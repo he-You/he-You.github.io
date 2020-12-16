@@ -1,0 +1,238 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>关于Spring的bean | he-You</title><meta name="keywords" content="SpringBean"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Spring中的bean默认都是单例的,Spring的单例是基于BeanFactory也就是Spring容器的，单例Bean在此容器内只有一个，Java的单例是基于 JVM，每个 JVM 内只有一个实例。 一.bean的作用域 创建一个bean定义，其实质是用该bean定义对应的类来创建真正实例的“配方”。把bean定义看成一个配方很有意义，它与class很类似，只根据一张“处方”就可以创建多个实">
+<meta property="og:type" content="article">
+<meta property="og:title" content="关于Spring的bean">
+<meta property="og:url" content="http://example.com/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="Spring中的bean默认都是单例的,Spring的单例是基于BeanFactory也就是Spring容器的，单例Bean在此容器内只有一个，Java的单例是基于 JVM，每个 JVM 内只有一个实例。 一.bean的作用域 创建一个bean定义，其实质是用该bean定义对应的类来创建真正实例的“配方”。把bean定义看成一个配方很有意义，它与class很类似，只根据一张“处方”就可以创建多个实">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/article2.jpg">
+<meta property="article:published_time" content="2020-09-12T14:57:06.434Z">
+<meta property="article:modified_time" content="2020-09-12T14:57:06.434Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="SpringBean">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/article2.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="http://example.com/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2020-09-12 22:57:06'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/article2.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">关于Spring的bean</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-09-12T14:57:06.434Z" title="发表于 2020-09-12 22:57:06">2020-09-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-09-12T14:57:06.434Z" title="更新于 2020-09-12 22:57:06">2020-09-12</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Spring/">Spring</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>Spring中的bean默认都是单例的,Spring的单例是基于BeanFactory也就是Spring容器的，单例Bean在此容器内只有一个，Java的单例是基于 JVM，每个 JVM 内只有一个实例。</p>
+<p>一.bean的作用域</p>
+<p>创建一个bean定义，其实质是用该bean定义对应的类来创建真正实例的“配方”。<br>把bean定义看成一个配方很有意义，它与class很类似，只根据一张“处方”就可以创建多个实例。<br>不仅可以控制注入到对象中的各种依赖和配置值，还可以控制该对象的作用域。<br>这样可以灵活选择所建对象的作用域，<br>而不必在Java Class级定义作用域。Spring Framework支持五种作用域，分别阐述如下表。</p>
+<p>五种作用域中，request、session 和 global session 三种作用域仅在基于web的应用中使用，只能用在基于 web 的 Spring ApplicationContext 环境。</p>
+<p>1 . <strong>singleton——唯一 bean 实例</strong></p>
+<p>当一个 bean 的作用域为 singleton，那么Spring IoC容器中只会存在一个共享的 bean 实例，并且所有对 bean 的请求，只要 id 与该 bean 定义相匹配，则只会返回bean的同一实例。 singleton 是单例类型(对应于单例模式)，就是在创建起容器时就同时自动创建了一个bean的对象，不管你是否使用，但我们可以指定Bean节点的 lazy-init=”true” 来延迟初始化bean，这时候，只有在第一次获取bean时才会初始化bean，即第一次请求该bean时才初始化。 每次获取到的对象都是同一个对象。注意，singleton 作用域是Spring中的缺省作用域。要在XML中将 bean 定义成 singleton ，可以这样配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;ServiceImpl&quot; class&#x3D;&quot;cn.csdn.service.ServiceImpl&quot; scope&#x3D;&quot;singleton&quot;&gt;</span><br></pre></td></tr></table></figure>
+<p>也可以通过 @Scope 注解（它可以显示指定bean的作用范围。）的方式</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@Service</span><br><span class="line">@Scope(&quot;singleton&quot;)</span><br><span class="line">public class ServiceImpl&#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>2 . <strong>prototype——每次请求都会创建一个新的 bean 实例</strong></p>
+<p>当一个bean的作用域为 prototype，表示一个 bean 定义对应多个对象实例。<br>prototype 作用域的 bean 会导致在每次对该 bean 请求（将其注入到另一个 bean 中，或者以程序的方式调用容器的 getBean() 方法<strong>）<br>时都会创建一个新的 bean 实例。prototype 是原型类型，<br>它在我们创建容器的时候并没有实例化，而是当我们获取bean的时候才会去创建一个对象，而<br>**且我们每次获取到的对象都不是同一个对象。根据经验，对有状态的 bean 应该使用 prototype 作用域，<br>而对无状态的 bean 则应该使用 singleton 作用域。</strong> 在 XML 中将 bean 定义成 prototype ，可以这样配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;account&quot; class&#x3D;&quot;com.foo.DefaultAccount&quot; scope&#x3D;&quot;prototype&quot;&#x2F;&gt;  </span><br><span class="line"> 或者</span><br><span class="line">&lt;bean id&#x3D;&quot;account&quot; class&#x3D;&quot;com.foo.DefaultAccount&quot; singleton&#x3D;&quot;false&quot;&#x2F;&gt; </span><br></pre></td></tr></table></figure>
+<p>注解方式:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">@Service</span><br><span class="line">@Scope(&quot;prototype&quot;)</span><br><span class="line">public class ServiceImpl&#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>request——每一次HTTP请求都会产生一个新的bean，该bean仅在当前HTTP request内有效<br>request只适用于Web程序，每一次 HTTP 请求都会产生一个新的bean，同时该bean仅在当前HTTP request内有效，<br>当请求结束后，该对象的生命周期即告结束。 在 XML 中将 bean 定义成 request ，可以这样配置：<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;loginAction&quot; class&#x3D;cn.csdn.LoginAction&quot; scope&#x3D;&quot;request&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure></li>
+<li>session——每一次HTTP请求都会产生一个新的 bean，该bean仅在当前 HTTP session 内有效<br>session只适用于Web程序，session 作用域表示该针对每一次 HTTP 请求都会产生一个新的 bean，<br>同时该 bean 仅在当前 HTTP session 内有效.<br>与request作用域一样，可以根据需要放心的更改所创建实例的内部状态，<br>而别的 HTTP session 中根据 userPreferences 创建的实例，<br>将不会看到这些特定于某个 HTTP session 的状态变化。当HTTP session最终被废弃的时候，<br>在该HTTP session作用域内的bean也会被废弃掉。<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;userPreferences&quot; class&#x3D;&quot;com.foo.UserPreferences&quot; scope&#x3D;&quot;session&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure></li>
+<li>globalSession<br>global session 作用域类似于标准的 HTTP session 作用域，<br>不过仅仅在基于 portlet 的 web 应用中才有意义。<br>Portlet 规范定义了全局 Session 的概念，它被所有构成某个 portlet web 应用的各种不同的 portle t所共享。<br>在global session 作用域中定义的 bean 被限定于全局portlet Session的生命周期范围内。<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;user&quot; class&#x3D;&quot;com.foo.Preferences &quot;scope&#x3D;&quot;globalSession&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>二.bean的生命周期</p>
+<p>实现<em>Aware接口 在Bean中使用Spring框架的一些对象**<br>有些时候我们需要在 Bean 的初始化中使用 Spring 框架自身的一些对象来执行一些操作，比如获取 ServletContext 的一些参数，获取 ApplicaitionContext 中的 BeanDefinition 的名字，获取 Bean 在容器中的名字等等。为了让 Bean 可以获取到框架自身的一些对象，Spring 提供了一组名为</em>Aware的接口。</p>
+<p>这些接口均继承于org.springframework.beans.factory.Aware标记接口，并提供一个将由 Bean 实现的set*方法,Spring通过基于setter的依赖注入方式使相应的对象可以被Bean使用。 网上说，这些接口是利用观察者模式实现的，类似于servlet listeners，目前还不明白，不过这也不在本文的讨论范围内。 介绍一些重要的Aware接口：</p>
+<ul>
+<li>ApplicationContextAware: 获得ApplicationContext对象,可以用来获取所有Bean definition的名字。</li>
+<li>BeanFactoryAware:获得BeanFactory对象，可以用来检测Bean的作用域。</li>
+<li>BeanNameAware:获得Bean在配置文件中定义的名字。</li>
+<li>ResourceLoaderAware:获得ResourceLoader对象，可以获得classpath中某个文件。</li>
+<li>ServletContextAware:在一个MVC应用中可以获取ServletContext对象，可以读取context中的参数。</li>
+<li>ServletConfigAware： 在一个MVC应用中可以获取ServletConfig对象，可以读取config中的参数。</li>
+</ul>
+<p>BeanPostProcessor<br>上面的*Aware接口是针对某个实现这些接口的Bean定制初始化的过程， Spring同样可以针对容器中的所有Bean，<br>或者某些Bean定制初始化过程，只需提供一个实现BeanPostProcessor接口的类即可。<br>该接口中包含两个方法，postProcessBeforeInitialization和postProcessAfterInitialization。<br>postProcessBeforeInitialization方法会在容器中的Bean初始化之前执行，postProcessAfterInitialization方法在容器中的Bean初始化之后执行。</p>
+<p>要将BeanPostProcessor的Bean像其他Bean一样定义在配置文件中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean class&#x3D;&quot;com.giraffe.spring.service.CustomerBeanPostProcessor&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+
+<p>Spring Bean的生命周期是这样的：</p>
+<ul>
+<li>Bean容器找到配置文件中 Spring Bean 的定义。</li>
+<li>Bean容器利用Java Reflection API创建一个Bean的实例。</li>
+<li>如果涉及到一些属性值 利用set方法设置一些属性值。</li>
+<li>如果Bean实现了BeanNameAware接口，调用setBeanName()方法，传入Bean的名字。</li>
+<li>如果Bean实现了BeanClassLoaderAware接口，调用setBeanClassLoader()方法，传入ClassLoader对象的实例。</li>
+<li>如果Bean实现了BeanFactoryAware接口，调用setBeanClassLoader()方法，传入ClassLoader对象的实例。</li>
+<li>与上面的类似，如果实现了其他*Aware接口，就调用相应的方法。</li>
+<li>如果有和加载这个Bean的Spring容器相关的BeanPostProcessor对象，执行postProcessBeforeInitialization()方法</li>
+<li>如果Bean实现了InitializingBean接口，执行afterPropertiesSet()方法。</li>
+<li>如果Bean在配置文件中的定义包含init-method属性，执行指定的方法。</li>
+<li>如果有和加载这个Bean的Spring容器相关的BeanPostProcessor对象，执行postProcessAfterInitialization()方法</li>
+<li>当要销毁Bean的时候，如果Bean实现了DisposableBean接口，执行destroy()方法。</li>
+<li>当要销毁Bean的时候，如果Bean在配置文件中的定义包含destroy-method属性，执行指定的方法。</li>
+</ul>
+<p>图:<br><img src="../spring/img/SpringBean.png"><br>或:<br><img src="../spring/img/SpringBean2.png"></p>
+<p>其实很多时候我们并不会真的去实现上面说描述的那些接口，那么下面我们就除去那些接口，针对bean的单例和非单例来描述下bean的生命周期：</p>
+<p><strong>单例管理的对象</strong><br>当scope=”singleton”，即默认情况下，会在启动容器时（即实例化容器时）时实例化。<br>但我们可以指定Bean节点的lazy-init=”true”来延迟初始化bean，<br>这时候，只有在第一次获取bean时才会初始化bean，即第一次请求该bean时才初始化。<br>如下配置：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;ServiceImpl&quot; class&#x3D;&quot;cn.csdn.service.ServiceImpl&quot; lazy-init&#x3D;&quot;true&quot;&#x2F;&gt;  </span><br></pre></td></tr></table></figure>
+<p>如果想对所有的默认单例bean都应用延迟初始化，可以在根节点beans设置default-lazy-init属性为true，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;beans default-lazy-init&#x3D;&quot;true&quot; …&gt;</span><br></pre></td></tr></table></figure>
+<p>默认情况下，Spring 在读取 xml 文件的时候，就会创建对象。在创建对象的时候先调用构造器，然后调用 init-method 属性值中所指定的方法。对象在被销毁的时候，会调用 destroy-method 属性值中所指定的方法（例如调用Container.destroy()方法的时候）。</p>
+<p><strong>非单例管理的对象</strong><br>当scope=”prototype”时，容器也会延迟初始化 bean，Spring 读取xml 文件的时候，<br>并不会立刻创建对象，而是在第一次请求该 bean 时才初始化（如调用getBean方法时）。<br>在第一次请求每一个 prototype 的bean 时，Spring容器都会调用其构造器创建这个对象，<br>然后调用init-method属性值中所指定的方法。<br>对象销毁的时候，Spring 容器不会帮我们调用任何方法，因为是非单例，<br>这个类型的对象有很多个，Spring容器一旦把这个对象交给你之后，就不再管理这个对象了。</p>
+<p>为了测试prototype bean的生命周期life.xml配置如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;life_prototype&quot; class&#x3D;&quot;com.bean.LifeBean&quot; scope&#x3D;&quot;prototype&quot; init-method&#x3D;&quot;init&quot; destroy-method&#x3D;&quot;destory&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+<p>测试程序：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">public class LifeTest &#123;</span><br><span class="line">    @Test </span><br><span class="line">    public void test() &#123;</span><br><span class="line">        AbstractApplicationContext container &#x3D; new ClassPathXmlApplicationContext(&quot;life.xml&quot;);</span><br><span class="line">        LifeBean life1 &#x3D; (LifeBean)container.getBean(&quot;life_singleton&quot;);</span><br><span class="line">        System.out.println(life1);</span><br><span class="line"></span><br><span class="line">        LifeBean life3 &#x3D; (LifeBean)container.getBean(&quot;life_prototype&quot;);</span><br><span class="line">        System.out.println(life3);</span><br><span class="line">        container.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">LifeBean()构造函数</span><br><span class="line">this is init of lifeBean</span><br><span class="line">com.bean.LifeBean@573f2bb1</span><br><span class="line">LifeBean()构造函数</span><br><span class="line">this is init of lifeBean</span><br><span class="line">com.bean.LifeBean@5ae9a829</span><br><span class="line">……</span><br><span class="line">this is destory of lifeBean com.bean.LifeBean@573f2bb1</span><br></pre></td></tr></table></figure>
+
+<p>可以发现，对于作用域为 prototype 的 bean ，其destroy方法并没有被调用。<br>如果 bean 的 scope 设为prototype时，当容器关闭时，destroy 方法不会被调用。<br>对于 prototype 作用域的 bean，有一点非常重要，那就是 Spring不能对一个 prototype bean 的整个生命周期负责：<br>容器在初始化、配置、装饰或者是装配完一个prototype实例后，将它交给客户端，随后就对该prototype实例不闻不问了。<br>不管何种作用域，容器都会调用所有对象的初始化生命周期回调方法。<br>但对prototype而言，任何配置好的析构生命周期回调方法都将不会被调用。清除prototype作用域的对象并释放任何prototype bean所持有的昂贵资源，<br>都是客户端代码的职责（让Spring容器释放被prototype作用域bean占用资源的一种可行方式是，通过使用bean的后置处理器，<br>该处理器持有要被清除的bean的引用）。谈及prototype作用域的bean时，<br>在某些方面你可以将Spring容器的角色看作是Java new操作的替代者，任何迟于该时间点的生命周期事宜都得交由客户端来处理。</p>
+<p>Spring 容器可以管理 singleton 作用域下 bean 的生命周期，在此作用域下，Spring 能够精确地知道bean何时被创建，何时初始化完成，以及何时被销毁。<br>而对于 prototype 作用域的bean，Spring只负责创建，当容器创建了 bean 的实例后，bean 的实例就交给了客户端的代码管理，<br>Spring容器将不再跟踪其生命周期，并且不会管理那些被配置成prototype作用域的bean的生命周期。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/">http://example.com/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/SpringBean/">SpringBean</a></div><div class="post_share"><div class="social-share" data-image="/img/article2.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/"><img class="prev-cover" src="/img/article1.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">如何优雅的构建请求路径</div></div></a></div><div class="next-post pull-right"><a href="/2020/09/11/Java8%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B/"><img class="next-cover" src="/img/article3.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">函数式编程</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/avatar.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">he-You</div><div class="author-info__description">永远相信美好的事物即将发生</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/he-You"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/he-You" target="_blank" title="Github"><i class="fab fa-github"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/10/12/%E7%AE%97%E6%B3%95%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" title="算法（一）基础数据类型"><img src="/img/article1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="算法（一）基础数据类型"/></a><div class="content"><a class="title" href="/2020/10/12/%E7%AE%97%E6%B3%95%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" title="算法（一）基础数据类型">算法（一）基础数据类型</a><time datetime="2020-10-12T15:52:06.918Z" title="发表于 2020-10-12 23:52:06">2020-10-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/" title="java.lang.UnsupportedOperationException异常"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="java.lang.UnsupportedOperationException异常"/></a><div class="content"><a class="title" href="/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/" title="java.lang.UnsupportedOperationException异常">java.lang.UnsupportedOperationException异常</a><time datetime="2020-10-05T15:58:52.931Z" title="发表于 2020-10-05 23:58:52">2020-10-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/" title="Java 内省机制介绍与实际运用"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Java 内省机制介绍与实际运用"/></a><div class="content"><a class="title" href="/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/" title="Java 内省机制介绍与实际运用">Java 内省机制介绍与实际运用</a><time datetime="2020-09-22T15:23:50.940Z" title="发表于 2020-09-22 23:23:50">2020-09-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/" title="如何优雅的构建请求路径"><img src="/img/article1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何优雅的构建请求路径"/></a><div class="content"><a class="title" href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/" title="如何优雅的构建请求路径">如何优雅的构建请求路径</a><time datetime="2020-09-15T23:33:17.308Z" title="发表于 2020-09-16 07:33:17">2020-09-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/" title="关于Spring的bean"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="关于Spring的bean"/></a><div class="content"><a class="title" href="/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/" title="关于Spring的bean">关于Spring的bean</a><time datetime="2020-09-12T14:57:06.434Z" title="发表于 2020-09-12 22:57:06">2020-09-12</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>

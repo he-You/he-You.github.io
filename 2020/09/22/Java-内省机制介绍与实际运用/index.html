@@ -1,0 +1,224 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Java 内省机制介绍与实际运用 | he-You</title><meta name="keywords" content="Java特性机制"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="一、内省机制的介绍 内省是指计算机程序在运行时（Run time）检查对象（Object）类型的一种能力，通常也可以称作运行时类型检查。 不应该将内省和反射混淆。相对于内省，反射更进一步，是指计算机程序在运行时（Run time）可以访问、检测和修改它本身状态或行为的一种能力。 Introspector是一个专门处理JavaBean的工具类，用来获取JavaBean里描述符号，常用的JavaBea">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java 内省机制介绍与实际运用">
+<meta property="og:url" content="http://example.com/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="一、内省机制的介绍 内省是指计算机程序在运行时（Run time）检查对象（Object）类型的一种能力，通常也可以称作运行时类型检查。 不应该将内省和反射混淆。相对于内省，反射更进一步，是指计算机程序在运行时（Run time）可以访问、检测和修改它本身状态或行为的一种能力。 Introspector是一个专门处理JavaBean的工具类，用来获取JavaBean里描述符号，常用的JavaBea">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/article2.jpg">
+<meta property="article:published_time" content="2020-09-22T15:23:50.940Z">
+<meta property="article:modified_time" content="2020-09-22T15:23:50.940Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="Java特性机制">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/article2.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="http://example.com/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: false,
+  postUpdate: '2020-09-22 23:23:50'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/article2.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Java 内省机制介绍与实际运用</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-09-22T15:23:50.940Z" title="发表于 2020-09-22 23:23:50">2020-09-22</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-09-22T15:23:50.940Z" title="更新于 2020-09-22 23:23:50">2020-09-22</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java/">Java</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><p>一、内省机制的介绍</p>
+<p>内省是指计算机程序在运行时（Run time）检查对象（Object）类型的一种能力，通常也可以称作运行时类型检查。 不应该将内省和反射混淆。相对于内省，反射更进一步，是指计算机程序在运行时（Run time）可以访问、检测和修改它本身状态或行为的一种能力。</p>
+<p>Introspector是一个专门处理JavaBean的工具类，用来获取JavaBean里描述符号，常用的JavaBean的描述符号相关类有BeanInfo、PropertyDescriptor，MethodDescriptor、BeanDescriptor、EventSetDescriptor和ParameterDescriptor</p>
+<p>二、什么是JavaBean</p>
+<ol>
+<li><p>特殊的类，主要作用是传递数据信息，用于访问私有字段且方法具有一定规则要求（get/set）更加宽泛的指 Java对象，一般是指作为参数在方法之间或模块之间传递，，也可以称之为值对象 VO。</p>
+</li>
+<li><p>JavaBean的信息在Introspector里对应的概念是BeanInfo，它包含了JavaBean所有的Descriptor(描述符)，主要有PropertyDescriptor，MethodDescriptor（MethodDescriptor里面包含ParameterDescriptor）、BeanDescriptor和EventSetDescriptor。</p>
+</li>
+</ol>
+<p>三、属性 Field 和属性描述PropertiesDescriptor 的区别</p>
+<p>如果是严格的JavaBean(Field名称不重复，并且Field具备Setter和Getter方法)，它的PropertyDescriptor会通过解析Setter和Getter方法，合并解析结果，最终得到对应的PropertyDescriptor实例。所以PropertyDescriptor包含了属性名称和属性的Setter和Getter方法（如果存在的话）。</p>
+<p>四、内省与反射的区别</p>
+<ul>
+<li>Reflection：反射就是运行时获取一个类的所有信息，可以获取到类的所有定义的信息（包括成员变量，成员方法，构造器等）可以操纵类的字段、方法、构造器等部分。</li>
+<li>Introspector：内省基于反射实现，主要用于操作JavaBean，基于JavaBean的规范进行Bean信息描述符的解析，依据于类的Setter和Getter方法，可以获取到类的描述符。如果一个类中的属性没有Setter和Getter方法，无法使用Introspector。</li>
+</ul>
+<p>五、相关类及 API的使用</p>
+<ol>
+<li><p>Introspector</p>
+<p>该类类似于 BeanInfo 的静态工厂类，主要是提供静态方法通过 Class实例获取 BeanInfo，之后再获取其他描述符。</p>
+<ul>
+<li>通过Class实例获取到BeanInfo实例。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> BeanInfo <span class="title">getBeanInfo</span><span class="params">(Class&lt;?&gt; beanClass)</span></span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>BeanInfo</p>
+<p>BeanInfo是一个接口，具体实现是GenericBeanInfo，通过这个接口可以获取一个类的各种类型的描述符。主要方法：</p>
+<ul>
+<li>BeanDescriptor getBeanDescriptor()：获取JavaBean描述符。</li>
+<li>EventSetDescriptor[] getEventSetDescriptors()：获取JavaBean的所有的EventSetDescriptor。</li>
+<li>PropertyDescriptor[] getPropertyDescriptors()：获取JavaBean的所有的PropertyDescriptor。</li>
+<li>MethodDescriptor[] getMethodDescriptors()：获取JavaBean的所有的MethodDescriptor。</li>
+</ul>
+<p>这里要注意一点，通过BeanInfo#getPropertyDescriptors()获取到的PropertyDescriptor数组中，除了Bean属性的之外，还会带有一个属性名为class的PropertyDescriptor实例，它的来源是Class的getClass方法，如果不需要这个属性那么<strong>最好判断后过滤</strong>，这一点需要紧记，否则容易出现问题。</p>
+</li>
+<li><p>PropertyDescriptor</p>
+<p>PropertyDescriptor类表示JavaBean类通过存储器（Setter和Getter）导出一个属性，它应该是内省体系中最常见的类。主要方法：</p>
+<ul>
+<li>synchronized Class&lt;?&gt; getPropertyType()：获得属性的Class对象。</li>
+<li>synchronized Method getReadMethod()：获得用于读取属性值（Getter）的方法；</li>
+<li>synchronized Method getWriteMethod()：获得用于写入属性值（Setter）的方法。</li>
+<li>int hashCode()：获取对象的哈希值。</li>
+<li>synchronized void setReadMethod(Method readMethod)：设置用于读取属性值（Getter）的方法。</li>
+<li>synchronized void setWriteMethod(Method writeMethod)：设置用于写入属性值（Setter）的方法。</li>
+</ul>
+</li>
+<li><p>demo</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        BeanInfo beanInfo = Introspector.getBeanInfo(Person.class);</span><br><span class="line">        PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();</span><br><span class="line">        <span class="keyword">for</span> (PropertyDescriptor propertyDescriptor : propertyDescriptors) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!<span class="string">&quot;class&quot;</span>.equals(propertyDescriptor.getName())) &#123;</span><br><span class="line">                System.out.println(propertyDescriptor.getName());</span><br><span class="line">                System.out.println(propertyDescriptor.getWriteMethod().getName());</span><br><span class="line">                System.out.println(propertyDescriptor.getReadMethod().getName());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Long id;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> Integer age;</span><br><span class="line">        </span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">getId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> id;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setId</span><span class="params">(Long id)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.id = id;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> name;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Integer <span class="title">getAge</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> age;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAge</span><span class="params">(Integer age)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.age = age;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p><strong>注</strong>：如果框架或者程序用到了JavaBeans Introspector，那么就相当于启用了一个<strong>系统级别的缓存</strong>，这个缓存会存放一些曾加载并分析过的Javabean的引用，当Web服务器关闭的时候，由于这个缓存中存放着这些Javabean的引用，所以垃圾回收器不能对Web容器中的JavaBean对象进行回收，导致内存越来越大。</p>
+<p>还有一点值得注意，<strong>清除Introspector缓存的唯一方式是刷新整个缓存缓冲区</strong>，这是<strong>因为JDK没法判断哪些是属于当前的应用的引用</strong>，所以刷新整个Introspector缓存缓冲区会导致把服务器的所有应用的Introspector缓存都删掉。Spring中提供的org.springframework.web.util.IntrospectorCleanupListener就是为了解决这个问题，它会在Web服务器停止的时候，清理一下这个Introspector缓存，使那些Javabean能被垃圾回收器正确回收。</p>
+<p>也就是说JDK的Introspector缓存管理是有一定缺陷的。但是如果使用在Spring体系则不会出现这种问题，因为Spring把Introspector缓存的管理移交到Spring自身而不是JDK（或者在Web容器销毁后完全不管），在加载并分析完所有类之后，会针对类加载器对Introspector缓存进行清理，避免内存泄漏的问题，详情可以看CachedIntrospectionResults和SpringBoot刷新上下文的方法AbstractApplicationContext#refresh()中finally代码块中存在清理缓存的方法AbstractApplicationContext#resetCommonCaches();。</p>
+<p>但是有很多程序和框架在使用了JavaBeans Introspector之后，都没有进行清理工作，比如Quartz、Struts等，这类操作会成为内存泄漏的隐患。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/">http://example.com/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Java%E7%89%B9%E6%80%A7%E6%9C%BA%E5%88%B6/">Java特性机制</a></div><div class="post_share"><div class="social-share" data-image="/img/article2.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/"><img class="prev-cover" src="/img/article2.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">java.lang.UnsupportedOperationException异常</div></div></a></div><div class="next-post pull-right"><a href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/"><img class="next-cover" src="/img/article1.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">如何优雅的构建请求路径</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="card-widget card-info"><div class="card-content"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/avatar.jpeg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">he-You</div><div class="author-info__description">永远相信美好的事物即将发生</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a></div><div class="card-info-data-item is-center"><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/he-You"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/he-You" target="_blank" title="Github"><i class="fab fa-github"></i></a></div></div></div><div class="card-widget card-announcement"><div class="card-content"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">This is my Blog</div></div></div><div class="sticky_layout"><div class="card-widget card-recent-post"><div class="card-content"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2020/10/12/%E7%AE%97%E6%B3%95%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" title="算法（一）基础数据类型"><img src="/img/article1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="算法（一）基础数据类型"/></a><div class="content"><a class="title" href="/2020/10/12/%E7%AE%97%E6%B3%95%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/" title="算法（一）基础数据类型">算法（一）基础数据类型</a><time datetime="2020-10-12T15:52:06.918Z" title="发表于 2020-10-12 23:52:06">2020-10-12</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/" title="java.lang.UnsupportedOperationException异常"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="java.lang.UnsupportedOperationException异常"/></a><div class="content"><a class="title" href="/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/" title="java.lang.UnsupportedOperationException异常">java.lang.UnsupportedOperationException异常</a><time datetime="2020-10-05T15:58:52.931Z" title="发表于 2020-10-05 23:58:52">2020-10-05</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/" title="Java 内省机制介绍与实际运用"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Java 内省机制介绍与实际运用"/></a><div class="content"><a class="title" href="/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/" title="Java 内省机制介绍与实际运用">Java 内省机制介绍与实际运用</a><time datetime="2020-09-22T15:23:50.940Z" title="发表于 2020-09-22 23:23:50">2020-09-22</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/" title="如何优雅的构建请求路径"><img src="/img/article1.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="如何优雅的构建请求路径"/></a><div class="content"><a class="title" href="/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/" title="如何优雅的构建请求路径">如何优雅的构建请求路径</a><time datetime="2020-09-15T23:33:17.308Z" title="发表于 2020-09-16 07:33:17">2020-09-16</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/" title="关于Spring的bean"><img src="/img/article2.jpg" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="关于Spring的bean"/></a><div class="content"><a class="title" href="/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/" title="关于Spring的bean">关于Spring的bean</a><time datetime="2020-09-12T14:57:06.434Z" title="发表于 2020-09-12 22:57:06">2020-09-12</time></div></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>

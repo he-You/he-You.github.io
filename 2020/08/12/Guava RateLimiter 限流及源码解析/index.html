@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Guava RateLimiter 限流及源码解析 | he-You</title><meta name="keywords" content="高并发"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="一、RateLimiter 实现原理Guava 有两种限流模式：  稳定模式（SmoothBursty）:令牌生成速度恒定 渐进模式（SmoothWarmingUp）:令牌生成速度缓慢提升知道维持到一个稳定值  二、RateLimiter 创建通过 create 方法创建实例，实际上是调用 SmoothBursty 稳定模式创建的实例 123456789public static RateLimi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Guava RateLimiter 限流及源码解析">
+<meta property="og:url" content="http://example.com/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="一、RateLimiter 实现原理Guava 有两种限流模式：  稳定模式（SmoothBursty）:令牌生成速度恒定 渐进模式（SmoothWarmingUp）:令牌生成速度缓慢提升知道维持到一个稳定值  二、RateLimiter 创建通过 create 方法创建实例，实际上是调用 SmoothBursty 稳定模式创建的实例 123456789public static RateLimi">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/img/article2.jpg">
+<meta property="article:published_time" content="2020-08-12T13:57:53.151Z">
+<meta property="article:modified_time" content="2020-09-09T15:03:00.813Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="高并发">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/img/article2.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="http://example.com/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2020-09-09 23:03:00'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = 'false'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">12</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">3</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/article2.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Guava RateLimiter 限流及源码解析</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-08-12T13:57:53.151Z" title="发表于 2020-08-12 21:57:53">2020-08-12</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-09-09T15:03:00.813Z" title="更新于 2020-09-09 23:03:00">2020-09-09</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java/">Java</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h4 id="一、RateLimiter-实现原理"><a href="#一、RateLimiter-实现原理" class="headerlink" title="一、RateLimiter 实现原理"></a>一、RateLimiter 实现原理</h4><p>Guava 有两种限流模式：</p>
+<ul>
+<li>稳定模式（SmoothBursty）:令牌生成速度恒定</li>
+<li>渐进模式（SmoothWarmingUp）:令牌生成速度缓慢提升知道维持到一个稳定值</li>
+</ul>
+<h4 id="二、RateLimiter-创建"><a href="#二、RateLimiter-创建" class="headerlink" title="二、RateLimiter 创建"></a>二、RateLimiter 创建</h4><p>通过 create 方法创建实例，实际上是调用 SmoothBursty 稳定模式创建的实例</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> RateLimiter <span class="title">create</span><span class="params">(<span class="keyword">double</span> permitsPerSecond)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> create(permitsPerSecond, SleepingStopwatch.createFromSystemTimer());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> RateLimiter <span class="title">create</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, SleepingStopwatch stopwatch)</span> </span>&#123;</span><br><span class="line">  RateLimiter rateLimiter = <span class="keyword">new</span> SmoothBursty(stopwatch, <span class="number">1.0</span> <span class="comment">/* maxBurstSeconds */</span>);</span><br><span class="line">  rateLimiter.setRate(permitsPerSecond);</span><br><span class="line">  <span class="keyword">return</span> rateLimiter;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>SmoothBursty 中有两个构造参数：</p>
+<ul>
+<li>SleepingStopwatch:guava中的一个时钟类实例，会通过这个来计算时间及令牌</li>
+<li>maxBurstySeconds：未使用的令牌存活时间，默认是 1</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The work (permits) of how many seconds can be saved up if this RateLimiter is unused?</span></span><br><span class="line"><span class="comment"> * 在RateLimiter未使用时，最多存储几秒的令牌</span></span><br><span class="line"><span class="comment"> * */</span></span><br><span class="line"> <span class="keyword">final</span> <span class="keyword">double</span> maxBurstSeconds;</span><br><span class="line"> </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The currently stored permits.</span></span><br><span class="line"><span class="comment"> * 当前存储令牌数</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> storedPermits;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The maximum number of stored permits.</span></span><br><span class="line"><span class="comment"> * 最大存储令牌数 = maxBurstSeconds * stableIntervalMicros(见下文)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> maxPermits;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The interval between two unit requests, at our stable rate. E.g., a stable rate of 5 permits</span></span><br><span class="line"><span class="comment"> * per second has a stable interval of 200ms.</span></span><br><span class="line"><span class="comment"> * 添加令牌时间间隔 = SECONDS.toMicros(1L) / permitsPerSecond；(1秒/每秒的令牌数)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> stableIntervalMicros;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The time when the next request (no matter its size) will be granted. After granting a request,</span></span><br><span class="line"><span class="comment"> * this is pushed further in the future. Large requests push this further than small requests.</span></span><br><span class="line"><span class="comment"> * 下一次请求可以获取令牌的起始时间</span></span><br><span class="line"><span class="comment"> * 由于RateLimiter允许预消费，上次请求预消费令牌后</span></span><br><span class="line"><span class="comment"> * 下次请求需要等待相应的时间到nextFreeTicketMicros时刻才可以获取令牌</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">long</span> nextFreeTicketMicros = <span class="number">0L</span>; <span class="comment">// could be either in the past or future</span></span><br></pre></td></tr></table></figure>
+
+<p>其中关键函数：</p>
+<ul>
+<li><p>setRate</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond)</span> </span>&#123;</span><br><span class="line">  checkArgument(</span><br><span class="line">      permitsPerSecond &gt; <span class="number">0.0</span> &amp;&amp; !Double.isNaN(permitsPerSecond), <span class="string">&quot;rate must be positive&quot;</span>);</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    doSetRate(permitsPerSecond, stopwatch.readMicros());</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>该方法可以设置令牌桶每秒生成令牌的数量，内部时间通过调用 SmoothRateLimiterd的 doSetRate 来实现</p>
+</li>
+<li><p>doSetRate</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">doSetRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">    resync(nowMicros);</span><br><span class="line">    <span class="keyword">double</span> stableIntervalMicros = SECONDS.toMicros(<span class="number">1L</span>) / permitsPerSecond;</span><br><span class="line">    <span class="keyword">this</span>.stableIntervalMicros = stableIntervalMicros;</span><br><span class="line">    doSetRate(permitsPerSecond, stableIntervalMicros);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里先通过调用<code>resync</code>生成令牌以及更新下一期令牌生成时间，然后更新stableIntervalMicros，最后又调用了<code>SmoothBursty</code>的<code>doSetRate</code></p>
+</li>
+<li><p>resync</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Updates &#123;<span class="doctag">@code</span> storedPermits&#125; and &#123;<span class="doctag">@code</span> nextFreeTicketMicros&#125; based on the current time.</span></span><br><span class="line"><span class="comment"> * 基于当前时间，更新下一次请求令牌的时间，以及当前存储的令牌(可以理解为生成令牌)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">resync</span><span class="params">(<span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// if nextFreeTicket is in the past, resync to now</span></span><br><span class="line">    <span class="keyword">if</span> (nowMicros &gt; nextFreeTicketMicros) &#123;</span><br><span class="line">      <span class="keyword">double</span> newPermits = (nowMicros - nextFreeTicketMicros) / coolDownIntervalMicros();</span><br><span class="line">      storedPermits = min(maxPermits, storedPermits + newPermits);</span><br><span class="line">      nextFreeTicketMicros = nowMicros;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<p>根据令牌桶算法，桶中的令牌是持续生成存放的，有请求时需要先从桶中拿到令牌才能开始执行，谁来持续生成令牌存放呢？</p>
+<p>一种解法是，开启一个定时任务，由定时任务持续生成令牌。这样的问题在于会极大的消耗系统资源，如，某接口需要分别对每个用户做访问频率限制，假设系统中存在6W用户，则至多需要开启6W个定时任务来维持每个桶中的令牌数，这样的开销是巨大的。</p>
+<p>另一种解法则是延迟计算，如上<code>resync</code>函数。该函数会在每次获取令牌之前调用，其实现思路为，若当前时间晚于nextFreeTicketMicros，则计算该段时间内可以生成多少令牌，将生成的令牌加入令牌桶中并更新数据。这样一来，只需要在获取令牌时计算一次即可。</p>
+<ul>
+<li><p>SmoothBursty的 doSetRate</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">doSetRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, <span class="keyword">double</span> stableIntervalMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">double</span> oldMaxPermits = <span class="keyword">this</span>.maxPermits;</span><br><span class="line">  maxPermits = maxBurstSeconds * permitsPerSecond;</span><br><span class="line">  <span class="keyword">if</span> (oldMaxPermits == Double.POSITIVE_INFINITY) &#123;</span><br><span class="line">    <span class="comment">// if we don&#x27;t special-case this, we would get storedPermits == NaN, below</span></span><br><span class="line">    <span class="comment">// Double.POSITIVE_INFINITY 代表无穷啊</span></span><br><span class="line">    storedPermits = maxPermits;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    storedPermits =</span><br><span class="line">        (oldMaxPermits == <span class="number">0.0</span>)</span><br><span class="line">            ? <span class="number">0.0</span> <span class="comment">// initial state</span></span><br><span class="line">            : storedPermits * maxPermits / oldMaxPermits;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+<p>桶中可存放的最大令牌数由maxBurstSeconds计算而来，其含义为最大存储maxBurstSeconds秒生成的令牌。<br> 该参数的作用在于，可以更为灵活地控制流量。如，某些接口限制为300次/20秒，某些接口限制为50次/45秒等。也就是流量不局限于qps。</p>
+<h4 id="RateLimiter-其他常用接口"><a href="#RateLimiter-其他常用接口" class="headerlink" title="RateLimiter 其他常用接口"></a>RateLimiter 其他常用接口</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@CanIgnoreReturnValue</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">double</span> <span class="title">acquire</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> acquire(<span class="number">1</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* 获取令牌，返回阻塞的时间</span></span><br><span class="line"><span class="comment">**/</span></span><br><span class="line"><span class="meta">@CanIgnoreReturnValue</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">double</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> microsToWait = reserve(permits);</span><br><span class="line">  stopwatch.sleepMicrosUninterruptibly(microsToWait);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">1.0</span> * microsToWait / SECONDS.toMicros(<span class="number">1L</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserve</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  checkPermits(permits);</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    <span class="keyword">return</span> reserveAndGetWaitLength(permits, stopwatch.readMicros());</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>acquire()主要用于获取 permits 个令牌，并计算需要等待的时间，进而挂起等待，并将该值返回，主要通过 reserve 返回需要等待的时间，reserve 中通过 reserveAndGetWaitLength 获取等待时间。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Reserves next ticket and returns the wait time that the caller must wait for.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> the required wait time, never negative</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserveAndGetWaitLength</span><span class="params">(<span class="keyword">int</span> permits, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> momentAvailable = reserveEarliestAvailable(permits, nowMicros);</span><br><span class="line">  <span class="keyword">return</span> max(momentAvailable - nowMicros, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后调用了 reserveEarliestAvailable</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserveEarliestAvailable</span><span class="params">(<span class="keyword">int</span> requiredPermits, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  resync(nowMicros);</span><br><span class="line">  <span class="keyword">long</span> returnValue = nextFreeTicketMicros;</span><br><span class="line">  <span class="keyword">double</span> storedPermitsToSpend = min(requiredPermits, <span class="keyword">this</span>.storedPermits);</span><br><span class="line">  <span class="keyword">double</span> freshPermits = requiredPermits - storedPermitsToSpend;</span><br><span class="line">  <span class="keyword">long</span> waitMicros =</span><br><span class="line">      storedPermitsToWaitTime(<span class="keyword">this</span>.storedPermits, storedPermitsToSpend)</span><br><span class="line">          + (<span class="keyword">long</span>) (freshPermits * stableIntervalMicros);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.nextFreeTicketMicros = LongMath.saturatedAdd(nextFreeTicketMicros, waitMicros);</span><br><span class="line">  <span class="keyword">this</span>.storedPermits -= storedPermitsToSpend;</span><br><span class="line">  <span class="keyword">return</span> returnValue;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先通过resync生成令牌以及同步nextFreeTicketMicros时间戳，freshPermits从令牌桶中获取令牌后还需要的令牌数量，通过storedPermitsToWaitTime计算出获取freshPermits还需要等待的时间，在稳定模式中，这里就是(long) (freshPermits * stableIntervalMicros) ，然后更新nextFreeTicketMicros以及storedPermits，这次获取令牌需要的等待到的时间点， reserveAndGetWaitLength返回需要等待的时间间隔。</p>
+<p>从<code>reserveEarliestAvailable</code>可以看出RateLimiter的预消费原理，以及获取令牌的等待时间时间原理（可以解释示例结果），当获取令牌不足时，并没有等待到令牌全部生成，而是<strong>更新了下次获取令牌时的nextFreeTicketMicros，从而影响的是下次获取令牌的等待时间。</strong></p>
+<p> <code>reserve</code>这里返回等待时间后，<code>acquire</code>通过调用<code>stopwatch.sleepMicrosUninterruptibly(microsToWait);</code>进行sleep操作，这里不同于Thread.sleep(), 这个函数的sleep是uninterruptibly的，内部实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">sleepUninterruptibly</span><span class="params">(<span class="keyword">long</span> sleepFor, TimeUnit unit)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//sleep 阻塞线程 内部通过Thread.sleep()</span></span><br><span class="line">  <span class="keyword">boolean</span> interrupted = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">long</span> remainingNanos = unit.toNanos(sleepFor);</span><br><span class="line">    <span class="keyword">long</span> end = System.nanoTime() + remainingNanos;</span><br><span class="line">    <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// TimeUnit.sleep() treats negative timeouts just like zero.</span></span><br><span class="line">        NANOSECONDS.sleep(remainingNanos);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        interrupted = <span class="keyword">true</span>;</span><br><span class="line">        remainingNanos = end - System.nanoTime();</span><br><span class="line">        <span class="comment">//如果被interrupt可以继续，更新sleep时间，循环继续sleep</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (interrupted) &#123;</span><br><span class="line">      Thread.currentThread().interrupt();</span><br><span class="line">      <span class="comment">//如果被打断过，sleep过后再真正中断线程</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>sleep 之后，<code>acquire</code>返回 sleep的时间，阻塞结束，获得到令牌。</p>
+<p><code>tryAcquire</code>函数可以尝试在timeout时间内获取令牌，如果可以则挂起等待相应时间并返回true，否则立即返回false<br> <code>canAcquire</code>用于判断timeout时间内是否可以获取令牌，通过判断<strong>当前时间+超时时间</strong>是否大于nextFreeTicketMicros 来决定是否能够拿到足够的令牌数，如果可以获取到，则过程同acquire，线程sleep等待，如果通过<code>canAcquire</code>在此超时时间内不能获取到令牌，则可以快速返回，不需要等待timeout后才知道能否获取到令牌。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> tryAcquire(permits, <span class="number">0</span>, MICROSECONDS);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> tryAcquire(<span class="number">1</span>, <span class="number">0</span>, MICROSECONDS);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> permits, <span class="keyword">long</span> timeout, TimeUnit unit)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> timeoutMicros = max(unit.toMicros(timeout), <span class="number">0</span>);</span><br><span class="line">  checkPermits(permits);</span><br><span class="line">  <span class="keyword">long</span> microsToWait;</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    <span class="keyword">long</span> nowMicros = stopwatch.readMicros();</span><br><span class="line">    <span class="keyword">if</span> (!canAcquire(nowMicros, timeoutMicros)) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      microsToWait = reserveAndGetWaitLength(permits, nowMicros);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  stopwatch.sleepMicrosUninterruptibly(microsToWait);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">canAcquire</span><span class="params">(<span class="keyword">long</span> nowMicros, <span class="keyword">long</span> timeoutMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> queryEarliestAvailable(nowMicros) - timeoutMicros &lt;= nowMicros;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">queryEarliestAvailable</span><span class="params">(<span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> nextFreeTicketMicros;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="http://example.com/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">http://example.com/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="http://example.com" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E9%AB%98%E5%B9%B6%E5%8F%91/">高并发</a></div><div class="post_share"><div class="social-share" data-image="/img/article2.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="prev-post pull-left"><a href="/2020/08/24/%E9%AB%98%E6%95%88%E7%9A%84%E8%AF%BB%E5%86%99%E9%98%9F%E5%88%97%EF%BC%9AConcurrentLinkedQueue%20%E7%B1%BB/"><img class="prev-cover" src="/img/article2.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of previous post"><div class="pagination-info"><div class="label">上一篇</div><div class="prev_info">高效的读写队列：ConcurrentLinkedQueue 类</div></div></a></div><div class="next-post pull-right"><a href="/2020/07/30/%E8%AF%BB%E5%86%99%E9%94%81/"><img class="next-cover" src="/img/article1.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">读写锁介绍与简单实用</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%B8%80%E3%80%81RateLimiter-%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="toc-number">1.</span> <span class="toc-text">一、RateLimiter 实现原理</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E4%BA%8C%E3%80%81RateLimiter-%E5%88%9B%E5%BB%BA"><span class="toc-number">2.</span> <span class="toc-text">二、RateLimiter 创建</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RateLimiter-%E5%85%B6%E4%BB%96%E5%B8%B8%E7%94%A8%E6%8E%A5%E5%8F%A3"><span class="toc-number">3.</span> <span class="toc-text">RateLimiter 其他常用接口</span></a></li></ol></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></div></body></html>
