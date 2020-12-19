@@ -1,0 +1,749 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>AQS 介绍</title>
+    <url>/2020/06/08/AQS%20%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<h3 id="AQS-介绍"><a href="#AQS-介绍" class="headerlink" title="AQS 介绍"></a>AQS 介绍</h3><p>一、基础介绍</p>
+<p>1.AQS(AbstractQueuedSynchronizer),是构建锁和同步器的框架。ReentrantLock，Semaphore，其他的诸如 ReentrantReadWriteLock都是基于 AQS 实现的</p>
+<p>2.原理：</p>
+<ul>
+<li><p>概述：如果请求的共享资源空闲，则将当前请求的线程设置为有效的工作线程，并将资源设置成锁定状态。如果资源被占用，AQS 会利用 <strong>CLH 队列锁</strong>实现阻塞以及等待唤醒的锁分配机制，将等待的线程加入队列中，等待资源空闲时系统的锁分配。</p>
+<ul>
+<li>其中：CLH(Craig,Landin,and Hagersten)队列是一个虚拟的双向队列（虚拟的双向队列即不存在队列实例，仅存在结点之间的关联关系）。AQS 是将每条请求共享资源的线程封装成一个 CLH 锁队列的一个结点（Node）来实现锁的分配。</li>
+</ul>
+</li>
+<li><p>同步：AQS使用的一个 int 变量表示同步状态，通过内置的 FIFO队列获取线程队列，并且使用 CAS 操作进行状态的修改（即 protected 修饰的 getState()/setState()/compareAndSetState()）</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">int</span> state;<span class="comment">//共享变量，使用volatile修饰保证线程可见性</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//返回同步状态的当前值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> state;</span><br><span class="line">&#125;</span><br><span class="line"> <span class="comment">// 设置同步状态的值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(<span class="keyword">int</span> newState)</span> </span>&#123;</span><br><span class="line">        state = newState;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//原子操作（CAS操作）将同步状态值设置为给定值update如果当前同步状态的值等于expect（期望值）</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSetState</span><span class="params">(<span class="keyword">int</span> expect, <span class="keyword">int</span> update)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> unsafe.compareAndSwapInt(<span class="keyword">this</span>, stateOffset, expect, update);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+<p>3.AQS 对资源的共享方式</p>
+<ul>
+<li><p>独占 Exclusive：只有一个线程能执行，如 ReentrantLock。又可分为公平锁和非公平锁,ReentrantLock 同时支持两种锁(默认公平锁)</p>
+<ul>
+<li>公平锁：先到先得，根据队列的排队顺序依次拿到锁</li>
+<li>非公平锁：当前线程请求获得锁时，需要通过 两次CAS操作争抢锁，如果没有抢到锁，放入队列中等待唤醒。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/** Synchronizer providing all implementation mechanics */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Sync sync;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ReentrantLock</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 默认非公平锁</span></span><br><span class="line">    sync = <span class="keyword">new</span> NonfairSync();</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ReentrantLock</span><span class="params">(<span class="keyword">boolean</span> fair)</span> </span>&#123;</span><br><span class="line">    sync = fair ? <span class="keyword">new</span> FairSync() : <span class="keyword">new</span> NonfairSync();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>ReentrantLock之公平锁 lock方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">FairSync</span> <span class="keyword">extends</span> <span class="title">Sync</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        acquire(<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// AbstractQueuedSynchronizer.acquire(int arg)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!tryAcquire(arg) &amp;&amp;</span><br><span class="line">            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))</span><br><span class="line">            selfInterrupt();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> acquires)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Thread current = Thread.currentThread();</span><br><span class="line">        <span class="keyword">int</span> c = getState();</span><br><span class="line">        <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 1. 和非公平锁相比，这里多了一个判断：是否有线程在等待</span></span><br><span class="line">            <span class="keyword">if</span> (!hasQueuedPredecessors() &amp;&amp;</span><br><span class="line">                compareAndSetState(<span class="number">0</span>, acquires)) &#123;</span><br><span class="line">                setExclusiveOwnerThread(current);</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (current == getExclusiveOwnerThread()) &#123;</span><br><span class="line">            <span class="keyword">int</span> nextc = c + acquires;</span><br><span class="line">            <span class="keyword">if</span> (nextc &lt; <span class="number">0</span>)</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> Error(<span class="string">&quot;Maximum lock count exceeded&quot;</span>);</span><br><span class="line">            setState(nextc);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>ReentrantLock之非公平锁 lock方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">NonfairSync</span> <span class="keyword">extends</span> <span class="title">Sync</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">lock</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 2. 和公平锁相比，这里会直接先进行一次CAS，成功就返回了</span></span><br><span class="line">        <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, <span class="number">1</span>))</span><br><span class="line">            setExclusiveOwnerThread(Thread.currentThread());</span><br><span class="line">        <span class="keyword">else</span></span><br><span class="line">            acquire(<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// AbstractQueuedSynchronizer.acquire(int arg)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!tryAcquire(arg) &amp;&amp;</span><br><span class="line">            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))</span><br><span class="line">            selfInterrupt();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> acquires)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> nonfairTryAcquire(acquires);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Performs non-fair tryLock.  tryAcquire is implemented in</span></span><br><span class="line"><span class="comment"> * subclasses, but both need nonfair try for trylock method.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">nonfairTryAcquire</span><span class="params">(<span class="keyword">int</span> acquires)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Thread current = Thread.currentThread();</span><br><span class="line">    <span class="keyword">int</span> c = getState();</span><br><span class="line">    <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">// 这里没有对阻塞队列进行判断</span></span><br><span class="line">        <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, acquires)) &#123;</span><br><span class="line">            setExclusiveOwnerThread(current);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (current == getExclusiveOwnerThread()) &#123;</span><br><span class="line">        <span class="keyword">int</span> nextc = c + acquires;</span><br><span class="line">        <span class="keyword">if</span> (nextc &lt; <span class="number">0</span>) <span class="comment">// overflow</span></span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> Error(<span class="string">&quot;Maximum lock count exceeded&quot;</span>);</span><br><span class="line">        setState(nextc);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注：公平锁和非公平锁之间存在两点不同：</p>
+<ul>
+<li>非公平锁在调用 lock 后，首先就会调用 CAS 进行一次抢锁，如果这个时候恰巧锁没有被占用，那么直接就获取到锁返回了。</li>
+<li>非公平锁在 CAS 失败后，和公平锁一样都会进入到 tryAcquire 方法，在 tryAcquire 方法中，如果发现锁这个时候被释放了（state == 0），非公平锁会直接 CAS 抢锁，但是公平锁会判断等待队列是否有线程处于等待状态，如果有则不去抢锁，乖乖排到后面。</li>
+</ul>
+<p>公平锁和非公平锁就这两点区别，<strong>如果这两次 CAS 都不成功，那么后面非公平锁和公平锁是一样的，都要进入到阻塞队列等待唤醒。</strong></p>
+<p>相对来说，<strong>非公平锁会有更好的性能</strong>，因为它的吞吐量比较大。当然，非公平锁让获取锁的时间变得更加不确定，可能会导致在阻塞队列中的线程长期处于饥饿状态。</p>
+</li>
+<li><p>共享（Share）</p>
+<p>多个线程可同时执行，如 Semaphore/CountDownLatch。Semaphore、CountDownLatCh、 CyclicBarrier、ReadWriteLock 我们都会在后面讲到。</p>
+<p>ReentrantReadWriteLock 可以看成是组合式，因为 ReentrantReadWriteLock 也就是读写锁允许多个线程同时对某一资源进行读。</p>
+<p>不同的自定义同步器争用共享资源的方式也不同。自定义同步器在实现时只需要实现共享资源 state 的获取与释放方式即可，至于具体线程等待队列的维护（如获取资源失败入队/唤醒出队等），AQS 已经在上层已经帮我们实现好了。</p>
+</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>AQS</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Guava RateLimiter 限流及源码解析</title>
+    <url>/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</url>
+    <content><![CDATA[<h4 id="一、RateLimiter-实现原理"><a href="#一、RateLimiter-实现原理" class="headerlink" title="一、RateLimiter 实现原理"></a>一、RateLimiter 实现原理</h4><p>Guava 有两种限流模式：</p>
+<ul>
+<li>稳定模式（SmoothBursty）:令牌生成速度恒定</li>
+<li>渐进模式（SmoothWarmingUp）:令牌生成速度缓慢提升知道维持到一个稳定值</li>
+</ul>
+<h4 id="二、RateLimiter-创建"><a href="#二、RateLimiter-创建" class="headerlink" title="二、RateLimiter 创建"></a>二、RateLimiter 创建</h4><p>通过 create 方法创建实例，实际上是调用 SmoothBursty 稳定模式创建的实例</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> RateLimiter <span class="title">create</span><span class="params">(<span class="keyword">double</span> permitsPerSecond)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> create(permitsPerSecond, SleepingStopwatch.createFromSystemTimer());</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> RateLimiter <span class="title">create</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, SleepingStopwatch stopwatch)</span> </span>&#123;</span><br><span class="line">  RateLimiter rateLimiter = <span class="keyword">new</span> SmoothBursty(stopwatch, <span class="number">1.0</span> <span class="comment">/* maxBurstSeconds */</span>);</span><br><span class="line">  rateLimiter.setRate(permitsPerSecond);</span><br><span class="line">  <span class="keyword">return</span> rateLimiter;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>SmoothBursty 中有两个构造参数：</p>
+<ul>
+<li>SleepingStopwatch:guava中的一个时钟类实例，会通过这个来计算时间及令牌</li>
+<li>maxBurstySeconds：未使用的令牌存活时间，默认是 1</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The work (permits) of how many seconds can be saved up if this RateLimiter is unused?</span></span><br><span class="line"><span class="comment"> * 在RateLimiter未使用时，最多存储几秒的令牌</span></span><br><span class="line"><span class="comment"> * */</span></span><br><span class="line"> <span class="keyword">final</span> <span class="keyword">double</span> maxBurstSeconds;</span><br><span class="line"> </span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The currently stored permits.</span></span><br><span class="line"><span class="comment"> * 当前存储令牌数</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> storedPermits;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The maximum number of stored permits.</span></span><br><span class="line"><span class="comment"> * 最大存储令牌数 = maxBurstSeconds * stableIntervalMicros(见下文)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> maxPermits;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The interval between two unit requests, at our stable rate. E.g., a stable rate of 5 permits</span></span><br><span class="line"><span class="comment"> * per second has a stable interval of 200ms.</span></span><br><span class="line"><span class="comment"> * 添加令牌时间间隔 = SECONDS.toMicros(1L) / permitsPerSecond；(1秒/每秒的令牌数)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">double</span> stableIntervalMicros;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The time when the next request (no matter its size) will be granted. After granting a request,</span></span><br><span class="line"><span class="comment"> * this is pushed further in the future. Large requests push this further than small requests.</span></span><br><span class="line"><span class="comment"> * 下一次请求可以获取令牌的起始时间</span></span><br><span class="line"><span class="comment"> * 由于RateLimiter允许预消费，上次请求预消费令牌后</span></span><br><span class="line"><span class="comment"> * 下次请求需要等待相应的时间到nextFreeTicketMicros时刻才可以获取令牌</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">long</span> nextFreeTicketMicros = <span class="number">0L</span>; <span class="comment">// could be either in the past or future</span></span><br></pre></td></tr></table></figure>
+
+<p>其中关键函数：</p>
+<ul>
+<li><p>setRate</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond)</span> </span>&#123;</span><br><span class="line">  checkArgument(</span><br><span class="line">      permitsPerSecond &gt; <span class="number">0.0</span> &amp;&amp; !Double.isNaN(permitsPerSecond), <span class="string">&quot;rate must be positive&quot;</span>);</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    doSetRate(permitsPerSecond, stopwatch.readMicros());</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>该方法可以设置令牌桶每秒生成令牌的数量，内部时间通过调用 SmoothRateLimiterd的 doSetRate 来实现</p>
+</li>
+<li><p>doSetRate</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">final</span> <span class="keyword">void</span> <span class="title">doSetRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">    resync(nowMicros);</span><br><span class="line">    <span class="keyword">double</span> stableIntervalMicros = SECONDS.toMicros(<span class="number">1L</span>) / permitsPerSecond;</span><br><span class="line">    <span class="keyword">this</span>.stableIntervalMicros = stableIntervalMicros;</span><br><span class="line">    doSetRate(permitsPerSecond, stableIntervalMicros);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里先通过调用<code>resync</code>生成令牌以及更新下一期令牌生成时间，然后更新stableIntervalMicros，最后又调用了<code>SmoothBursty</code>的<code>doSetRate</code></p>
+</li>
+<li><p>resync</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Updates &#123;<span class="doctag">@code</span> storedPermits&#125; and &#123;<span class="doctag">@code</span> nextFreeTicketMicros&#125; based on the current time.</span></span><br><span class="line"><span class="comment"> * 基于当前时间，更新下一次请求令牌的时间，以及当前存储的令牌(可以理解为生成令牌)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">resync</span><span class="params">(<span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// if nextFreeTicket is in the past, resync to now</span></span><br><span class="line">    <span class="keyword">if</span> (nowMicros &gt; nextFreeTicketMicros) &#123;</span><br><span class="line">      <span class="keyword">double</span> newPermits = (nowMicros - nextFreeTicketMicros) / coolDownIntervalMicros();</span><br><span class="line">      storedPermits = min(maxPermits, storedPermits + newPermits);</span><br><span class="line">      nextFreeTicketMicros = nowMicros;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ul>
+<p>根据令牌桶算法，桶中的令牌是持续生成存放的，有请求时需要先从桶中拿到令牌才能开始执行，谁来持续生成令牌存放呢？</p>
+<p>一种解法是，开启一个定时任务，由定时任务持续生成令牌。这样的问题在于会极大的消耗系统资源，如，某接口需要分别对每个用户做访问频率限制，假设系统中存在6W用户，则至多需要开启6W个定时任务来维持每个桶中的令牌数，这样的开销是巨大的。</p>
+<p>另一种解法则是延迟计算，如上<code>resync</code>函数。该函数会在每次获取令牌之前调用，其实现思路为，若当前时间晚于nextFreeTicketMicros，则计算该段时间内可以生成多少令牌，将生成的令牌加入令牌桶中并更新数据。这样一来，只需要在获取令牌时计算一次即可。</p>
+<ul>
+<li><p>SmoothBursty的 doSetRate</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">doSetRate</span><span class="params">(<span class="keyword">double</span> permitsPerSecond, <span class="keyword">double</span> stableIntervalMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">double</span> oldMaxPermits = <span class="keyword">this</span>.maxPermits;</span><br><span class="line">  maxPermits = maxBurstSeconds * permitsPerSecond;</span><br><span class="line">  <span class="keyword">if</span> (oldMaxPermits == Double.POSITIVE_INFINITY) &#123;</span><br><span class="line">    <span class="comment">// if we don&#x27;t special-case this, we would get storedPermits == NaN, below</span></span><br><span class="line">    <span class="comment">// Double.POSITIVE_INFINITY 代表无穷啊</span></span><br><span class="line">    storedPermits = maxPermits;</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    storedPermits =</span><br><span class="line">        (oldMaxPermits == <span class="number">0.0</span>)</span><br><span class="line">            ? <span class="number">0.0</span> <span class="comment">// initial state</span></span><br><span class="line">            : storedPermits * maxPermits / oldMaxPermits;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ul>
+<p>桶中可存放的最大令牌数由maxBurstSeconds计算而来，其含义为最大存储maxBurstSeconds秒生成的令牌。<br> 该参数的作用在于，可以更为灵活地控制流量。如，某些接口限制为300次/20秒，某些接口限制为50次/45秒等。也就是流量不局限于qps。</p>
+<h4 id="RateLimiter-其他常用接口"><a href="#RateLimiter-其他常用接口" class="headerlink" title="RateLimiter 其他常用接口"></a>RateLimiter 其他常用接口</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@CanIgnoreReturnValue</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">double</span> <span class="title">acquire</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> acquire(<span class="number">1</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* 获取令牌，返回阻塞的时间</span></span><br><span class="line"><span class="comment">**/</span></span><br><span class="line"><span class="meta">@CanIgnoreReturnValue</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">double</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> microsToWait = reserve(permits);</span><br><span class="line">  stopwatch.sleepMicrosUninterruptibly(microsToWait);</span><br><span class="line">  <span class="keyword">return</span> <span class="number">1.0</span> * microsToWait / SECONDS.toMicros(<span class="number">1L</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserve</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  checkPermits(permits);</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    <span class="keyword">return</span> reserveAndGetWaitLength(permits, stopwatch.readMicros());</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>acquire()主要用于获取 permits 个令牌，并计算需要等待的时间，进而挂起等待，并将该值返回，主要通过 reserve 返回需要等待的时间，reserve 中通过 reserveAndGetWaitLength 获取等待时间。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Reserves next ticket and returns the wait time that the caller must wait for.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> the required wait time, never negative</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserveAndGetWaitLength</span><span class="params">(<span class="keyword">int</span> permits, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> momentAvailable = reserveEarliestAvailable(permits, nowMicros);</span><br><span class="line">  <span class="keyword">return</span> max(momentAvailable - nowMicros, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>最后调用了 reserveEarliestAvailable</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">reserveEarliestAvailable</span><span class="params">(<span class="keyword">int</span> requiredPermits, <span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  resync(nowMicros);</span><br><span class="line">  <span class="keyword">long</span> returnValue = nextFreeTicketMicros;</span><br><span class="line">  <span class="keyword">double</span> storedPermitsToSpend = min(requiredPermits, <span class="keyword">this</span>.storedPermits);</span><br><span class="line">  <span class="keyword">double</span> freshPermits = requiredPermits - storedPermitsToSpend;</span><br><span class="line">  <span class="keyword">long</span> waitMicros =</span><br><span class="line">      storedPermitsToWaitTime(<span class="keyword">this</span>.storedPermits, storedPermitsToSpend)</span><br><span class="line">          + (<span class="keyword">long</span>) (freshPermits * stableIntervalMicros);</span><br><span class="line"></span><br><span class="line">  <span class="keyword">this</span>.nextFreeTicketMicros = LongMath.saturatedAdd(nextFreeTicketMicros, waitMicros);</span><br><span class="line">  <span class="keyword">this</span>.storedPermits -= storedPermitsToSpend;</span><br><span class="line">  <span class="keyword">return</span> returnValue;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>首先通过resync生成令牌以及同步nextFreeTicketMicros时间戳，freshPermits从令牌桶中获取令牌后还需要的令牌数量，通过storedPermitsToWaitTime计算出获取freshPermits还需要等待的时间，在稳定模式中，这里就是(long) (freshPermits * stableIntervalMicros) ，然后更新nextFreeTicketMicros以及storedPermits，这次获取令牌需要的等待到的时间点， reserveAndGetWaitLength返回需要等待的时间间隔。</p>
+<p>从<code>reserveEarliestAvailable</code>可以看出RateLimiter的预消费原理，以及获取令牌的等待时间时间原理（可以解释示例结果），当获取令牌不足时，并没有等待到令牌全部生成，而是<strong>更新了下次获取令牌时的nextFreeTicketMicros，从而影响的是下次获取令牌的等待时间。</strong></p>
+<p> <code>reserve</code>这里返回等待时间后，<code>acquire</code>通过调用<code>stopwatch.sleepMicrosUninterruptibly(microsToWait);</code>进行sleep操作，这里不同于Thread.sleep(), 这个函数的sleep是uninterruptibly的，内部实现：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">sleepUninterruptibly</span><span class="params">(<span class="keyword">long</span> sleepFor, TimeUnit unit)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//sleep 阻塞线程 内部通过Thread.sleep()</span></span><br><span class="line">  <span class="keyword">boolean</span> interrupted = <span class="keyword">false</span>;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="keyword">long</span> remainingNanos = unit.toNanos(sleepFor);</span><br><span class="line">    <span class="keyword">long</span> end = System.nanoTime() + remainingNanos;</span><br><span class="line">    <span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">      <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// TimeUnit.sleep() treats negative timeouts just like zero.</span></span><br><span class="line">        NANOSECONDS.sleep(remainingNanos);</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">      &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">        interrupted = <span class="keyword">true</span>;</span><br><span class="line">        remainingNanos = end - System.nanoTime();</span><br><span class="line">        <span class="comment">//如果被interrupt可以继续，更新sleep时间，循环继续sleep</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (interrupted) &#123;</span><br><span class="line">      Thread.currentThread().interrupt();</span><br><span class="line">      <span class="comment">//如果被打断过，sleep过后再真正中断线程</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>sleep 之后，<code>acquire</code>返回 sleep的时间，阻塞结束，获得到令牌。</p>
+<p><code>tryAcquire</code>函数可以尝试在timeout时间内获取令牌，如果可以则挂起等待相应时间并返回true，否则立即返回false<br> <code>canAcquire</code>用于判断timeout时间内是否可以获取令牌，通过判断<strong>当前时间+超时时间</strong>是否大于nextFreeTicketMicros 来决定是否能够拿到足够的令牌数，如果可以获取到，则过程同acquire，线程sleep等待，如果通过<code>canAcquire</code>在此超时时间内不能获取到令牌，则可以快速返回，不需要等待timeout后才知道能否获取到令牌。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> permits)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> tryAcquire(permits, <span class="number">0</span>, MICROSECONDS);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">()</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> tryAcquire(<span class="number">1</span>, <span class="number">0</span>, MICROSECONDS);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">tryAcquire</span><span class="params">(<span class="keyword">int</span> permits, <span class="keyword">long</span> timeout, TimeUnit unit)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">long</span> timeoutMicros = max(unit.toMicros(timeout), <span class="number">0</span>);</span><br><span class="line">  checkPermits(permits);</span><br><span class="line">  <span class="keyword">long</span> microsToWait;</span><br><span class="line">  <span class="keyword">synchronized</span> (mutex()) &#123;</span><br><span class="line">    <span class="keyword">long</span> nowMicros = stopwatch.readMicros();</span><br><span class="line">    <span class="keyword">if</span> (!canAcquire(nowMicros, timeoutMicros)) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      microsToWait = reserveAndGetWaitLength(permits, nowMicros);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  stopwatch.sleepMicrosUninterruptibly(microsToWait);</span><br><span class="line">  <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">canAcquire</span><span class="params">(<span class="keyword">long</span> nowMicros, <span class="keyword">long</span> timeoutMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> queryEarliestAvailable(nowMicros) - timeoutMicros &lt;= nowMicros;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">final</span> <span class="keyword">long</span> <span class="title">queryEarliestAvailable</span><span class="params">(<span class="keyword">long</span> nowMicros)</span> </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> nextFreeTicketMicros;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>高并发</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Java 内省机制介绍与实际运用</title>
+    <url>/2020/09/22/Java-%E5%86%85%E7%9C%81%E6%9C%BA%E5%88%B6%E4%BB%8B%E7%BB%8D%E4%B8%8E%E5%AE%9E%E9%99%85%E8%BF%90%E7%94%A8/</url>
+    <content><![CDATA[<p>一、内省机制的介绍</p>
+<p>内省是指计算机程序在运行时（Run time）检查对象（Object）类型的一种能力，通常也可以称作运行时类型检查。 不应该将内省和反射混淆。相对于内省，反射更进一步，是指计算机程序在运行时（Run time）可以访问、检测和修改它本身状态或行为的一种能力。</p>
+<p>Introspector是一个专门处理JavaBean的工具类，用来获取JavaBean里描述符号，常用的JavaBean的描述符号相关类有BeanInfo、PropertyDescriptor，MethodDescriptor、BeanDescriptor、EventSetDescriptor和ParameterDescriptor</p>
+<p>二、什么是JavaBean</p>
+<ol>
+<li><p>特殊的类，主要作用是传递数据信息，用于访问私有字段且方法具有一定规则要求（get/set）更加宽泛的指 Java对象，一般是指作为参数在方法之间或模块之间传递，，也可以称之为值对象 VO。</p>
+</li>
+<li><p>JavaBean的信息在Introspector里对应的概念是BeanInfo，它包含了JavaBean所有的Descriptor(描述符)，主要有PropertyDescriptor，MethodDescriptor（MethodDescriptor里面包含ParameterDescriptor）、BeanDescriptor和EventSetDescriptor。</p>
+</li>
+</ol>
+<p>三、属性 Field 和属性描述PropertiesDescriptor 的区别</p>
+<p>如果是严格的JavaBean(Field名称不重复，并且Field具备Setter和Getter方法)，它的PropertyDescriptor会通过解析Setter和Getter方法，合并解析结果，最终得到对应的PropertyDescriptor实例。所以PropertyDescriptor包含了属性名称和属性的Setter和Getter方法（如果存在的话）。</p>
+<p>四、内省与反射的区别</p>
+<ul>
+<li>Reflection：反射就是运行时获取一个类的所有信息，可以获取到类的所有定义的信息（包括成员变量，成员方法，构造器等）可以操纵类的字段、方法、构造器等部分。</li>
+<li>Introspector：内省基于反射实现，主要用于操作JavaBean，基于JavaBean的规范进行Bean信息描述符的解析，依据于类的Setter和Getter方法，可以获取到类的描述符。如果一个类中的属性没有Setter和Getter方法，无法使用Introspector。</li>
+</ul>
+<p>五、相关类及 API的使用</p>
+<ol>
+<li><p>Introspector</p>
+<p>该类类似于 BeanInfo 的静态工厂类，主要是提供静态方法通过 Class实例获取 BeanInfo，之后再获取其他描述符。</p>
+<ul>
+<li>通过Class实例获取到BeanInfo实例。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> BeanInfo <span class="title">getBeanInfo</span><span class="params">(Class&lt;?&gt; beanClass)</span></span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>BeanInfo</p>
+<p>BeanInfo是一个接口，具体实现是GenericBeanInfo，通过这个接口可以获取一个类的各种类型的描述符。主要方法：</p>
+<ul>
+<li>BeanDescriptor getBeanDescriptor()：获取JavaBean描述符。</li>
+<li>EventSetDescriptor[] getEventSetDescriptors()：获取JavaBean的所有的EventSetDescriptor。</li>
+<li>PropertyDescriptor[] getPropertyDescriptors()：获取JavaBean的所有的PropertyDescriptor。</li>
+<li>MethodDescriptor[] getMethodDescriptors()：获取JavaBean的所有的MethodDescriptor。</li>
+</ul>
+<p>这里要注意一点，通过BeanInfo#getPropertyDescriptors()获取到的PropertyDescriptor数组中，除了Bean属性的之外，还会带有一个属性名为class的PropertyDescriptor实例，它的来源是Class的getClass方法，如果不需要这个属性那么<strong>最好判断后过滤</strong>，这一点需要紧记，否则容易出现问题。</p>
+</li>
+<li><p>PropertyDescriptor</p>
+<p>PropertyDescriptor类表示JavaBean类通过存储器（Setter和Getter）导出一个属性，它应该是内省体系中最常见的类。主要方法：</p>
+<ul>
+<li>synchronized Class&lt;?&gt; getPropertyType()：获得属性的Class对象。</li>
+<li>synchronized Method getReadMethod()：获得用于读取属性值（Getter）的方法；</li>
+<li>synchronized Method getWriteMethod()：获得用于写入属性值（Setter）的方法。</li>
+<li>int hashCode()：获取对象的哈希值。</li>
+<li>synchronized void setReadMethod(Method readMethod)：设置用于读取属性值（Getter）的方法。</li>
+<li>synchronized void setWriteMethod(Method writeMethod)：设置用于写入属性值（Setter）的方法。</li>
+</ul>
+</li>
+<li><p>demo</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        BeanInfo beanInfo = Introspector.getBeanInfo(Person.class);</span><br><span class="line">        PropertyDescriptor[] propertyDescriptors = beanInfo.getPropertyDescriptors();</span><br><span class="line">        <span class="keyword">for</span> (PropertyDescriptor propertyDescriptor : propertyDescriptors) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!<span class="string">&quot;class&quot;</span>.equals(propertyDescriptor.getName())) &#123;</span><br><span class="line">                System.out.println(propertyDescriptor.getName());</span><br><span class="line">                System.out.println(propertyDescriptor.getWriteMethod().getName());</span><br><span class="line">                System.out.println(propertyDescriptor.getReadMethod().getName());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Person</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Long id;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> Integer age;</span><br><span class="line">        </span><br><span class="line">        <span class="function"><span class="keyword">public</span> Long <span class="title">getId</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> id;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setId</span><span class="params">(Long id)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.id = id;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> name;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Integer <span class="title">getAge</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> age;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setAge</span><span class="params">(Integer age)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.age = age;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p><strong>注</strong>：如果框架或者程序用到了JavaBeans Introspector，那么就相当于启用了一个<strong>系统级别的缓存</strong>，这个缓存会存放一些曾加载并分析过的Javabean的引用，当Web服务器关闭的时候，由于这个缓存中存放着这些Javabean的引用，所以垃圾回收器不能对Web容器中的JavaBean对象进行回收，导致内存越来越大。</p>
+<p>还有一点值得注意，<strong>清除Introspector缓存的唯一方式是刷新整个缓存缓冲区</strong>，这是<strong>因为JDK没法判断哪些是属于当前的应用的引用</strong>，所以刷新整个Introspector缓存缓冲区会导致把服务器的所有应用的Introspector缓存都删掉。Spring中提供的org.springframework.web.util.IntrospectorCleanupListener就是为了解决这个问题，它会在Web服务器停止的时候，清理一下这个Introspector缓存，使那些Javabean能被垃圾回收器正确回收。</p>
+<p>也就是说JDK的Introspector缓存管理是有一定缺陷的。但是如果使用在Spring体系则不会出现这种问题，因为Spring把Introspector缓存的管理移交到Spring自身而不是JDK（或者在Web容器销毁后完全不管），在加载并分析完所有类之后，会针对类加载器对Introspector缓存进行清理，避免内存泄漏的问题，详情可以看CachedIntrospectionResults和SpringBoot刷新上下文的方法AbstractApplicationContext#refresh()中finally代码块中存在清理缓存的方法AbstractApplicationContext#resetCommonCaches();。</p>
+<p>但是有很多程序和框架在使用了JavaBeans Introspector之后，都没有进行清理工作，比如Quartz、Struts等，这类操作会成为内存泄漏的隐患。</p>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java特性机制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>函数式编程</title>
+    <url>/2020/09/11/Java8%E5%87%BD%E6%95%B0%E5%BC%8F%E7%BC%96%E7%A8%8B/</url>
+    <content><![CDATA[<h3 id="函数式编程"><a href="#函数式编程" class="headerlink" title="函数式编程"></a>函数式编程</h3><p>所谓函数式编程就是将函数（一段操作）作为一个基本单位进行传递。以前的Java中参数只能是具体的变量，函数式编程打破这一规范，可以将整个方法作为一个参数传递。</p>
+<p>Java毕竟是面向对象的编程语言，你要传递的东西，必须是一个类或接口的对象或者一个基本类型变量，所以Java就定义了函数式接口，用来承载传递的函数。</p>
+<h3 id="函数式接口"><a href="#函数式接口" class="headerlink" title="函数式接口"></a>函数式接口</h3><p>函数式接口是在JDK1.8中提出的新概念，但对应的却是老结构，在以往版本的JDK中就已经存在这种结构，只是没有定义化。</p>
+<p>函数式接口就是只有一个抽象方法的接口。常用的函数式接口有Runnable、Comparator等。</p>
+<p>JDK1.8将这些接口取了一个统一的名称函数式接口，为了规范化，同时避免用户自定义函数式接口时错误的添加了其他的抽象方法，<br>而定义了一个注解：@FunctionalInterface，凡是由该注解标注的接口，统统为函数式接口，强制性的只有一个抽象方法。</p>
+<p>为了函数式接口的扩展，JDK对接口规范进行了进一步修改，接口中除了可以定义抽象方法之外，还能够定义静态方法，和默认方法，<br>而且这两种方法可以拥有自己的实现。其中静态方法一般作为工具方法，而默认方法是可以被继承重写的，<br>还能拥有一个默认的实现。除此之外，函数式接口中还可以重写Object中定义的方法。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 典型函数式接口</span></span><br><span class="line"><span class="meta">@FunctionalInterface</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 自定义函数式接口</span></span><br><span class="line"><span class="meta">@FunctionalInterface</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Itest</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">test</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="comment">// 重写Object中的方法</span></span><br><span class="line">    <span class="function"><span class="keyword">boolean</span> <span class="title">equals</span><span class="params">(Object obj)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">default</span> <span class="keyword">void</span> <span class="title">defaultMethod</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="comment">// 这是一个默认方法</span></span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">static</span> <span class="keyword">void</span> <span class="title">staticMethod</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="comment">// 这是一个静态方法</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Lambda表达式"><a href="#Lambda表达式" class="headerlink" title="Lambda表达式"></a>Lambda表达式</h3><p>Lambda表达式，简化了匿名内部类的操作方式。</p>
+<p>Lamnda表达式可以用在两个地方，一种是集合遍历，另一种就是替换匿名内部类。</p>
+<p>前者基于Iterable接口和Map接口中定义的forEach方法，后者则依据函数式接口。</p>
+<ul>
+<li>forEach方法<br>其实forEach方法是对函数式接口的有效利用，将遍历的书写流程简化，我们不用再写一大堆的for循环框架代码。<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class LanbdaTest &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        List&lt;String&gt; list &#x3D; Collections.EMPTY_LIST;</span><br><span class="line">        list.forEach(System.out::println);</span><br><span class="line">        Map&lt;String,Object&gt; map &#x3D; Collections.EMPTY_MAP;</span><br><span class="line">        map.forEach((k,v) -&gt; System.out.println(k + &quot;:&quot;+ v));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，即需要提供参数，<br>但是没有返回值的方法（函数或操作）。</li>
+</ul>
+<p>forEach方法最开始是在Iterable接口和Map接口中定义的，这是以默认方法的方式定义的，<br>分别以Consumer和BiConsumer作为入参。</p>
+<p>Iterable中的forEach方法：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public interface Iterable&lt;T&gt; &#123;</span><br><span class="line">    default void forEach(Consumer&lt;? super T&gt; action) &#123;</span><br><span class="line">        Objects.requireNonNull(action);</span><br><span class="line">        for (T t : this) &#123;</span><br><span class="line">            action.accept(t);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Iterable的实现类均可以通过重写该方法来自定义遍历的方式。</p>
+<p>比如以数组为底层结构的ArrayList、CopyOnWriteArrayList、CopyOnWriteArraySet等都是<br>以普通for循环来实现的遍历。而以链表为底层结构的LinkedList则没有重写forEach方法，<br>采用默认方法中简化的for循环，编译器会对其进行处理，将其采用Iterator进行遍历。</p>
+<ul>
+<li>Map中的forEach方法：<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public interface Map&lt;K,V&gt; &#123;</span><br><span class="line">    default void forEach(BiConsumer&lt;? super K, ? super V&gt; action) &#123;</span><br><span class="line">        Objects.requireNonNull(action);</span><br><span class="line">        for (Map.Entry&lt;K, V&gt; entry : entrySet()) &#123;</span><br><span class="line">            K k;</span><br><span class="line">            V v;</span><br><span class="line">            try &#123;</span><br><span class="line">                k &#x3D; entry.getKey();</span><br><span class="line">                v &#x3D; entry.getValue();</span><br><span class="line">            &#125; catch(IllegalStateException ise) &#123;</span><br><span class="line">                &#x2F;&#x2F; this usually means the entry is no longer in the map.</span><br><span class="line">                throw new ConcurrentModificationException(ise);</span><br><span class="line">            &#125;</span><br><span class="line">            action.accept(k, v);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+在常用的HashMap和TreeMap中都对该方法进行了重写，HashMap采用数组+链表（红黑树）的方式实现，<br>但是遍历的时候采用的就是数组+链表双重遍历，因为在HashMap中的红黑树同时还是一个双向链表。<br>而TreeMap中则是使用树结构的<strong>中序遍历</strong>方式实现的。</li>
+</ul>
+<h4 id="替换匿名内部类"><a href="#替换匿名内部类" class="headerlink" title="替换匿名内部类"></a>替换匿名内部类</h4><p>Lambda替换匿名内部类有一个前提，那就是这个匿名内部类的接口类型必须为函数式接口，<br>如果不是函数式接口，是无法使用Lambda替换的。</p>
+<p>常用的函数式接口为Runnable，使用匿名内部类方式如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class LambdaTest &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        Thread t &#x3D; new Thread(new Runnable() &#123;</span><br><span class="line">            @Override</span><br><span class="line">            public void run() &#123;</span><br><span class="line">                System.out.println(&quot;采用匿名内部类&quot;);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用Lambda替换如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class LambdaTest &#123;</span><br><span class="line">    public static void main(String[] args) &#123;</span><br><span class="line">        Thread t1 &#x3D; new Thread(()-&gt;System.out.println(&quot;采用Lambda方式&quot;));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Lambda表达式最大的作用其实就是替换匿名内部类，简化这种写法。</p>
+<h3 id="方法引用"><a href="#方法引用" class="headerlink" title="方法引用"></a>方法引用</h3><p>方法引用出现的目的是为了解决所需的操作已经存在的情况。</p>
+<p>当我们需要传递的操作已经存在，那就不必再费尽心思的再写一个出来了，直接使用方法引用来将已有的方法给它就行了。</p>
+<p>方法引用使用“::”双英文冒号组成的操作符来指定方法。</p>
+<p>这种形式参数不再是显式传递，采用方法引用之后，参数会自动传递，我们举个例子看看简单的原理：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LanbdaTest</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">getName</span><span class="params">(Supplier&lt;String&gt; supplier)</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> supplier.get();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Person person = <span class="keyword">new</span> Person(<span class="string">&quot;huahua&quot;</span>);</span><br><span class="line">        System.out.println(getName(person::getName));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Person</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">Person</span><span class="params">(String name)</span></span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>执行结果为：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">huahua</span><br></pre></td></tr></table></figure>
+
+<p>解析：<br>首先我们使用了方法引用：person::getName，Person类中有已定义好的获取name的方法，这里就可以直接引用该方法。<br>Supplier是供应者，可以无中生有，也就是不需要参数，产生一个返回值。</p>
+<p>Person中的getName方法，明显就符合Supplier的格式，没有参数，但是返回了一个结果，<br>所以这里就可以直接传递person::getName。</p>
+<p>方法引用的种类：</p>
+<ul>
+<li>类的构造器引用：ArrayList::new、String[]::new</li>
+<li>类的静态方法引用：String::valueOf、Integer::valueOf</li>
+<li>类的实例方法引用：String::length、Person::getName</li>
+<li>对象的实例方法引用：sring::length、person::getName<br>方法引用于Lambda可以算是平等，并列的关系，Lambda用于自定义操作，方法引用用于引用已存在的操作。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java8</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring事务之回滚机制</title>
+    <url>/2020/07/11/Spring%20%E4%BA%8B%E5%8A%A1%E4%B9%8B%E5%9B%9E%E6%BB%9A%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><ol>
+<li><p>事务回滚的机制是为了防止程序运行过程中出现异常，导致数据库产生脏数据。即当程序出现异常时，数据库的状态回滚到异常之前的状态；</p>
+</li>
+<li><p>异常的架构</p>
+</li>
+</ol>
+<p><img src="https://i.loli.net/2020/09/23/aWD4UvbJq6sSTEf.png" alt="exception.png"></p>
+<ol start="3">
+<li>checked 和 unchecked 异常</li>
+</ol>
+<p>Spring使用声明式事务处理，<strong>默认情况下，如果被注解的数据库操作方法中发生了unchecked异常</strong>，所有的数据库操作将rollback；<strong>如果发生的异常是checked异常，默认情况下数据库操作还是会提交的。</strong></p>
+<p><strong>checked异常：</strong> </p>
+<p>表示无效，不是程序中可以预测的。比如无效的用户输入，文件不存在，网络或者数据库链接错误。这些都是外在的原因，都不是程序内部可以控制的。 </p>
+<p>必须在代码中显式地处理。比如try-catch块处理，或者给所在的方法加上throws说明，将异常抛到调用栈的上一层。 </p>
+<p>继承自java.lang.Exception（java.lang.RuntimeException除外）。</p>
+<p><strong>unchecked异常：</strong> </p>
+<p>表示错误，程序的逻辑错误。是RuntimeException的子类，比如IllegalArgumentException, NullPointerException和IllegalStateException。 </p>
+<p>不需要在代码中显式地捕获unchecked异常做处理。 </p>
+<p>继承自java.lang.RuntimeException（而java.lang.RuntimeException继承自java.lang.Exception）。</p>
+<h3 id="Transactional的使用"><a href="#Transactional的使用" class="headerlink" title="@Transactional的使用"></a>@Transactional的使用</h3><ol>
+<li>相关概念</li>
+</ol>
+<ul>
+<li><p>Spring 的@Transactional 注解是基于动态代理的机制，提供一种事务管理方式；</p>
+</li>
+<li><p>一般使用是通过如下代码对方法或接口或类注释：</p>
+<p><strong>@Transactional(propagation=Propagation.NOT_SUPPORTED)</strong></p>
+<p>其中：</p>
+<p>Propagation支持7种不同的传播机制：</p>
+<p><strong>REQUIRED：</strong>如果存在一个事务，则支持当前事务。如果没有事务则开启一个新的事务。</p>
+<p><strong>SUPPORTS：</strong> 如果存在一个事务，支持当前事务。如果没有事务，则非事务的执行。但是对于事务同步的事务管理器，PROPAGATION_SUPPORTS与不使用事务有少许不同。</p>
+<p><strong>NOT_SUPPORTED：</strong>总是非事务地执行，并挂起任何存在的事务。</p>
+<p><strong>REQUIRESNEW：</strong>总是开启一个新的事务。如果一个事务已经存在，则将这个存在的事务挂起。</p>
+<p><strong>MANDATORY：</strong>如果已经存在一个事务，支持当前事务。如果没有一个活动的事务，则抛出异常。</p>
+<p><strong>NEVER：</strong>总是非事务地执行，如果存在一个活动事务，则抛出异常</p>
+<p><strong>NESTED：</strong>如果一个活动的事务存在，则运行在一个嵌套的事务中。如果没有活动事务，则按REQUIRED属性执行。</p>
+</li>
+<li><p>@Transactional 注解只能应用到 public 可见度的方法上。 如果你在 protected、private 或者 package-visible 的方法上使用 @Transactional 注解，它也不会报错， 但是这个被注解的方法将不会展示已配置的事务设置。</p>
+</li>
+</ul>
+<ol start="2">
+<li>回滚机制</li>
+</ol>
+<ul>
+<li><p>判断是否能够回滚的逻辑如下：<br> (1) 根据@Transactional注解中rollbackFor、rollbackForClassName、noRollbackForClassName配置的值，找到最符合ex的异常类型，如果符合的异常类型不是NoRollbackRuleAttribute，则可以执行回滚。<br> (2) 如果@Transactional没有配置，则默认使用RuntimeException和Error异常。</p>
+</li>
+<li><p>事务处理：</p>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());</span><br></pre></td></tr></table></figure>
+
+<p>交给事务管理器回滚事务。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">processRollback</span><span class="params">(DefaultTransactionStatus status)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            triggerBeforeCompletion(status);</span><br><span class="line">            <span class="comment">//如果有安全点，回滚至安全点</span></span><br><span class="line">            <span class="keyword">if</span> (status.hasSavepoint()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">                    logger.debug(<span class="string">&quot;Rolling back transaction to savepoint&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                status.rollbackToHeldSavepoint();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//如果是新事务，回滚事务</span></span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (status.isNewTransaction()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">                    logger.debug(<span class="string">&quot;Initiating transaction rollback&quot;</span>);</span><br><span class="line">                &#125;</span><br><span class="line">                doRollback(status);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="comment">//如果有事务但不是新事务，则把标记事务状态，等事务链执行完毕后统一回滚</span></span><br><span class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (status.hasTransaction()) &#123;</span><br><span class="line">                <span class="keyword">if</span> (status.isLocalRollbackOnly() || isGlobalRollbackOnParticipationFailure()) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">                        logger.debug(<span class="string">&quot;Participating transaction failed - marking existing transaction as rollback-only&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                    doSetRollbackOnly(status);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">                        logger.debug(<span class="string">&quot;Participating transaction failed - letting transaction originator decide on rollback&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">else</span> &#123;</span><br><span class="line">                logger.debug(<span class="string">&quot;Should roll back transaction but cannot - no transaction available&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> (RuntimeException ex) &#123;</span><br><span class="line">            triggerAfterCompletion(status, TransactionSynchronization.STATUS_UNKNOWN);</span><br><span class="line">            <span class="keyword">throw</span> ex;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">catch</span> (Error err) &#123;</span><br><span class="line">            triggerAfterCompletion(status, TransactionSynchronization.STATUS_UNKNOWN);</span><br><span class="line">            <span class="keyword">throw</span> err;</span><br><span class="line">        &#125;</span><br><span class="line">        triggerAfterCompletion(status, TransactionSynchronization.STATUS_ROLLED_BACK);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">finally</span> &#123;</span><br><span class="line">        <span class="comment">//清空记录的资源并将挂起的资源恢复</span></span><br><span class="line">        cleanupAfterCompletion(status);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>事务处理的逻辑总结起来如下：</p>
+<ol>
+<li><p>如果存在安全点，则回滚事务至安全点，这个主要是处理嵌套事务，回滚安全点的操作还是交给了数据库处理.</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rollbackToHeldSavepoint</span><span class="params">()</span> <span class="keyword">throws</span> TransactionException </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!hasSavepoint()) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> TransactionUsageException(</span><br><span class="line">                <span class="string">&quot;Cannot roll back to savepoint - no savepoint associated with current transaction&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    getSavepointManager().rollbackToSavepoint(getSavepoint());</span><br><span class="line">    getSavepointManager().releaseSavepoint(getSavepoint());</span><br><span class="line">    setSavepoint(<span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<ol start="2">
+<li><p>当前事务是一个新事务时，那么直接回滚，使用的是DataSourceTransactionManager事务管理器，所以调用DataSourceTransactionManager中的doRollback方法,直接调用数据库连接的回滚方法。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doRollback</span><span class="params">(DefaultTransactionStatus status)</span> </span>&#123;</span><br><span class="line">    DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();</span><br><span class="line">    Connection con = txObject.getConnectionHolder().getConnection();</span><br><span class="line">    <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">        logger.debug(<span class="string">&quot;Rolling back JDBC transaction on Connection [&quot;</span> + con + <span class="string">&quot;]&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        con.rollback();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">catch</span> (SQLException ex) &#123;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> TransactionSystemException(<span class="string">&quot;Could not roll back JDBC transaction&quot;</span>, ex);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<ol start="3">
+<li><p>当前存在事务，但又不是一个新的事务，只把事务的状态标记为read-only，等到事务链执行完毕后，统一回滚,调用DataSourceTransactionManager的doSetRollbackOnly</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doSetRollbackOnly</span><span class="params">(DefaultTransactionStatus status)</span> </span>&#123;</span><br><span class="line">    DataSourceTransactionObject txObject = (DataSourceTransactionObject) status.getTransaction();</span><br><span class="line">    <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">        logger.debug(<span class="string">&quot;Setting JDBC transaction [&quot;</span> + txObject.getConnectionHolder().getConnection() +</span><br><span class="line">                <span class="string">&quot;] rollback-only&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    txObject.setRollbackOnly();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<ol start="4">
+<li><p>清空记录的资源并将挂起的资源恢复</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">cleanupAfterCompletion</span><span class="params">(DefaultTransactionStatus status)</span> </span>&#123;</span><br><span class="line">    <span class="comment">//设置完成状态，避免重复调用</span></span><br><span class="line">    status.setCompleted();</span><br><span class="line">    <span class="comment">//如果是新的同步状态，则需要将绑定到当前线程的事务信息清理，传播行为中挂起事务的都会清理</span></span><br><span class="line">    <span class="keyword">if</span> (status.isNewSynchronization()) &#123;</span><br><span class="line">        TransactionSynchronizationManager.clear();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//如果是新事务，清理数据库连接</span></span><br><span class="line">    <span class="keyword">if</span> (status.isNewTransaction()) &#123;</span><br><span class="line">        doCleanupAfterCompletion(status.getTransaction());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//将挂起的事务恢复</span></span><br><span class="line">    <span class="keyword">if</span> (status.getSuspendedResources() != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">if</span> (status.isDebug()) &#123;</span><br><span class="line">            logger.debug(<span class="string">&quot;Resuming suspended transaction after completion of inner transaction&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        resume(status.getTransaction(), (SuspendedResourcesHolder) status.getSuspendedResources());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>事务机制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>java.lang.UnsupportedOperationException异常</title>
+    <url>/2020/10/05/java.lang.UnsupportedOperationException%E5%BC%82%E5%B8%B8/</url>
+    <content><![CDATA[<p>关于操作 List出现的java.lang.UnsupportedOperationException异常</p>
+<p>一 、出现该异常的场景</p>
+<ul>
+<li>需要对 List数据进行增删处理，即对 List 容器中的元素进行 add 或者 remove操作</li>
+<li>对 abstractList 的子类进行 add/remove 可能会出现这个异常</li>
+</ul>
+<p>二、异常的原因</p>
+<p>如果 List 的继承于 AbstractList 且没有实现 add()或 remove()时，对 list 对象中的元素进行增加或者删除就会出现这个异常。</p>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>异常</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>关于Spring的bean</title>
+    <url>/2020/09/12/%E5%85%B3%E4%BA%8ESpring%E7%9A%84bean/</url>
+    <content><![CDATA[<p>Spring中的bean默认都是单例的,Spring的单例是基于BeanFactory也就是Spring容器的，单例Bean在此容器内只有一个，Java的单例是基于 JVM，每个 JVM 内只有一个实例。</p>
+<p>一.bean的作用域</p>
+<p>创建一个bean定义，其实质是用该bean定义对应的类来创建真正实例的“配方”。<br>把bean定义看成一个配方很有意义，它与class很类似，只根据一张“处方”就可以创建多个实例。<br>不仅可以控制注入到对象中的各种依赖和配置值，还可以控制该对象的作用域。<br>这样可以灵活选择所建对象的作用域，<br>而不必在Java Class级定义作用域。Spring Framework支持五种作用域，分别阐述如下表。</p>
+<p>五种作用域中，request、session 和 global session 三种作用域仅在基于web的应用中使用，只能用在基于 web 的 Spring ApplicationContext 环境。</p>
+<p>1 . <strong>singleton——唯一 bean 实例</strong></p>
+<p>当一个 bean 的作用域为 singleton，那么Spring IoC容器中只会存在一个共享的 bean 实例，并且所有对 bean 的请求，只要 id 与该 bean 定义相匹配，则只会返回bean的同一实例。 singleton 是单例类型(对应于单例模式)，就是在创建起容器时就同时自动创建了一个bean的对象，不管你是否使用，但我们可以指定Bean节点的 lazy-init=”true” 来延迟初始化bean，这时候，只有在第一次获取bean时才会初始化bean，即第一次请求该bean时才初始化。 每次获取到的对象都是同一个对象。注意，singleton 作用域是Spring中的缺省作用域。要在XML中将 bean 定义成 singleton ，可以这样配置：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;ServiceImpl&quot; class&#x3D;&quot;cn.csdn.service.ServiceImpl&quot; scope&#x3D;&quot;singleton&quot;&gt;</span><br></pre></td></tr></table></figure>
+<p>也可以通过 @Scope 注解（它可以显示指定bean的作用范围。）的方式</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">@Service</span><br><span class="line">@Scope(&quot;singleton&quot;)</span><br><span class="line">public class ServiceImpl&#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>2 . <strong>prototype——每次请求都会创建一个新的 bean 实例</strong></p>
+<p>当一个bean的作用域为 prototype，表示一个 bean 定义对应多个对象实例。<br>prototype 作用域的 bean 会导致在每次对该 bean 请求（将其注入到另一个 bean 中，或者以程序的方式调用容器的 getBean() 方法<strong>）<br>时都会创建一个新的 bean 实例。prototype 是原型类型，<br>它在我们创建容器的时候并没有实例化，而是当我们获取bean的时候才会去创建一个对象，而<br>**且我们每次获取到的对象都不是同一个对象。根据经验，对有状态的 bean 应该使用 prototype 作用域，<br>而对无状态的 bean 则应该使用 singleton 作用域。</strong> 在 XML 中将 bean 定义成 prototype ，可以这样配置：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;account&quot; class&#x3D;&quot;com.foo.DefaultAccount&quot; scope&#x3D;&quot;prototype&quot;&#x2F;&gt;  </span><br><span class="line"> 或者</span><br><span class="line">&lt;bean id&#x3D;&quot;account&quot; class&#x3D;&quot;com.foo.DefaultAccount&quot; singleton&#x3D;&quot;false&quot;&#x2F;&gt; </span><br></pre></td></tr></table></figure>
+<p>注解方式:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">@Service</span><br><span class="line">@Scope(&quot;prototype&quot;)</span><br><span class="line">public class ServiceImpl&#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>request——每一次HTTP请求都会产生一个新的bean，该bean仅在当前HTTP request内有效<br>request只适用于Web程序，每一次 HTTP 请求都会产生一个新的bean，同时该bean仅在当前HTTP request内有效，<br>当请求结束后，该对象的生命周期即告结束。 在 XML 中将 bean 定义成 request ，可以这样配置：<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;loginAction&quot; class&#x3D;cn.csdn.LoginAction&quot; scope&#x3D;&quot;request&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure></li>
+<li>session——每一次HTTP请求都会产生一个新的 bean，该bean仅在当前 HTTP session 内有效<br>session只适用于Web程序，session 作用域表示该针对每一次 HTTP 请求都会产生一个新的 bean，<br>同时该 bean 仅在当前 HTTP session 内有效.<br>与request作用域一样，可以根据需要放心的更改所创建实例的内部状态，<br>而别的 HTTP session 中根据 userPreferences 创建的实例，<br>将不会看到这些特定于某个 HTTP session 的状态变化。当HTTP session最终被废弃的时候，<br>在该HTTP session作用域内的bean也会被废弃掉。<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;userPreferences&quot; class&#x3D;&quot;com.foo.UserPreferences&quot; scope&#x3D;&quot;session&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure></li>
+<li>globalSession<br>global session 作用域类似于标准的 HTTP session 作用域，<br>不过仅仅在基于 portlet 的 web 应用中才有意义。<br>Portlet 规范定义了全局 Session 的概念，它被所有构成某个 portlet web 应用的各种不同的 portle t所共享。<br>在global session 作用域中定义的 bean 被限定于全局portlet Session的生命周期范围内。<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;user&quot; class&#x3D;&quot;com.foo.Preferences &quot;scope&#x3D;&quot;globalSession&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>二.bean的生命周期</p>
+<p>实现<em>Aware接口 在Bean中使用Spring框架的一些对象**<br>有些时候我们需要在 Bean 的初始化中使用 Spring 框架自身的一些对象来执行一些操作，比如获取 ServletContext 的一些参数，获取 ApplicaitionContext 中的 BeanDefinition 的名字，获取 Bean 在容器中的名字等等。为了让 Bean 可以获取到框架自身的一些对象，Spring 提供了一组名为</em>Aware的接口。</p>
+<p>这些接口均继承于org.springframework.beans.factory.Aware标记接口，并提供一个将由 Bean 实现的set*方法,Spring通过基于setter的依赖注入方式使相应的对象可以被Bean使用。 网上说，这些接口是利用观察者模式实现的，类似于servlet listeners，目前还不明白，不过这也不在本文的讨论范围内。 介绍一些重要的Aware接口：</p>
+<ul>
+<li>ApplicationContextAware: 获得ApplicationContext对象,可以用来获取所有Bean definition的名字。</li>
+<li>BeanFactoryAware:获得BeanFactory对象，可以用来检测Bean的作用域。</li>
+<li>BeanNameAware:获得Bean在配置文件中定义的名字。</li>
+<li>ResourceLoaderAware:获得ResourceLoader对象，可以获得classpath中某个文件。</li>
+<li>ServletContextAware:在一个MVC应用中可以获取ServletContext对象，可以读取context中的参数。</li>
+<li>ServletConfigAware： 在一个MVC应用中可以获取ServletConfig对象，可以读取config中的参数。</li>
+</ul>
+<p>BeanPostProcessor<br>上面的*Aware接口是针对某个实现这些接口的Bean定制初始化的过程， Spring同样可以针对容器中的所有Bean，<br>或者某些Bean定制初始化过程，只需提供一个实现BeanPostProcessor接口的类即可。<br>该接口中包含两个方法，postProcessBeforeInitialization和postProcessAfterInitialization。<br>postProcessBeforeInitialization方法会在容器中的Bean初始化之前执行，postProcessAfterInitialization方法在容器中的Bean初始化之后执行。</p>
+<p>要将BeanPostProcessor的Bean像其他Bean一样定义在配置文件中</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean class&#x3D;&quot;com.giraffe.spring.service.CustomerBeanPostProcessor&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+
+<p>Spring Bean的生命周期是这样的：</p>
+<ul>
+<li>Bean容器找到配置文件中 Spring Bean 的定义。</li>
+<li>Bean容器利用Java Reflection API创建一个Bean的实例。</li>
+<li>如果涉及到一些属性值 利用set方法设置一些属性值。</li>
+<li>如果Bean实现了BeanNameAware接口，调用setBeanName()方法，传入Bean的名字。</li>
+<li>如果Bean实现了BeanClassLoaderAware接口，调用setBeanClassLoader()方法，传入ClassLoader对象的实例。</li>
+<li>如果Bean实现了BeanFactoryAware接口，调用setBeanClassLoader()方法，传入ClassLoader对象的实例。</li>
+<li>与上面的类似，如果实现了其他*Aware接口，就调用相应的方法。</li>
+<li>如果有和加载这个Bean的Spring容器相关的BeanPostProcessor对象，执行postProcessBeforeInitialization()方法</li>
+<li>如果Bean实现了InitializingBean接口，执行afterPropertiesSet()方法。</li>
+<li>如果Bean在配置文件中的定义包含init-method属性，执行指定的方法。</li>
+<li>如果有和加载这个Bean的Spring容器相关的BeanPostProcessor对象，执行postProcessAfterInitialization()方法</li>
+<li>当要销毁Bean的时候，如果Bean实现了DisposableBean接口，执行destroy()方法。</li>
+<li>当要销毁Bean的时候，如果Bean在配置文件中的定义包含destroy-method属性，执行指定的方法。</li>
+</ul>
+<p>图:<br><img src="../spring/img/SpringBean.png"><br>或:<br><img src="../spring/img/SpringBean2.png"></p>
+<p>其实很多时候我们并不会真的去实现上面说描述的那些接口，那么下面我们就除去那些接口，针对bean的单例和非单例来描述下bean的生命周期：</p>
+<p><strong>单例管理的对象</strong><br>当scope=”singleton”，即默认情况下，会在启动容器时（即实例化容器时）时实例化。<br>但我们可以指定Bean节点的lazy-init=”true”来延迟初始化bean，<br>这时候，只有在第一次获取bean时才会初始化bean，即第一次请求该bean时才初始化。<br>如下配置：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;ServiceImpl&quot; class&#x3D;&quot;cn.csdn.service.ServiceImpl&quot; lazy-init&#x3D;&quot;true&quot;&#x2F;&gt;  </span><br></pre></td></tr></table></figure>
+<p>如果想对所有的默认单例bean都应用延迟初始化，可以在根节点beans设置default-lazy-init属性为true，如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;beans default-lazy-init&#x3D;&quot;true&quot; …&gt;</span><br></pre></td></tr></table></figure>
+<p>默认情况下，Spring 在读取 xml 文件的时候，就会创建对象。在创建对象的时候先调用构造器，然后调用 init-method 属性值中所指定的方法。对象在被销毁的时候，会调用 destroy-method 属性值中所指定的方法（例如调用Container.destroy()方法的时候）。</p>
+<p><strong>非单例管理的对象</strong><br>当scope=”prototype”时，容器也会延迟初始化 bean，Spring 读取xml 文件的时候，<br>并不会立刻创建对象，而是在第一次请求该 bean 时才初始化（如调用getBean方法时）。<br>在第一次请求每一个 prototype 的bean 时，Spring容器都会调用其构造器创建这个对象，<br>然后调用init-method属性值中所指定的方法。<br>对象销毁的时候，Spring 容器不会帮我们调用任何方法，因为是非单例，<br>这个类型的对象有很多个，Spring容器一旦把这个对象交给你之后，就不再管理这个对象了。</p>
+<p>为了测试prototype bean的生命周期life.xml配置如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&lt;bean id&#x3D;&quot;life_prototype&quot; class&#x3D;&quot;com.bean.LifeBean&quot; scope&#x3D;&quot;prototype&quot; init-method&#x3D;&quot;init&quot; destroy-method&#x3D;&quot;destory&quot;&#x2F;&gt;</span><br></pre></td></tr></table></figure>
+<p>测试程序：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class LifeTest &#123;</span><br><span class="line">    @Test </span><br><span class="line">    public void test() &#123;</span><br><span class="line">        AbstractApplicationContext container &#x3D; new ClassPathXmlApplicationContext(&quot;life.xml&quot;);</span><br><span class="line">        LifeBean life1 &#x3D; (LifeBean)container.getBean(&quot;life_singleton&quot;);</span><br><span class="line">        System.out.println(life1);</span><br><span class="line"></span><br><span class="line">        LifeBean life3 &#x3D; (LifeBean)container.getBean(&quot;life_prototype&quot;);</span><br><span class="line">        System.out.println(life3);</span><br><span class="line">        container.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>运行结果：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">LifeBean()构造函数</span><br><span class="line">this is init of lifeBean</span><br><span class="line">com.bean.LifeBean@573f2bb1</span><br><span class="line">LifeBean()构造函数</span><br><span class="line">this is init of lifeBean</span><br><span class="line">com.bean.LifeBean@5ae9a829</span><br><span class="line">……</span><br><span class="line">this is destory of lifeBean com.bean.LifeBean@573f2bb1</span><br></pre></td></tr></table></figure>
+
+<p>可以发现，对于作用域为 prototype 的 bean ，其destroy方法并没有被调用。<br>如果 bean 的 scope 设为prototype时，当容器关闭时，destroy 方法不会被调用。<br>对于 prototype 作用域的 bean，有一点非常重要，那就是 Spring不能对一个 prototype bean 的整个生命周期负责：<br>容器在初始化、配置、装饰或者是装配完一个prototype实例后，将它交给客户端，随后就对该prototype实例不闻不问了。<br>不管何种作用域，容器都会调用所有对象的初始化生命周期回调方法。<br>但对prototype而言，任何配置好的析构生命周期回调方法都将不会被调用。清除prototype作用域的对象并释放任何prototype bean所持有的昂贵资源，<br>都是客户端代码的职责（让Spring容器释放被prototype作用域bean占用资源的一种可行方式是，通过使用bean的后置处理器，<br>该处理器持有要被清除的bean的引用）。谈及prototype作用域的bean时，<br>在某些方面你可以将Spring容器的角色看作是Java new操作的替代者，任何迟于该时间点的生命周期事宜都得交由客户端来处理。</p>
+<p>Spring 容器可以管理 singleton 作用域下 bean 的生命周期，在此作用域下，Spring 能够精确地知道bean何时被创建，何时初始化完成，以及何时被销毁。<br>而对于 prototype 作用域的bean，Spring只负责创建，当容器创建了 bean 的实例后，bean 的实例就交给了客户端的代码管理，<br>Spring容器将不再跟踪其生命周期，并且不会管理那些被配置成prototype作用域的bean的生命周期。</p>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>SpringBean</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>如何优雅的构建请求路径</title>
+    <url>/2020/09/16/%E5%A6%82%E4%BD%95%E4%BC%98%E9%9B%85%E7%9A%84%E6%9E%84%E5%BB%BA%E8%AF%B7%E6%B1%82%E8%B7%AF%E5%BE%84/</url>
+    <content><![CDATA[<p>UriComponentsBuilder 是 Spring 提供的一个 UriComponents 类的构建类,通过他可以方便的构建我们请求的 url</p>
+<h3 id="UriComponentsBuilder的主要属性"><a href="#UriComponentsBuilder的主要属性" class="headerlink" title="UriComponentsBuilder的主要属性"></a>UriComponentsBuilder的主要属性</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 协议：HTTP/HTTPS</span></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String scheme;</span><br><span class="line"><span class="comment">// 协议特定部分,用来处理一些特殊协议,http协议用不到</span></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String ssp;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String userInfo;</span><br><span class="line"><span class="comment">// 域名</span></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String host;</span><br><span class="line"><span class="comment">// 端口</span></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String port;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> UriComponentsBuilder.CompositePathComponentBuilder pathBuilder;</span><br><span class="line"><span class="comment">// 查询参数</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> MultiValueMap&lt;String, String&gt; queryParams = <span class="keyword">new</span> LinkedMultiValueMap();</span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> String fragment;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, Object&gt; uriVariables = <span class="keyword">new</span> HashMap(<span class="number">4</span>);</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">boolean</span> encodeTemplate;</span><br><span class="line"><span class="keyword">private</span> Charset charset;</span><br></pre></td></tr></table></figure>
+
+<h3 id="实例化静态方法"><a href="#实例化静态方法" class="headerlink" title="实例化静态方法"></a>实例化静态方法</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">newInstance</span><span class="params">()</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromPath</span><span class="params">(String path)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromUri</span><span class="params">(URI uri)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromUriString</span><span class="params">(String uri)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromHttpUrl</span><span class="params">(String httpUrl)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromHttpRequest</span><span class="params">(HttpRequest request)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> UriComponentsBuilder <span class="title">fromOriginHeader</span><span class="params">(String origin)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h3 id="构建示例"><a href="#构建示例" class="headerlink" title="构建示例:"></a>构建示例:</h3><ul>
+<li>构建完整的 url</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">UriComponents uriComponents = UriComponentsBuilder.newInstance()</span><br><span class="line">                .scheme(<span class="string">&quot;http&quot;</span>)</span><br><span class="line">                .host(<span class="string">&quot;www.github.com&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/he-You&quot;</span>)</span><br><span class="line">                .queryParam(<span class="string">&quot;query&quot;</span>,<span class="string">&quot;userName&quot;</span>)</span><br><span class="line">                .encode();</span><br><span class="line">        System.out.println(uriComponents.toString());</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>构建模板 url</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">UriComponents uriComponents = UriComponentsBuilder.newInstance()</span><br><span class="line">                .scheme(<span class="string">&quot;http&quot;</span>).host(<span class="string">&quot;www.github.com&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/he-You&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/&#123;project&#125;&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/category/&#123;booking&#125;&quot;</span>)</span><br><span class="line">                .build()</span><br><span class="line">                .expand(<span class="string">&quot;42&quot;</span>, <span class="string">&quot;21&quot;</span>)</span><br><span class="line">                .encode();</span><br><span class="line">        System.out.println(uriComponents.toString());</span><br></pre></td></tr></table></figure>
+
+<p>打印结果：<a href="http://github.com/he-You/42/category/21">http://github.com/he-You/42/category/21</a></p>
+<p>expand 有多个实现,支持传入可变参数和Map.</p>
+<ul>
+<li>构建编码的 url</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">UriComponents uriComponents = UriComponentsBuilder.newInstance()</span><br><span class="line">                .scheme(<span class="string">&quot;http&quot;</span>).host(<span class="string">&quot;www.github.com&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/he-You&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/&#123;project&#125;&quot;</span>)</span><br><span class="line">                .path(<span class="string">&quot;/category/&#123;booking&#125;&quot;</span>)</span><br><span class="line">                .build()</span><br><span class="line">                .expand(<span class="string">&quot;42&quot;</span>, <span class="string">&quot;21&quot;</span>)</span><br><span class="line">                .encode(<span class="string">&quot;UTF-8&quot;</span>);</span><br><span class="line">        System.out.println(uriComponents.toString());</span><br></pre></td></tr></table></figure>
+
+<h3 id="在-Servlet-环境中"><a href="#在-Servlet-环境中" class="headerlink" title="在 Servlet 环境中"></a>在 Servlet 环境中</h3><p>使用子类ServletUriComponentsBuilder提供的静态工厂方法可以从一个Servlet request中获取有用的URI信息：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">HttpServletRequest request = ...</span><br><span class="line"> </span><br><span class="line"><span class="comment">// Re-use host, scheme, port, path and query string</span></span><br><span class="line"><span class="comment">// Replace the &quot;accountId&quot; query param</span></span><br><span class="line"> </span><br><span class="line">ServletUriComponentsBuilder ucb = ServletUriComponentsBuilder.fromRequest(request)</span><br><span class="line">        .replaceQueryParam(<span class="string">&quot;accountId&quot;</span>, <span class="string">&quot;&#123;id&#125;&quot;</span>).build()</span><br><span class="line">        .expand(<span class="string">&quot;123&quot;</span>)</span><br><span class="line">        .encode();</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>SpringBoot</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>浅析volatile</title>
+    <url>/2020/09/10/%E6%B5%85%E6%9E%90volatile/</url>
+    <content><![CDATA[<h4 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h4><p>1 . 保证了不同线程对该变量操作的内存可见性;<br>2 . 禁止指令重排序</p>
+<p>JMM主要就是围绕着如何在并发过程中如何处理原子性、可见性和有序性这3个特征来建立的，<br>通过解决这三个问题，可以解除缓存不一致的问题。而volatile跟可见性和有序性都有关。</p>
+<p>1 . **原子性(Atomicity)**： Java中，对基本数据类型的读取和赋值操作是原子性操作，所谓原子性操作就是指这些操作是不可中断的，要做一定做完，要么就没有执行。<br>例:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">i &#x3D; 2;</span><br><span class="line">j &#x3D; i;</span><br><span class="line">i++;</span><br><span class="line">i &#x3D; i + 1；</span><br></pre></td></tr></table></figure>
+
+<p>上面4个操作中，<br>i=2是读取操作，必定是原子性操作，<br>j=i你以为是原子性操作，其实吧，分为两步，一是读取i的值，然后再赋值给j,这就是2步操作了，称不上原子操作，<br>i++和i = i + 1其实是等效的，读取i的值，加1，再写回主存，那就是3步操作了。</p>
+<p>所以上面的举例中，最后的值可能出现多种情况，就是因为满足不了原子性。<br>这么说来，只有简单的读取，赋值是原子操作，还只能是用数字赋值，用变量的话还多了一步读取变量值的操作。<br>有个例外是，虚拟机规范中允许对64位数据类型(long和double)，分为2次32为的操作来处理，但是最新JDK实现还是实现了原子操作的。<br>JMM只实现了基本的原子性，像上面i++那样的操作，<strong>必须借助于synchronized和Lock来保证整块代码的原子性了</strong>。<br>线程在释放锁之前，必然会把i的值刷回到主存的。</p>
+<p>2 . 可见性(Visibility)：<br>说到可见性，Java就是利用volatile来提供可见性的。<br>当一个变量被volatile修饰时，那么对它的修改会立刻刷新到主存，当其它线程需要读取该变量时，会去内存中读取新值。而普通变量则不能保证这一点。<br>其实通过synchronized和Lock也能够保证可见性，线程在释放锁之前，会把共享变量值都刷回主存，但是synchronized和Lock的开销都更大。</p>
+<p>3 . 有序性（Ordering）</p>
+<p>JMM是允许编译器和处理器对指令重排序的，但是规定了as-if-serial语义，即不管怎么重排序，程序的执行结果不能改变。比如下面的程序段：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">double pi &#x3D; 3.14;    &#x2F;&#x2F;A</span><br><span class="line">double r &#x3D; 1;        &#x2F;&#x2F;B</span><br><span class="line">double s&#x3D; pi * r * r;&#x2F;&#x2F;C</span><br></pre></td></tr></table></figure>
+<p>上面的语句，可以按照A-&gt;B-&gt;C执行，结果为3.14,但是也可以按照B-&gt;A-&gt;C的顺序执行，因为A、B是两句独立的语句，<br>而C则依赖于A、B，所以A、B可以重排序，但是C却不能排到A、B的前面。<br>JMM保证了重排序不会影响到单线程的执行，但是在多线程中却容易出问题。</p>
+<p>JMM具备一些先天的有序性,即不需要通过任何手段就可以保证的有序性，通常称为happens-before原则。<br>&lt;&lt;JSR-133：Java Memory Model and Thread Specification&gt;&gt;<br>定义了如下happens-before规则：</p>
+<ul>
+<li>程序顺序规则： 一个线程中的每个操作，happens-before于该线程中的任意后续操作</li>
+<li>监视器锁规则：对一个线程的解锁，happens-before于随后对这个线程的加锁</li>
+<li>volatile变量规则： 对一个volatile域的写，happens-before于后续对这个volatile域的读</li>
+<li>传递性：如果A happens-before B ,且 B happens-before C, 那么 A happens-before C</li>
+<li>start()规则： 如果线程A执行操作ThreadB_start()(启动线程B) ,  那么A线程的ThreadB_start()happens-before 于B中的任意操作</li>
+<li>join()原则： 如果A执行ThreadB.join()并且成功返回，那么线程B中的任意操作happens-before于线程A从ThreadB.join()操作成功返回。</li>
+<li>interrupt()原则： 对线程interrupt()方法的调用先行发生于被中断线程代码检测到中断事件的发生，可以通过Thread.interrupted()方法检测是否有中断发生</li>
+<li>finalize()原则：一个对象的初始化完成先行发生于它的finalize()方法的开始</li>
+</ul>
+<p>第1条规则程序顺序规则是说在一个线程里，所有的操作都是按顺序的，但是在JMM里其实只要执行结果一样，是允许重排序的，这边的happens-before强调的重点也是单线程执行结果的正确性，但是无法保证多线程也是如此。<br>第2条规则监视器规则其实也好理解，就是在加锁之前，确定这个锁之前已经被释放了，才能继续加锁。<br>第3条规则，就适用到所讨论的volatile，如果一个线程先去写一个变量，另外一个线程再去读，那么写入操作一定在读操作之前。<br>第4条规则，就是happens-before的传递性。</p>
+<p>从内存语义上来看</p>
+<p>当写一个volatile变量时，JMM会把该线程对应的本地内存中的共享变量刷新到主内存</p>
+<p>当读一个volatile变量时，JMM会把该线程对应的本地内存置为无效，线程接下来将从主内存中读取共享变量。</p>
+<h4 id="volatile的两点内存语义能保证可见性和有序性，但是能保证原子性吗？"><a href="#volatile的两点内存语义能保证可见性和有序性，但是能保证原子性吗？" class="headerlink" title="volatile的两点内存语义能保证可见性和有序性，但是能保证原子性吗？"></a>volatile的两点内存语义能保证可见性和有序性，但是能保证原子性吗？</h4><p>要想保证原子性，只能借助于synchronized,Lock以及并发包下的atomic的原子操作类了，即对基本数据类型的 自增（加1操作），自减（减1操作）、以及加法操作（加一个数），减法操作（减一个数）进行了封装，保证这些操作是原子性操作。</p>
+<h4 id="volatile底层的实现机制"><a href="#volatile底层的实现机制" class="headerlink" title="volatile底层的实现机制"></a>volatile底层的实现机制</h4><p>如果把加入volatile关键字的代码和未加入volatile关键字的代码都生成汇编代码，会发现加入volatile关键字的代码会多出一个lock前缀指令。<br>lock前缀指令实际相当于一个内存屏障，内存屏障提供了以下功能:</p>
+<p>1 . 重排序时不能把后面的指令重排序到内存屏障之前的位置<br>2 . 使得本CPU的Cache写入内存<br>3 . 写入动作也会引起别的CPU或者别的内核无效化其Cache，相当于让新写入的值对别的线程可见。</p>
+<p>举例:<br>状态量标记，就如上面对flag的标记：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestVolatile</span></span>&#123;  </span><br><span class="line">      <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">      <span class="keyword">volatile</span> bool flag = <span class="keyword">false</span>;</span><br><span class="line">      </span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">()</span></span>&#123;</span><br><span class="line">          a = <span class="number">2</span>;              <span class="comment">//1</span></span><br><span class="line">          flag = <span class="keyword">true</span>;        <span class="comment">//2</span></span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">multiply</span><span class="params">()</span></span>&#123;</span><br><span class="line">          <span class="keyword">if</span> (flag) &#123;         <span class="comment">//3</span></span><br><span class="line">              <span class="keyword">int</span> ret = a * a;<span class="comment">//4</span></span><br><span class="line">          &#125;</span><br><span class="line">      &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这种对变量的读写操作，标记为volatile可以保证修改对线程立刻可见。比synchronized,Lock有一定的效率提升。</p>
+<p>2.单例模式的实现，典型的双重检查锁定（DCL）</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(instance==<span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="keyword">if</span>(instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是一种懒汉的单例模式，使用时才创建对象，而且为了避免初始化操作的指令重排序，给instance加上了volatile。</p>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>同步</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>算法（一）基础数据类型</title>
+    <url>/2020/10/12/%E7%AE%97%E6%B3%95%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B/</url>
+    <content><![CDATA[<h3 id="基础数据类型"><a href="#基础数据类型" class="headerlink" title="基础数据类型"></a>基础数据类型</h3><h4 id="一、-背包"><a href="#一、-背包" class="headerlink" title="一、 背包"></a>一、 背包</h4><ol>
+<li><p>概念</p>
+<p>背包是一种不支持从中删除元素的集合数据类型，它的目的就是帮助用例收集元素并迭代遍历所有收集到的元素,且迭代的顺序与用例无关</p>
+</li>
+<li><p>demo</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Stats</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Bag&lt;Double&gt; numbers = <span class="keyword">new</span> Bag&lt;Double&gt;();</span><br><span class="line">        <span class="keyword">while</span>(!StdIn.isEmpty())&#123;</span><br><span class="line">            numbers.add(StdIn.readDouble());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">int</span> N = numbers.size();</span><br><span class="line">        <span class="keyword">double</span> sum = <span class="number">0.0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">double</span> x : numbers) &#123;</span><br><span class="line">            sum += x;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">double</span> std = Math.sqrt(sum/(N-<span class="number">1</span>))；</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<h4 id="二、队列"><a href="#二、队列" class="headerlink" title="二、队列"></a>二、队列</h4><ol>
+<li><p>概念</p>
+<p>队列是一种基于先进先出（FIFO）策略的集合类型，也是公平的策略，队列中保存元素的相对顺序。</p>
+</li>
+<li><p>demo</p>
+ <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span>[] readInts(String name)&#123;</span><br><span class="line">    In in = <span class="keyword">new</span> In(name);</span><br><span class="line">    Queue&lt;Integer&gt; q = <span class="keyword">new</span> Queue&lt;Integer&gt;();</span><br><span class="line">    <span class="keyword">while</span>(!in.isEmpty())&#123;</span><br><span class="line">        q.enqueue(in.readInt());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">int</span> N = q.size();</span><br><span class="line">    <span class="keyword">int</span>[] a = <span class="keyword">new</span> <span class="keyword">int</span>[N];</span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i&lt;N; i++) &#123;</span><br><span class="line">        a[i] = q.dequeue();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<h4 id="三、栈"><a href="#三、栈" class="headerlink" title="三、栈"></a>三、栈</h4><ol>
+<li><p>栈，又称之为下压栈，是一种基于后进先出（LIFO）策略的集合</p>
+</li>
+<li><p>demo</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Reverse</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span></span>&#123;</span><br><span class="line">        Stack&lt;Integer&gt; stack;</span><br><span class="line">        stack = <span class="keyword">new</span> Stack&lt;Integer&gt;();</span><br><span class="line">        <span class="keyword">while</span> (!StdIn.isEmpty())&#123;</span><br><span class="line">            stack.push(StdIn.readInt());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i: stack) &#123;</span><br><span class="line">            System.out.println(i);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定容栈：即容量固定的栈</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 定容字符串栈的抽象数据类型与实现</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> heyou(heyou_0423 @ 163.com)</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2020/9/26 22:20</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FixedCapacityStackOfStrings</span>&lt;<span class="title">Item</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Item[] a;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> N;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FixedCapacityStackOfStrings</span><span class="params">(<span class="keyword">int</span> cap)</span></span>&#123;</span><br><span class="line">        a = (Item[]) <span class="keyword">new</span> Object[cap];</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isEmpty</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> N==<span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">size</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> N;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">push</span><span class="params">(Item item)</span></span>&#123;</span><br><span class="line">        a[N+<span class="number">1</span>] = item;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Item <span class="title">pop</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> a[--N];</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">fnPrint</span><span class="params">(String exp)</span></span>&#123;</span><br><span class="line">        String[] split = exp.split(<span class="string">&quot; &quot;</span>);</span><br><span class="line">        FixedCapacityStackOfStrings f = <span class="keyword">new</span> FixedCapacityStackOfStrings(<span class="number">20</span>);</span><br><span class="line">        <span class="keyword">for</span> (String s:split) &#123;</span><br><span class="line">            <span class="comment">// 这里要多判断一下,f函数的成员变量n是否为零.如果为零,则说明数组里面没东西了,不能用pop()去取数据,否则则会报错</span></span><br><span class="line">            <span class="keyword">if</span>(s.equals(<span class="string">&quot;-&quot;</span>) &amp;&amp; !f.isEmpty())&#123;</span><br><span class="line">                <span class="comment">// 取数据的前提是:数组里面还有数据才可以</span></span><br><span class="line">                Object pop = f.pop();</span><br><span class="line">                System.out.println(pop);</span><br><span class="line">            &#125;<span class="keyword">else</span>&#123;</span><br><span class="line">                f.push(s);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(<span class="string">&quot;-----------------end-------------------&quot;</span>);</span><br><span class="line">        System.out.println(f.size()+<span class="string">&quot; left on stack &quot;</span>);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        String exp=<span class="string">&quot;to be or not to - be - - that - - - is&quot;</span>;</span><br><span class="line">        fnPrint(exp);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+
+</li>
+</ol>
+<h4 id="四、链表"><a href="#四、链表" class="headerlink" title="四、链表"></a>四、链表</h4><ol>
+<li><p>概念</p>
+<p>链表是一种递归的数据结构，它要么为空，要么指向下一个节点（node）的引用，该节点含有一个泛型的元素和一个指向另一条链表的引用。</p>
+</li>
+<li><p>内部类的定义</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span></span>&#123;</span><br><span class="line">    Item item;</span><br><span class="line">    Node next;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>链表的特性</p>
+<ul>
+<li>可以出来任意数据类型的数据</li>
+<li>所需要的空间总是和集合的大小成正比</li>
+<li>操作所需要的时间总是和集合大小无关</li>
+<li>不支持随机访问</li>
+</ul>
+</li>
+<li><p>下压栈的链表实现</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 下压栈的链表实现</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> heyou(heyou_0423 @ 163.com)</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2020/10/7 22:32</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Stack</span>&lt;<span class="title">Item</span>&gt; <span class="keyword">implements</span> <span class="title">Iterable</span>&lt;<span class="title">Item</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> Node first;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> N;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 定义链表节点</span></span><br><span class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span></span>&#123;</span><br><span class="line">        Item item;</span><br><span class="line">        Node next;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isEmpty</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> first == <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">size</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> N;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">push</span><span class="params">(Item item)</span></span>&#123;</span><br><span class="line">        Node oldFirst = first;</span><br><span class="line">        first = <span class="keyword">new</span> Node();</span><br><span class="line">        first.item = item;</span><br><span class="line">        first.next = oldFirst;</span><br><span class="line">        N++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Item <span class="title">pop</span><span class="params">()</span></span>&#123;</span><br><span class="line">        Item item = first.item;</span><br><span class="line">        first = first.next;</span><br><span class="line">        N--;</span><br><span class="line">        <span class="keyword">return</span> item;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Iterator&lt;Item&gt; <span class="title">iterator</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> ListIterator();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">ListIterator</span> <span class="keyword">implements</span> <span class="title">Iterator</span>&lt;<span class="title">Item</span>&gt;</span>&#123;</span><br><span class="line">        <span class="keyword">private</span> Node curretnt = first;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">hasNext</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> curretnt != <span class="keyword">null</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Item <span class="title">next</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            Item item = curretnt.item;</span><br><span class="line">            curretnt = curretnt.next;</span><br><span class="line">            <span class="keyword">return</span> item;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">remove</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure></li>
+</ol>
+]]></content>
+      <categories>
+        <category>算法</category>
+      </categories>
+      <tags>
+        <tag>数据类型</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>读写锁介绍与简单实用</title>
+    <url>/2020/07/30/%E8%AF%BB%E5%86%99%E9%94%81/</url>
+    <content><![CDATA[<h3 id="读写锁"><a href="#读写锁" class="headerlink" title="读写锁"></a>读写锁</h3><p><code>ReentrantLock</code>保证了只有一个线程可以执行临界区代码：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class Counter &#123;</span><br><span class="line">    private final Lock lock &#x3D; new ReentrantLock();</span><br><span class="line">    private int[] counts &#x3D; new int[10];</span><br><span class="line"></span><br><span class="line">    public void inc(int index) &#123;</span><br><span class="line">        lock.lock();</span><br><span class="line">        try &#123;</span><br><span class="line">            counts[index] +&#x3D; 1;</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public int[] get() &#123;</span><br><span class="line">        lock.lock();</span><br><span class="line">        try &#123;</span><br><span class="line">            return Arrays.copyOf(counts, counts.length);</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            lock.unlock();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>但是有些时候，这种保护有点过头。因为我们发现，任何时刻，只允许一个线程修改，也就是调用<code>inc()</code>方法是必须获取锁，但是，<code>get()</code>方法只读取数据，不修改数据，它实际上允许多个线程同时调用。</p>
+<p>实际上我们想要的是：允许多个线程同时读，但只要有一个线程在写，其他线程就必须等待：</p>
+<table>
+<thead>
+<tr>
+<th align="left"></th>
+<th align="left">读</th>
+<th align="left">写</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">读</td>
+<td align="left">允许</td>
+<td align="left">不允许</td>
+</tr>
+<tr>
+<td align="left">写</td>
+<td align="left">不允许</td>
+<td align="left">不允许</td>
+</tr>
+</tbody></table>
+<p>使用<code>ReadWriteLock</code>可以解决这个问题，它保证：</p>
+<ul>
+<li>只允许一个线程写入（其他线程既不能写入也不能读取）；</li>
+<li>没有写入时，多个线程允许同时读（提高性能）。</li>
+</ul>
+<p>用<code>ReadWriteLock</code>实现这个功能十分容易。我们需要创建一个<code>ReadWriteLock</code>实例，然后分别获取读锁和写锁：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class Counter &#123;</span><br><span class="line">    private final ReadWriteLock rwlock &#x3D; new ReentrantReadWriteLock();</span><br><span class="line">    private final Lock rlock &#x3D; rwlock.readLock();</span><br><span class="line">    private final Lock wlock &#x3D; rwlock.writeLock();</span><br><span class="line">    private int[] counts &#x3D; new int[10];</span><br><span class="line"></span><br><span class="line">    public void inc(int index) &#123;</span><br><span class="line">        wlock.lock(); &#x2F;&#x2F; 加写锁</span><br><span class="line">        try &#123;</span><br><span class="line">            counts[index] +&#x3D; 1;</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            wlock.unlock(); &#x2F;&#x2F; 释放写锁</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    public int[] get() &#123;</span><br><span class="line">        rlock.lock(); &#x2F;&#x2F; 加读锁</span><br><span class="line">        try &#123;</span><br><span class="line">            return Arrays.copyOf(counts, counts.length);</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            rlock.unlock(); &#x2F;&#x2F; 释放读锁</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>把读写操作分别用读锁和写锁来加锁，在读取时，多个线程可以同时获得读锁，这样就大大提高了并发读的执行效率。</p>
+<p>使用<code>ReadWriteLock</code>时，适用条件是同一个数据，有大量线程读取，但仅有少数线程修改。</p>
+<p>例如，一个论坛的帖子，回复可以看做写入操作，它是不频繁的，但是，浏览可以看做读取操作，是非常频繁的，这种情况就可以使用<code>ReadWriteLock</code>。</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>使用<code>ReadWriteLock</code>可以提高读取效率：</p>
+<ul>
+<li><code>ReadWriteLock</code>只允许一个线程写入；</li>
+<li><code>ReadWriteLock</code>允许多个线程在没有写入时同时读取；</li>
+<li><code>ReadWriteLock</code>适合读多写少的场景。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>锁</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>高效的读写队列：ConcurrentLinkedQueue 类</title>
+    <url>/2020/08/24/%E9%AB%98%E6%95%88%E7%9A%84%E8%AF%BB%E5%86%99%E9%98%9F%E5%88%97%EF%BC%9AConcurrentLinkedQueue%20%E7%B1%BB/</url>
+    <content><![CDATA[<h3 id="高效的读写队列：ConcurrentLinkedQueue-类"><a href="#高效的读写队列：ConcurrentLinkedQueue-类" class="headerlink" title="高效的读写队列：ConcurrentLinkedQueue 类"></a>高效的读写队列：ConcurrentLinkedQueue 类</h3><h4 id="一、核心节点Node"><a href="#一、核心节点Node" class="headerlink" title="一、核心节点Node"></a>一、核心节点Node</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span>&lt;<span class="title">E</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">volatile</span> E item;</span><br><span class="line">    <span class="keyword">volatile</span> Node&lt;E&gt; next;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>item 指的是目标元素，即存入列表的元素</li>
+<li>next指的是当前节点 Node 的下一个元素</li>
+</ul>
+<p>在对 Node 节点进行操作时，使用的是 CAS即比对赋值，这种操作是具有原子性。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">casItem</span><span class="params">(E cmp, E val)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> UNSAFE.compareAndSwapObject(<span class="keyword">this</span>, itemOffset, cmp, val);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lazySetNext</span><span class="params">(Node&lt;E&gt; val)</span></span>&#123;</span><br><span class="line">    UNSAFE.putOrderedObject(<span class="keyword">this</span>, nextOffset, val);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">boolean</span> <span class="title">casNext</span><span class="params">(Node&lt;E&gt; cmp, Node&lt;E&gt; val)</span></span>&#123;</span><br><span class="line">    <span class="keyword">return</span> UNSAFE.compareAndSwapObject(<span class="keyword">this</span>, nextOffset, cmp, val);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p>casItem()：表示设置当前 Node 的 item 的值，需要两个参数：</p>
+<ul>
+<li>cmp：期望值</li>
+<li>val:目标值</li>
+</ul>
+<p>当当前值等于cmp期望值时，会将当前值设置为目标值。</p>
+</li>
+<li><p>casNext：原理同上，只不过作用的对象是 next 字段。</p>
+</li>
+</ul>
+<h4 id="二、重要的字段head-头部-和-tail（尾部）"><a href="#二、重要的字段head-头部-和-tail（尾部）" class="headerlink" title="二、重要的字段head(头部) 和 tail（尾部）"></a>二、重要的字段head(头部) 和 tail（尾部）</h4><ul>
+<li>对于 head 来说，它<strong>永远不会为 null</strong>,并且通过 head 及 succ()后继方法一定能完整遍历整个链表。</li>
+<li>对于 tail ,它并不总是位于链表的尾部，因为tail 位置的更新不是及时的。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Inserts the specified element at the tail of this queue.</span></span><br><span class="line"><span class="comment">    * As the queue is unbounded, this method will never return &#123;<span class="doctag">@code</span> false&#125;.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@return</span> &#123;<span class="doctag">@code</span> true&#125; (as specified by &#123;<span class="doctag">@link</span> Queue#offer&#125;)</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@throws</span> NullPointerException if the specified element is null</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">offer</span><span class="params">(E e)</span> </span>&#123;</span><br><span class="line">       checkNotNull(e);</span><br><span class="line">       <span class="keyword">final</span> Node&lt;E&gt; newNode = <span class="keyword">new</span> Node&lt;E&gt;(e);</span><br><span class="line"></span><br><span class="line">       <span class="keyword">for</span> (Node&lt;E&gt; t = tail, p = t;;) &#123;</span><br><span class="line">           Node&lt;E&gt; q = p.next;</span><br><span class="line">           <span class="keyword">if</span> (q == <span class="keyword">null</span>) &#123;</span><br><span class="line">               <span class="comment">// p is last node</span></span><br><span class="line">               <span class="keyword">if</span> (p.casNext(<span class="keyword">null</span>, newNode)) &#123;</span><br><span class="line">                   <span class="comment">// Successful CAS is the linearization point</span></span><br><span class="line">                   <span class="comment">// for e to become an element of this queue,</span></span><br><span class="line">                   <span class="comment">// and for newNode to become &quot;live&quot;.</span></span><br><span class="line">                   <span class="keyword">if</span> (p != t) <span class="comment">// hop two nodes at a time</span></span><br><span class="line">                       casTail(t, newNode);  <span class="comment">// Failure is OK.</span></span><br><span class="line">                   <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">               &#125;</span><br><span class="line">               <span class="comment">// Lost CAS race to another thread; re-read next</span></span><br><span class="line">           &#125;</span><br><span class="line">           <span class="keyword">else</span> <span class="keyword">if</span> (p == q)</span><br><span class="line">               <span class="comment">// We have fallen off list.  If tail is unchanged, it</span></span><br><span class="line">               <span class="comment">// will also be off-list, in which case we need to</span></span><br><span class="line">               <span class="comment">// jump to head, from which all live nodes are always</span></span><br><span class="line">               <span class="comment">// reachable.  Else the new tail is a better bet.</span></span><br><span class="line">               p = (t != (t = tail)) ? t : head;</span><br><span class="line">           <span class="keyword">else</span></span><br><span class="line">               <span class="comment">// Check for tail updates after two hops.</span></span><br><span class="line">               p = (p != t &amp;&amp; t != (t = tail)) ? t : q;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>注：</p>
+<ul>
+<li>这个方法是没有进行锁操作的。线程的安全性完全由 CAS 操作和队列算法进行保障。</li>
+<li>方法的核心是 for 循环，这个循环没有出口，只能在尝试成功后才能进行返回。</li>
+</ul>
+<p>当第一次加入元素时，由于队列为空，p.next为 null。此时将 p 的 next 节点赋值为 newNode,即完成入队操作。此时 p==t 为 true,所以不会进行更新 tail 操作，而是一直在 for 循环内部操作，直到成功。在此过程中，tail 都不会更新位置的</p>
+<p>当试图对第二个元素进行入队操作时，由于 t 在 head的位置上，因此 p.next 指向时间的第一个元素，因此 q!=null 表示 q 不是最好的节点。而入队需要得到最后一个元素的位置，因此开始循环查找最后一个元素：</p>
+<p><code>p = (p != t &amp;&amp; t != (t = tail)) ? t : q;</code></p>
+<p>此时 p 实际上指向链表的第一个元素，而它的 next 为 null,故在第二个循环时，p 更新自己的 next，让它指向新加入的元素节点，如果成功在会更新 t 的所在位置，将 t 移动到链表的最后。</p>
+<p><strong>哨兵(sentinel)节点</strong>：p==q的情况。所谓哨兵节点即 next 指向自己的节点。当遇到哨兵节点，由于无法通过 next 获得后续的节点，因此很能返回 head 重新遍历。进一步找到链表的末尾。如果在执行的过程中 tail 发生改变，会尝试将 tail 作为链表的尾部避免重新查找 tail。</p>
+<p>对于<code> p = (t != (t = tail)) ? t : head;</code></p>
+<p>注：</p>
+<ul>
+<li>!=并不是原子操作</li>
+<li>在并发环境下 t!=t 是可能会成立的，如果两个 t 不相同表示 tail 被修改了，这时可以将新的 tail 作为链表的尾部，反之则返回 head,即从头部开始重新查找尾部。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>JUC</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Java 并发编程（一）基础概念介绍</title>
+    <url>/2020/12/16/Java%20%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><h4 id="1-时间片"><a href="#1-时间片" class="headerlink" title="1.时间片"></a>1.时间片</h4><p>时间片是 CPU 分配给各个线程的时间，CPU 是通过时间片分配算法来循环执行任务的。</p>
+<p><strong>Q：什么是上下文切换？</strong></p>
+<p>A：当当前任务所在的时间片结束时，切换之前会保持上一个任务的状态，以便下次切换回这个任务时可以加载这个任务的状态。所以任务<strong>从保存到再次加载的过程</strong>就是一次上下文切换</p>
+<p><strong>Q：上下文切换有什么影响？</strong></p>
+<p>A：上下文的切换是有开销的，主要体现在多线程环境下，<strong>上下文的切换会影响任务的执行耗时</strong>。所以，多线程不一定比单线程更快（多线程还有创建线程的开销）</p>
+<p><strong>Q：如何减少上下文的切换？</strong></p>
+<p>A：减少上下文切换的方法有：无锁并发编程 、CAS 算法、使用最少线程和使用协程</p>
+<ul>
+<li>无锁并发编程：在多线程环境中，尽量不使用锁，如将数据的 ID 用 Hash 算法取模分段，不同的线程处理不同段的数据。</li>
+<li>CAS 算法：Compare And Set 比较赋值，原子操作，不需要加锁</li>
+<li>使用最少线程：避免创建不需要的线程，避免大量线程处于等待状态</li>
+<li>协程：在单线程里实现多任务的任务调度，并在单线程里维持多个任务间的切换</li>
+</ul>
+<h3 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h3><p><strong>Q：什么是同步，什么是异步？</strong></p>
+<p>A：同步（Synchronous）:任务的结果需要内部执行完处理逻辑之后才能拿到；异步（Asynchronous）:更像消息的传递，调用立即返回，但是任务的执行在另一个线程中继续</p>
+<h3 id="并发与并行"><a href="#并发与并行" class="headerlink" title="并发与并行"></a>并发与并行</h3><p>Q：什么是并发，什么是并行？</p>
+<p>A：并发是指一段时间内多个任务交替进行，而并行是真正意义上的多个任务同时执行；单核 CPU 是不存在真实的并行的，毕竟一个 CPU一次只能执行一个指令，真正的并行存在于多核 CPU 的系统中</p>
+<h3 id="临界区"><a href="#临界区" class="headerlink" title="临界区"></a>临界区</h3><p>临界区是指一种公共资源或共享数据，可以被多个线程使用（读取），但是每次只能由一个线程使用（修改），一旦临界区资源被占用，其他线程只能等待。</p>
+<h3 id="线程与进程"><a href="#线程与进程" class="headerlink" title="线程与进程"></a>线程与进程</h3><h4 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h4><p><strong>线程</strong>与进程相似，但线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享同一块内存空间和一组系统资源，所以系统在产生一个线程，或是在各个线程之间作切换工作时，负担要比进程小得多，也正因为如此，线程也被称为轻量级进程。</p>
+<h4 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h4><p><strong>进程</strong>是程序的一次执行过程，是<strong>系统运行程序的基本单位</strong>，因此进程是动态的。系统运行一个程序即是一个进程从创建，运行到消亡的过程。简单来说，一个进程就是一个执行中的程序，它在计算机中一个指令接着一个指令地执行着，同时，每个进程还占有某些系统资源如 CPU 时间，内存空间，文件，输入输出设备的使用权等等。换句话说，当程序在执行时，将会被操作系统载入内存中。</p>
+<h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><p><strong>Q：什么是死锁？</strong></p>
+<p>A：两个线程互相等待对方释放锁</p>
+<p><strong>Q：死锁产生的原因是什么？</strong></p>
+<p>A：释放锁之前出现异常，没能执行释放锁的操作；亦或释放锁的操作出现异常，导致锁无法正常释放。</p>
+<p><strong>Q：如何避免死锁？</strong></p>
+<p>A：避免死锁的常见方式：</p>
+<ul>
+<li>避免一个线程获得多个锁</li>
+<li>避免一个线程在锁内同时占用多个临界区资源，尽量一个线程内只占用一个资源</li>
+<li>为锁定时，使用 Lock.tryLock(timeOut)替代内部锁机制</li>
+<li>对于数据库锁，加锁和解锁必须在同一个数据库连接里，否则会出现解锁失败的情况。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
+      </tags>
+  </entry>
+</search>
