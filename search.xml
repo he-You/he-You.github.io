@@ -746,4 +746,95 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>JUC</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Java 并发编程（二）volatile 关键字</title>
+    <url>/2020/12/20/Java%20%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%BA%8C%EF%BC%89volatile%20%E5%85%B3%E9%94%AE%E5%AD%97/</url>
+    <content><![CDATA[<h3 id="volatile-的定义与实现原理"><a href="#volatile-的定义与实现原理" class="headerlink" title="volatile 的定义与实现原理"></a>volatile 的定义与实现原理</h3><h4 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h4><blockquote>
+<p>Java 编程语言允许线程访问共享变量，为了确保共享变量能被准确和一致地更新，线程应该确保通过排他锁单独获得这个变量——Java 语言规范第 3 版</p>
+</blockquote>
+<p>而关键字 volatile 的作用就是单独获得这个变量，确保在 Java 线程内存模型中其他的线程读取变量值是一致的。</p>
+<h4 id="CPU相关术语"><a href="#CPU相关术语" class="headerlink" title="CPU相关术语"></a>CPU相关术语</h4><table>
+<thead>
+<tr>
+<th align="left">术语</th>
+<th>英文单词</th>
+<th>术语描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">内存屏障</td>
+<td>memory barriers</td>
+<td>一组处理器指令，用于实现对内存的顺序限制</td>
+</tr>
+<tr>
+<td align="left">缓冲行</td>
+<td>cache line</td>
+<td>CPU 告诉缓存中可以分配的最新存储单位。处理器填写缓存时会加载整个缓存行，现代 CPU需要执行几百次 CPU指令</td>
+</tr>
+<tr>
+<td align="left">原子操作</td>
+<td>atomic operations</td>
+<td>不可中断，不可分割的一个或者一系列操作</td>
+</tr>
+<tr>
+<td align="left">缓存行填充</td>
+<td>cache line fill</td>
+<td>当处理器识别到从内存中读取操作数是可缓存的，处理器读取整个高速缓存行到适当的缓存（L1,L2,L3的或所有的缓存行）</td>
+</tr>
+<tr>
+<td align="left">缓存命中</td>
+<td>cache hit</td>
+<td>如果进行高速缓存行填充操作的内存位置仍然是下次处理器访问的地址时，处理器会从缓存中读取操作数而不是从内存中读取</td>
+</tr>
+<tr>
+<td align="left">写命中</td>
+<td>write hit</td>
+<td>当处理器将操作数写回到一个内存缓存的区域时，它首先会检查这缓存的地址是否在缓存行中，如果存在一个有效的缓冲行，则处理器将这个操作数写回到缓存，而不是写到内存，这个操作被称为写命中。</td>
+</tr>
+<tr>
+<td align="left">写缺失</td>
+<td>write misses the cache</td>
+<td>一个有效的缓存行被写入到不存在的内存区域</td>
+</tr>
+</tbody></table>
+<h4 id="volatile-的特性"><a href="#volatile-的特性" class="headerlink" title="volatile 的特性"></a>volatile 的特性</h4><ul>
+<li>不同线程的内存可见性：当一个变量被volatile修饰时，那么对它的修改会立刻刷新到主存，当其它线程需要读取该变量时，会去内存中读取新值。</li>
+<li>禁止指令重排序，保证指令的有序性：如果一个线程先去写一个变量，另外一个线程再去读，那么写入操作一定在读操作之前。</li>
+</ul>
+<h4 id="volatile-特性的实现原理"><a href="#volatile-特性的实现原理" class="headerlink" title="volatile 特性的实现原理"></a>volatile 特性的实现原理</h4><h5 id="如何保证可见性"><a href="#如何保证可见性" class="headerlink" title="如何保证可见性"></a>如何保证可见性</h5><p>当 volatile 修饰的共享变量进行写操作时，代码转成汇编指令时会多出一行Lock 前缀的指令，lock前缀指令实际相当于一个内存屏障，该指令在多核 CPU中会有以下两个操作：</p>
+<ul>
+<li>将当前出来领取缓存行的数据写回到系统内存</li>
+<li>回写内存的操作会使其他 CPU 内缓存了该内存地址的数据无效</li>
+</ul>
+<p>另外，Lock 指令在重排序时不能使后面的指令重排序到内存屏障之前的位置 。</p>
+<p>在多核处理器下，为了保证各个处理器的缓存一致，就会实现缓存一致性协议，每个处理器通过嗅探在总线上传播的数据检查自己缓存的值是否已经过期，当处理器发现自己缓存行对应的内存地址被修改，就会将当前处理器的缓存行设置成无效状态，当前处理器对这个数据进行修改操作时，会重新从系统内存中把数据读到处理器缓存中。</p>
+<h5 id="如何保证有序性"><a href="#如何保证有序性" class="headerlink" title="如何保证有序性"></a>如何保证有序性</h5><p>JMM是允许编译器和处理器对指令重排序的，但是规定了as-if-serial语义，即不管怎么重排序，程序的执行结果不能改变。JMM具备一些先天的有序性,即不需要通过任何手段就可以保证的有序性，通常称为happens-before原则。</p>
+<p>JSR-133定义了如下happens-before规则：</p>
+<ul>
+<li>程序顺序规则： 一个线程中的每个操作，happens-before于该线程中的任意后续操作</li>
+<li>监视器锁规则：对一个线程的解锁，happens-before于随后对这个线程的加锁</li>
+<li><strong>volatile变量规则： 对一个volatile域的写，happens-before于后续对这个volatile域的读</strong></li>
+<li>传递性：如果A happens-before B ,且 B happens-before C, 那么 A happens-before C</li>
+<li>start()规则： 如果线程A执行操作ThreadB_start()(启动线程B) ,  那么A线程的ThreadB_start()happens-before 于B中的任意操作</li>
+<li>join()原则： 如果A执行ThreadB.join()并且成功返回，那么线程B中的任意操作happens-before于线程A从ThreadB.join()操作成功返回。</li>
+<li>interrupt()原则： 对线程interrupt()方法的调用先行发生于被中断线程代码检测到中断事件的发生，可以通过Thread.interrupted()方法检测是否有中断发生</li>
+<li>finalize()原则：一个对象的初始化完成先行发生于它的finalize()方法的开始</li>
+</ul>
+<p>第3条规则，就适用到所讨论的volatile，如果一个线程先去写一个变量，另外一个线程再去读，那么写入操作一定在读操作之前。</p>
+<p>举例:<br>1.状态量标记，就如上面对flag的标记：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestVolatile</span></span>&#123;  </span><br><span class="line">      <span class="keyword">int</span> a = <span class="number">0</span>;</span><br><span class="line">      <span class="keyword">volatile</span> bool flag = <span class="keyword">false</span>;</span><br><span class="line">      </span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">()</span></span>&#123;</span><br><span class="line">          a = <span class="number">2</span>;              <span class="comment">//1</span></span><br><span class="line">          flag = <span class="keyword">true</span>;        <span class="comment">//2</span></span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">multiply</span><span class="params">()</span></span>&#123;</span><br><span class="line">          <span class="keyword">if</span> (flag) &#123;         <span class="comment">//3</span></span><br><span class="line">              <span class="keyword">int</span> ret = a * a;<span class="comment">//4</span></span><br><span class="line">          &#125;</span><br><span class="line">      &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这种对变量的读写操作，标记为volatile可以保证修改对线程立刻可见。比synchronized,Lock有一定的效率提升。</p>
+<p>2.单例模式的实现，典型的双重检查锁定（DCL）</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    &#125;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(instance==<span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="keyword">if</span>(instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是一种懒汉的单例模式，使用时才创建对象，而且为了避免初始化操作的指令重排序，给instance加上了volatile。</p>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
+      </tags>
+  </entry>
 </search>
