@@ -1,0 +1,318 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Java 并发编程（三）Java 对象头与锁升级 | he-You</title><meta name="keywords" content="锁"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="对象头与对象布局对象头的定义 object header Common structure at the beginning of every GC-managed heap object. (Every oop points to an object header.) Includes fundamental information about the heap object’s layout,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Java 并发编程（三）Java 对象头与锁升级">
+<meta property="og:url" content="https://he-you.github.io/2020/12/25/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%89%EF%BC%89Java-%E5%AF%B9%E8%B1%A1%E5%A4%B4%E4%B8%8E%E9%94%81%E5%8D%87%E7%BA%A7/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="对象头与对象布局对象头的定义 object header Common structure at the beginning of every GC-managed heap object. (Every oop points to an object header.) Includes fundamental information about the heap object’s layout,">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg">
+<meta property="article:published_time" content="2020-12-25T15:49:07.972Z">
+<meta property="article:modified_time" content="2020-12-25T15:49:07.972Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="锁">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2020/12/25/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%89%EF%BC%89Java-%E5%AF%B9%E8%B1%A1%E5%A4%B4%E4%B8%8E%E9%94%81%E5%8D%87%E7%BA%A7/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2020-12-25 23:49:07'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">17</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">14</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">5</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Java 并发编程（三）Java 对象头与锁升级</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-12-25T15:49:07.972Z" title="发表于 2020-12-25 23:49:07">2020-12-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2020-12-25T15:49:07.972Z" title="更新于 2020-12-25 23:49:07">2020-12-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">Java并发编程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="对象头与对象布局"><a href="#对象头与对象布局" class="headerlink" title="对象头与对象布局"></a>对象头与对象布局</h1><h2 id="对象头的定义"><a href="#对象头的定义" class="headerlink" title="对象头的定义"></a>对象头的定义</h2><blockquote>
+<p><strong>object header</strong></p>
+<p>Common structure at the beginning of every GC-managed heap object. (Every oop points to an object header.) Includes fundamental information about the heap object’s layout, type, GC state, <strong>synchronization state</strong>, and identity hash code. Consists of two words. In arrays it is immediately followed by a length field. Note that both Java objects and VM-internal objects have a common object header format.</p>
+</blockquote>
+<p>以上来自 <a target="_blank" rel="noopener" href="http://openjdk.java.net/groups/hotspot/docs/HotSpotGlossary.html">OpenJDK 的文档</a></p>
+<p><strong>对象头</strong></p>
+<p>每个gc管理的堆对象开头的公共结构。(每个oop都指向一个对象标头。)包括堆对象的布局、类型、GC状态、同步状态和标识哈希码的基本信息。<strong>由两个词组成</strong>。在数组中，它后面紧跟着一个长度字段。注意，Java对象和vm内部对象都有一个通用的对象头格式。</p>
+<p>由文档可知：对象头是由 mark word 和 klass pointer即</p>
+<blockquote>
+<p><strong>mark word</strong></p>
+<p>The first word of every object header. Usually a set of bitfields including synchronization state and identity hash code. May also be a pointer (with characteristic low bit encoding) to synchronization related information. During GC, may contain GC state bits.</p>
+<p><strong>klass pointer</strong></p>
+<p>The second word of every object header. Points to another object (a metaobject) which describes the layout and behavior of the original object. For Java objects, the “klass” contains a C++ style “vtable”.</p>
+</blockquote>
+<p>综上：对象头由实例数据和对齐填充数据构成。其中：对齐填充数据（根据实际情况，当对象头和实例数据在JVM中占的内存空间为8的倍数时，不需要进行填充）</p>
+<p>注：（64位）JVM只能识别以8的倍数的对象，所以会根据实际情况对Java对象进行数据的填充，确保该对象的大小为8的倍数。（下文涉及对象头概念若无说明均为 64 位虚拟机环境）</p>
+<h2 id="Mark-Word的存储结构"><a href="#Mark-Word的存储结构" class="headerlink" title="Mark Word的存储结构"></a>Mark Word的存储结构</h2><table>
+<thead>
+<tr>
+<th></th>
+<th>25bit</th>
+<th>31bit</th>
+<th>1bit</th>
+<th>4bit</th>
+<th>1bit</th>
+<th>2bit</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>锁状态</td>
+<td></td>
+<td></td>
+<td>cms_free</td>
+<td>分代年龄</td>
+<td>偏向锁</td>
+<td>锁标志位</td>
+</tr>
+<tr>
+<td>无锁</td>
+<td>unused</td>
+<td>hashCode</td>
+<td></td>
+<td></td>
+<td>0</td>
+<td>01</td>
+</tr>
+<tr>
+<td>偏向锁</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>1</td>
+<td>01</td>
+</tr>
+</tbody></table>
+<p>对象头一共96bit=12byte,其中mark word占64bit 而klass pointer占32个bit;hotspot默认开启指针压缩，所以klass pointer占32个bit,如果没开启指针压缩的虚拟机 klass pointer占64个bit</p>
+<h2 id="如何查看对象布局"><a href="#如何查看对象布局" class="headerlink" title="如何查看对象布局"></a>如何查看对象布局</h2><ol>
+<li><p>引入依赖</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.openjdk.jol<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jol-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>0.9<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>查看</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> JavaObject objectHead = <span class="keyword">new</span> JavaObject();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(ClassLayout.parseInstance(objectHead).toPrintable());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>输出结果</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">object.JavaObject object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                               VALUE</span><br><span class="line">      0     4        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)</span><br><span class="line">      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4        (object header)                           05 c0 00 f8 (00000101 11000000 00000000 11111000) (-134168571)</span><br><span class="line">     12     4        (loss due to the next object alignment)</span><br><span class="line">Instance size: 16 bytes</span><br><span class="line">Space losses: 0 bytes internal + 4 bytes external &#x3D; 4 bytes total</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h1 id="锁升级与对比"><a href="#锁升级与对比" class="headerlink" title="锁升级与对比"></a>锁升级与对比</h1><h2 id="锁的类型"><a href="#锁的类型" class="headerlink" title="锁的类型"></a>锁的类型</h2><p>为了减少获得锁和释放锁时带来的性能消耗，JavaSE1.6引入了 4 种锁的状态，级别由低到高分别是：</p>
+<ul>
+<li>无锁状态</li>
+<li>偏向锁状态</li>
+<li>轻量级锁状态</li>
+<li>重量级锁状态</li>
+</ul>
+<p>注：锁的级别只可以升级，但是不能降级。目的是提高获得锁和释放锁的效率。</p>
+<ol>
+<li><p>偏向锁</p>
+<p>1.1 引入偏向锁的目的</p>
+<p>大多数情况锁不仅不存在多线程竞争，而且总是一个线程多次获得，为了让线程获得锁的代价更低而引入了偏向锁。</p>
+<p>1.2 偏向锁的加锁过程</p>
+<p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
+<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
+<p>1.3 偏向锁的撤销</p>
+<p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个全局安全点（这个时期没有正在执行的字节码）。</p>
+<p>首先会暂停拥有偏向锁的线程，检查该线程是否还处于活动状态，如果不是则将对象头设置为无锁状态；如果持有偏向锁的线程还在活动当中，持有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的 Mark Word 要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。</p>
+<p>1.4 偏向锁的关闭</p>
+<p>偏向锁在 JDK6和 JDK7 中是默认启用的，但是在应用程序启动之后才激活。如果要关闭延迟，可以用 JVM参数设置：-XX:BiasedLockingStartuoDelay=0;</p>
+<p>关闭偏向锁：**-XXUseBiasedLocking=false**</p>
+</li>
+<li><p>轻量级锁</p>
+<p>2.1 加锁</p>
+<p>线程在执行同步块之前，JVM 会在当前线程的栈帧中创建用于存储锁记录的空间，并将对象头中的 Mark Word 复制到锁记录中，官方称之为 <strong>Displaced Mark Word</strong>，然后线程尝试使用 CAS 将对象头中的 Mark Word替换为指向锁记录的指针。如果成功，当前线程获得锁，如果失败则表示其他线程竞争锁，当前线程会尝试使用自旋来获得锁。</p>
+<p>2.2 解锁</p>
+<p><strong>使用 CAS 操作将 Displaced Mark Word 替换回到对象头</strong>，如果成功则表示没有出现竞争，如果失败表示当前锁存在竞争，此时锁就会膨胀成重量级锁。</p>
+<p>一旦锁升级到重量级锁，此时锁就无法恢复到轻量级锁状态，处于这个状态（重量级锁）不会出现自旋，其他线程尝试获得锁时都会被阻塞，知道当前持有重量级锁的线程释放锁之后再去唤醒这些锁，继续进行锁的竞争。</p>
+</li>
+</ol>
+<h3 id="锁的优缺点比对"><a href="#锁的优缺点比对" class="headerlink" title="锁的优缺点比对"></a>锁的优缺点比对</h3><table>
+<thead>
+<tr>
+<th>锁</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏向锁</td>
+<td>加锁与解锁不需要额外的消耗，执行效率高</td>
+<td>线程之间存在竞争时，会带来撤销锁的消耗</td>
+<td>只适用于一个线程访问同步块场景</td>
+</tr>
+<tr>
+<td>轻量级锁</td>
+<td>竞争的线程不会阻塞，提高程序的响应时间</td>
+<td>存在一直自旋消耗 CPU的情况</td>
+<td>追求响应时间</td>
+</tr>
+<tr>
+<td>重量级锁</td>
+<td>线程竞争不会出现自旋情况</td>
+<td>线程阻塞，响应时间慢</td>
+<td>追求吞吐量，同步块执行速度快</td>
+</tr>
+</tbody></table>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2020/12/25/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%89%EF%BC%89Java-%E5%AF%B9%E8%B1%A1%E5%A4%B4%E4%B8%8E%E9%94%81%E5%8D%87%E7%BA%A7/">https://he-you.github.io/2020/12/25/Java-并发编程（三）Java-对象头与锁升级/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E9%94%81/">锁</a></div><div class="post_share"><div class="social-share" data-image="https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2020/12/21/synchronized%20%E7%9A%84%E4%BD%BF%E7%94%A8%E5%8F%8A%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/0081Kckwgy1glue6ws7dmj30u0190qhz.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Java 并发编程（二）synchronized 关键字</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2020/07/30/读写锁/" title="读写锁介绍与简单实用"><img class="cover" src="/img/article3.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2020-07-30</div><div class="title">读写锁介绍与简单实用</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E5%AF%B9%E8%B1%A1%E5%A4%B4%E4%B8%8E%E5%AF%B9%E8%B1%A1%E5%B8%83%E5%B1%80"><span class="toc-number">1.</span> <span class="toc-text">对象头与对象布局</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%B9%E8%B1%A1%E5%A4%B4%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="toc-number">1.1.</span> <span class="toc-text">对象头的定义</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Mark-Word%E7%9A%84%E5%AD%98%E5%82%A8%E7%BB%93%E6%9E%84"><span class="toc-number">1.2.</span> <span class="toc-text">Mark Word的存储结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%A6%82%E4%BD%95%E6%9F%A5%E7%9C%8B%E5%AF%B9%E8%B1%A1%E5%B8%83%E5%B1%80"><span class="toc-number">1.3.</span> <span class="toc-text">如何查看对象布局</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%94%81%E5%8D%87%E7%BA%A7%E4%B8%8E%E5%AF%B9%E6%AF%94"><span class="toc-number">2.</span> <span class="toc-text">锁升级与对比</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%94%81%E7%9A%84%E7%B1%BB%E5%9E%8B"><span class="toc-number">2.1.</span> <span class="toc-text">锁的类型</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%94%81%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9%E6%AF%94%E5%AF%B9"><span class="toc-number">2.1.1.</span> <span class="toc-text">锁的优缺点比对</span></a></li></ol></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
