@@ -1093,8 +1093,8 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <h2 id="JMM"><a href="#JMM" class="headerlink" title="JMM"></a><strong>JMM</strong></h2><p><strong>JMM(JavaMemoryModel)即 Java 内存模型</strong>，定义了线程和主内存之间的抽象关系：线程之间的共享变量存储在主内存中，每个线程都有一个私有的本地内存（LocalMemory）,<strong>本地内存存储了该线程读/写共享变量的副本</strong>。</p>
 <p>这里所说的变量指的是实例变量和类变量，不包含局部变量，因为<strong>局部变量是线程私有</strong>的，因此不存在竞争问题。线程对变量的所有的操作(读，取)都必须在工作内存中完成，而不能直接读写主内存中的变量。</p>
 <p>不同线程之间也不能直接访问对方工作内存中的变量，线程间变量的值的传递需要通过主内存中转来完成。</p>
-<h2 id="本地内存和主内存的关系："><a href="#本地内存和主内存的关系：" class="headerlink" title="本地内存和主内存的关系："></a><strong>本地内存和主内存的关系：</strong></h2><p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2k1tyuy5j31dq0timzz.jpg"></p>
-<h2 id="MESI（缓存一致性协议）"><a href="#MESI（缓存一致性协议）" class="headerlink" title="MESI（缓存一致性协议）"></a><strong>MESI（缓存一致性协议）</strong></h2><p>MESI 是指4中状态的首字母。每个Cache line有4个状态，可用2个bit表示</p>
+<h2 id="本地内存和主内存的关系"><a href="#本地内存和主内存的关系" class="headerlink" title="本地内存和主内存的关系"></a><strong>本地内存和主内存的关系</strong></h2><p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2k1tyuy5j31dq0timzz.jpg"></p>
+<h2 id="MESI（缓存一致性协议）"><a href="#MESI（缓存一致性协议）" class="headerlink" title="MESI（缓存一致性协议）"></a><strong>MESI（缓存一致性协议）</strong></h2><p><code>MESI</code>是众多缓存一致性协议中的一种，也在Intel系列中广泛使用的缓存一致性协议<br><code>缓存行（Cache line）</code>的状态有<code>Modified</code>、Exclusive、 <code>Share</code> 、<code>Invalid</code>，而MESI 命名正是以这4中状态的首字母来命名的。该协议要求在每个缓存行上维护两个状态位（可用2个bit表示），使得每个数据单位可能处于M、E、S和I这四种状态之一,各种状态含义如下</p>
 <table>
 <thead>
 <tr>
@@ -1105,26 +1105,27 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </thead>
 <tbody><tr>
 <td align="left">M 修改 (Modified)</td>
-<td align="left">该Cache line有效，数据被修改了，和内存中的数据不一致，数据只存在于本Cache中。</td>
-<td align="left">缓存行必须时刻监听所有试图读该缓存行相对就主存的操作，这种操作必须在缓存将该缓存行写回主存并将状态变成S（共享）状态之前被延迟执行。</td>
+<td align="left">表示缓存行数据被修改了，并且没有更新至主内存。处于这一状态的数据，只在本CPU中有缓存数据，而其他CPU中没有。简单的可理解为<strong>缓存行数据独占被修改且未同步</strong>。</td>
+<td align="left">一个处于<code>M</code>状态的缓存行，必须时刻监听所有<code>试图读取</code>该缓存行对应的主存地址的操作，如果监听到，则必须在此操作执行前把其缓存行中的<code>数据写回主内存</code></td>
 </tr>
 <tr>
 <td align="left">E 独享、互斥 (Exclusive)</td>
-<td align="left">该Cache line有效，数据和内存中的数据一致，数据只存在于本Cache中。</td>
-<td align="left">缓存行也必须监听其它缓存读主存中该缓存行的操作，一旦有这种操作，该缓存行需要变成S（共享）状态。</td>
+<td align="left">表示缓存行数据是独占的。处于这一状态的数据，只有在本CPU中有缓存，其它CPU中没有缓存该数据，且其数据没有修改与主内存中一致。简单的可理解为<strong>缓存行数据独占且未被修改</strong></td>
+<td align="left">一个处于<code>S</code>状态的缓存行，必须时刻监听使该缓存行<code>无效</code>或者<code>独享</code>该缓存行的请求，如果监听到，则必须把其缓存行状态设置为<code>I</code>。</td>
 </tr>
 <tr>
 <td align="left">S 共享 (Shared)</td>
-<td align="left">该Cache line有效，数据和内存中的数据一致，数据存在于很多Cache中。</td>
-<td align="left">缓存行也必须监听其它缓存使该缓存行无效或者独享该缓存行的请求，并将该缓存行变成无效（Invalid）。</td>
+<td align="left">表示缓存行数据是共享的。处于这一状态的数据在多个CPU中都有缓存，且与内存一致</td>
+<td align="left">一个处于<code>E</code>状态的缓存行，必须时刻监听其他试图<code>读取</code>该缓存行对应的主存地址的操作，如果监听到，则必须把其缓存行状态设置为S。</td>
 </tr>
 <tr>
 <td align="left">I 无效 (Invalid)</td>
-<td align="left">该Cache line无效。</td>
+<td align="left">表示缓存行数据是无效的。本CPU中的这份缓存已经无效。</td>
 <td align="left">无</td>
 </tr>
 </tbody></table>
-<p>当CPU写数据时，如果发现操作的变量是共享变量，即在其他CPU中也存在该变量的副本，会发出信号通知其他CPU将该变量的缓存行置为无效状态，因此当其他CPU需要读取这个变量时，发现自己缓存中缓存该变量的缓存行是无效的，那么它就会从内存重新读取。</p>
+<p>CPU除了在做内存数据传输的时候和总线交互 ，而且还会通过不停在嗅探总线上发生的数据交换，跟踪其他缓存在做什么。当一个缓存代表它所属的处理器去读写内存时，其它处理器都会得到通知，以此来使自己的<code>缓存保持同步</code>。只要某个处理器一写内存，其它处理器马上知道这块内存在它们的缓存段中已失效。</p>
+<p>MESI主要是靠在总线上传递消息,并对消息增加不同的监听，来保证一个线程对共享变量的更新，对其它处理器上运行的线程是可见。但是消息传递是要时间的，一个请求，多个响应，每次都会涉及到CPU的切换，对于CPU这么频繁的读取，消息传递产生的时间是一种致命的影响，会导致<strong>引起缓存一致性流量风暴：总线风暴</strong></p>
 <h2 id="嗅探"><a href="#嗅探" class="headerlink" title="嗅探"></a><strong>嗅探</strong></h2><p>每个处理器通过嗅探在总线上传播的数据来检查自己缓存的值是不是过期了，当处理器发现自己缓存行对应的内存地址被修改，就会将当前处理器的缓存行设置成无效状态，当处理器对这个数据进行修改操作的时候，会重新从系统内存中把数据读到处理器缓存里。</p>
 <h2 id="总线风暴"><a href="#总线风暴" class="headerlink" title="总线风暴"></a><strong>总线风暴</strong></h2><p>所谓 总线风暴就是 volatile 是基于 MESI 缓存一致性协议，需要不断从主内存嗅探和 循环CAS，过多无效的嗅探会导致总线带宽达到峰值。</p>
 <h2 id="总线事务"><a href="#总线事务" class="headerlink" title="总线事务"></a>总线事务</h2><p>每次处理器和内存之间的数据传递都是通过一系列步骤来完成的，这些步骤称之为总线事务（Bus Transaction），总线事务包括读事务（Read Transaction）和写事务（Write Transaction）。</p>
