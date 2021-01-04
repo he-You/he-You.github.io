@@ -1196,4 +1196,74 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>并发</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Java 并发编程（四）线程入门</title>
+    <url>/2021/01/04/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%9B%9B%EF%BC%89%E7%BA%BF%E7%A8%8B%E5%85%A5%E9%97%A8/</url>
+    <content><![CDATA[<h2 id="线程简介"><a href="#线程简介" class="headerlink" title="线程简介"></a>线程简介</h2><h3 id="什么是进程"><a href="#什么是进程" class="headerlink" title="什么是进程"></a>什么是进程</h3><p>进程（Process）是计算机系统资源分配和调度的基本单位，是操作系统结构的基础。进程是程序执行的基本执行实体；是线程的容器；</p>
+<h3 id="什么是线程"><a href="#什么是线程" class="headerlink" title="什么是线程"></a>什么是线程</h3><p>现代操作系统调度的最小单元，也被称为轻量级进程。每个线程都有自己的计数器，堆栈和局部变量等属性，并且可以访问共享的内存变量。</p>
+<h2 id="线程的生命周期"><a href="#线程的生命周期" class="headerlink" title="线程的生命周期"></a>线程的生命周期</h2><h3 id="线程的优先级"><a href="#线程的优先级" class="headerlink" title="线程的优先级"></a>线程的优先级</h3><p>线程的优先级是决定线程需要分配多少处理器资源的线程属性。在 Java 中通过整型变量 priority 来设置优先级:setPriority(int level)，默认是 5；优先级区间：1~10；</p>
+<h3 id="线程的状态"><a href="#线程的状态" class="headerlink" title="线程的状态"></a>线程的状态</h3><p>Java 线程在运行的生命周期中有 6 种不同的状态，在给定的一个时刻，线程只能处于一个状态。</p>
+<table>
+<thead>
+<tr>
+<th>状态名称</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NEW</td>
+<td>初始状态，线程被构建，但是还没调用 start()方法</td>
+</tr>
+<tr>
+<td>RUNNABLE</td>
+<td>运行状态，Java 线程将操作系统中的就绪和运行两种状态统称“运行中”</td>
+</tr>
+<tr>
+<td>BLOCKED</td>
+<td>阻塞状态，表示线程阻塞于锁</td>
+</tr>
+<tr>
+<td>WAITING</td>
+<td>等待状态，表示线程进入等待状态，进入该状态表示当前线程需要等待其他线程做出特点操作（通知或中断）</td>
+</tr>
+<tr>
+<td>TIME_WAITING</td>
+<td>超时等待，它可以在指定的时间自行返回</td>
+</tr>
+<tr>
+<td>TERMINATED</td>
+<td>终止状态，表示当前线程已经执行完毕</td>
+</tr>
+</tbody></table>
+<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gmc1tsyh10j316l0u0apn.jpg" alt="线程状态的变迁"></p>
+<h3 id="线程的启动与终止"><a href="#线程的启动与终止" class="headerlink" title="线程的启动与终止"></a>线程的启动与终止</h3><h4 id="线程的启动"><a href="#线程的启动" class="headerlink" title="线程的启动"></a>线程的启动</h4><p>当线程被创建完成后，需要调用 start()方法启动线程。<strong>注意，不能通过调用 run()启动线程</strong>，虽然可以执行 run()方法内部的代码逻辑，但是实际上是主线程在执行，而不是创建的线程。</p>
+<h4 id="线程的中断"><a href="#线程的中断" class="headerlink" title="线程的中断"></a>线程的中断</h4><p> 中断可以理解为线程的一个标识位属性，表示运行中的线程是否被其他线程进行了中断操作。线程可以通过 isInterrupted()判断自身是否被中断，也可以通过 Thread.interrupted()对当前线程的中断标志进行复位。如果当前线程处于终结状态或被中断过，在调用 isInterrupted()方法时会返回 false;</p>
+<h4 id="终止线程"><a href="#终止线程" class="headerlink" title="终止线程"></a>终止线程</h4><p>线程的中断是终止线程的一种方式，但是还有终止线程的方式：cancel()。</p>
+<h2 id="线程间的通信"><a href="#线程间的通信" class="headerlink" title="线程间的通信"></a>线程间的通信</h2><h4 id="volatile-与-synchronized-关键字"><a href="#volatile-与-synchronized-关键字" class="headerlink" title="volatile 与 synchronized 关键字"></a>volatile 与 synchronized 关键字</h4><p>通过 JMM 的学习我们知道，线程之间的通信是通过主内存（共享内存）进行的。因此避免不了使用 volatile 与 synchronized。</p>
+<ul>
+<li><p>关键字 volatile 的使用是告知程序在访问该关键字修饰的变量时，需要访问共享内存，同时将共享内存中该变量的值回刷到线程的本地内存中，从而确保该变量在所有线程的内存可见性。</p>
+</li>
+<li><p>关键字 synchronized 可以修饰方法和同步块。但是在二者的实现略有不同：</p>
+</li>
+</ul>
+<p>对于同步块：synchronized 使用 monitorenter 和 monitorexit 指令</p>
+<p>对于同步方法：synchronized 实现同步的原理是依赖方法修饰符上的 ACC_SYNCHRONIZED 来完成的</p>
+<p>二者的本质是通过获取 monitor，这个获取过程的具有排他性的。</p>
+<h4 id="等待-通知机制"><a href="#等待-通知机制" class="headerlink" title="等待/通知机制"></a>等待/通知机制</h4><p>等待通知机制是指一个线程A调用的对象O的 wait()方法进入等待状态，而另一个线程B调用了对象 O 的 notify()或者 notifyAll(),A线程收到通知后从对象O 的 wait()方法中返回，继续执行后续操作。该机制通过对象完成线程间的通信。</p>
+<ul>
+<li>wait()：使<strong>调用该方法的线程释放共享资源锁</strong>，然后从运行状态退出，进入等待队列，直到被再次唤醒。</li>
+<li>wait(long)：超时等待一段时间，这里的参数时间是毫秒，也就是等待长达n毫秒，如果没有通知就超时返回。</li>
+<li>wait(long，int)：对于超时时间更细力度的控制，单位为纳秒。</li>
+<li>notify()：<strong>随机唤醒</strong>等待队列中等待同一共享资源的一个线程，并使该线程退出等待队列，进入可运行状态，也就是notify()方法仅通知一个线程。<strong>前提是获得对象的锁。</strong></li>
+<li>notifyAll()：使所有正在等待队列中等待同一共享资源的全部线程退出等待队列，进入可运行状态。此时，优先级最高的那个线程最先执行，但也有可能是随机执行，这取决于JVM虚拟机的实现。</li>
+</ul>
+<p>注：Object.wait()方法在调用前提是：必须包含在对应的 synchronized 语句中，都需要首先获得目标对象的 monitor。</p>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
+      </tags>
+  </entry>
 </search>
