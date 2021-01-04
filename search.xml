@@ -1197,8 +1197,8 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（四）线程入门</title>
-    <url>/2021/01/04/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%9B%9B%EF%BC%89%E7%BA%BF%E7%A8%8B%E5%85%A5%E9%97%A8/</url>
+    <title>Java 并发编程（五）线程入门</title>
+    <url>/2021/01/04/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%BA%94%EF%BC%89%E7%BA%BF%E7%A8%8B%E5%85%A5%E9%97%A8/</url>
     <content><![CDATA[<h2 id="线程简介"><a href="#线程简介" class="headerlink" title="线程简介"></a>线程简介</h2><h3 id="什么是进程"><a href="#什么是进程" class="headerlink" title="什么是进程"></a>什么是进程</h3><p>进程（Process）是计算机系统资源分配和调度的基本单位，是操作系统结构的基础。进程是程序执行的基本执行实体；是线程的容器；</p>
 <h3 id="什么是线程"><a href="#什么是线程" class="headerlink" title="什么是线程"></a>什么是线程</h3><p>现代操作系统调度的最小单元，也被称为轻量级进程。每个线程都有自己的计数器，堆栈和局部变量等属性，并且可以访问共享的内存变量。</p>
 <h2 id="线程的生命周期"><a href="#线程的生命周期" class="headerlink" title="线程的生命周期"></a>线程的生命周期</h2><h3 id="线程的优先级"><a href="#线程的优先级" class="headerlink" title="线程的优先级"></a>线程的优先级</h3><p>线程的优先级是决定线程需要分配多少处理器资源的线程属性。在 Java 中通过整型变量 priority 来设置优先级:setPriority(int level)，默认是 5；优先级区间：1~10；</p>
