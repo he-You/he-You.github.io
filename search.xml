@@ -1266,4 +1266,48 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>并发</tag>
       </tags>
   </entry>
+  <entry>
+    <title>布隆过滤器</title>
+    <url>/2021/01/05/%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8/</url>
+    <content><![CDATA[<h3 id="布隆过滤器-Bloom-Filter"><a href="#布隆过滤器-Bloom-Filter" class="headerlink" title="布隆过滤器-Bloom Filter"></a>布隆过滤器-Bloom Filter</h3><p>布隆过滤器的原理是，当一个元素被加入集合时，通过K个Hash函数将这个元素映射成一个位数组中的K个点，<br>把它们置为1。当检查一个元素是否存在时，我们只要将元素通过K个Hash函数进行计算,<br>看看这些点是不是都是1就（大约）知道集合中有没有它了：<br>如果这些点有任何一个0，则被检元素一定不在；如果都是1，则被检元素<strong>很可能在</strong>。这就是布隆过滤器的基本思想</p>
+<p>Bloom Filter跟单哈希函数Bit-Map不同之处在于：Bloom Filter使用了k个哈希函数，<br>每个字符串跟k个bit对应。从而降低了冲突的概率。</p>
+<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gmd6wwgyv4j30oi0d8t9h.jpg"></p>
+<p><strong>由于Hash函数存在Hash碰撞的情况,布隆过滤器无法100%保证检索的数据存在</strong>,但是能100%判断出数据不存在,这样就可以用于<strong>解决缓存穿透</strong>的情况了</p>
+<p>缺陷:<br>根据上面我们可以知道,布隆过滤器有存在误判的情况,而且由于进行了k次Hash计算,删除就变得十分复杂;即:</p>
+<ul>
+<li><p>存在误判，可能要查到的元素并没有在容器中，但是hash之后得到的k个位置上值都是1。<br>如果bloom filter中存储的是黑名单，那么可以通过建立一个白名单来存储可能会误判的元素。</p>
+</li>
+<li><p>删除困难。一个放入容器的元素映射到bit数组的k个位置上是1，删除的时候不能简单的直接置为0，<br>可能会影响其他元素的判断。可以采用Counting Bloom Filter</p>
+</li>
+</ul>
+<p><strong>Bloom Filter 实现</strong></p>
+<p>布隆过滤器有许多实现与优化，Guava中就提供了一种Bloom Filter的实现。在实现布隆过滤器的时候需要注意两点:即<strong>数据量n和误判率fpp</strong><br>同时需要计算bit数组的大小和Hash函数的个数K;</p>
+<p>对于一个确定的场景，我们预估要存的数据量为n，期望的误判率为fpp，然后需要计算我们需要的Bit数组的大小m，以及hash函数的个数k，并选择hash函数</p>
+<p><strong>Java实现:</strong></p>
+<p>第一步:依赖</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>com.google.guava<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>guava<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>23.0<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span>  </span><br></pre></td></tr></table></figure>
+<p>第二步:</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestBloomFilter</span> </span>&#123;</span><br><span class="line">    <span class="comment">//100w个数据</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">int</span> total = <span class="number">1000000</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> BloomFilter bloomFilter = BloomFilter.create(Funnels.integerFunnel(), total);</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 初始化100w条数据到过滤器中</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; total; i++) &#123;</span><br><span class="line">            bloomFilter.put(i);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 匹配已在过滤器中的值，是否有匹配不上的</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; total; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (!bloomFilter.mightContain(i)) &#123;</span><br><span class="line">                System.out.println(<span class="string">&quot;元素检查未命中&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 匹配不在过滤器中的50000个值，有多少匹配出来</span></span><br><span class="line">        <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = total; i &lt; total + <span class="number">50000</span>; i++) &#123;</span><br><span class="line">            <span class="keyword">if</span> (bloomFilter.mightContain(i)) &#123;</span><br><span class="line">                count++;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(<span class="string">&quot;误判的数量：&quot;</span> + count);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>打印结果:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">误判的数量：1566</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+
+<p>运行结果表示，遍历这一百w个在过滤器中的数时，都被识别出来了。5w个不在过滤器中的数，误判了1566个，错误率是0.03左右。</p>
+<p>打开BloomFilter 源码:</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">BloomFilter&lt;T&gt; <span class="title">create</span><span class="params">(Funnel&lt;? <span class="keyword">super</span> T&gt; funnel, <span class="keyword">int</span> expectedInsertions)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> create(funnel, (<span class="keyword">long</span>)expectedInsertions);</span><br><span class="line">&#125;   </span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">BloomFilter&lt;T&gt; <span class="title">create</span><span class="params">(Funnel&lt;? <span class="keyword">super</span> T&gt; funnel, <span class="keyword">long</span> expectedInsertions)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> create(funnel, expectedInsertions, <span class="number">0.03D</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">BloomFilter&lt;T&gt; <span class="title">create</span><span class="params">(Funnel&lt;? <span class="keyword">super</span> T&gt; funnel, <span class="keyword">long</span> expectedInsertions, <span class="keyword">double</span> fpp)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> create(funnel, expectedInsertions, fpp, BloomFilterStrategies.MURMUR128_MITZ_64);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;T&gt; <span class="function">BloomFilter&lt;T&gt; <span class="title">create</span><span class="params">(Funnel&lt;? <span class="keyword">super</span> T&gt; funnel, <span class="keyword">int</span> expectedInsertions, <span class="keyword">double</span> fpp)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> create(funnel, (<span class="keyword">long</span>)expectedInsertions, fpp);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>BloomFilter 一共四个create方法，不过最终都是走向第四个。看一下每个参数的含义：</p>
+<ul>
+<li>funnel：数据类型(一般是调用Funnels工具类中的)</li>
+<li>expectedInsertions：期望插入的值的个数</li>
+<li>fpp 错误率(默认值为0.03)</li>
+<li>strategy 哈希算法Bloom Filter的应用</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>缓存击穿</tag>
+      </tags>
+  </entry>
 </search>
