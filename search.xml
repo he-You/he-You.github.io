@@ -1311,71 +1311,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>线程池学习</title>
-    <url>/2021/01/06/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h3 id="核心线程池的内部实现"><a href="#核心线程池的内部实现" class="headerlink" title="核心线程池的内部实现"></a>核心线程池的内部实现</h3><p>一、ThreadPoolExecutor 类</p>
-<ol>
-<li><p>构造函数</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function">pubilic <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">int</span> maxmumPoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">long</span> keepAliveTime,</span></span></span><br><span class="line"><span class="function"><span class="params">                           TimeUnit unit, </span></span></span><br><span class="line"><span class="function"><span class="params">                           BolockingQueue&lt;Runnable&gt; workQueue,</span></span></span><br><span class="line"><span class="function"><span class="params">                           ThreadFactory threadFactory,</span></span></span><br><span class="line"><span class="function"><span class="params">                           RejectedExecutionHandler handler)</span></span></span><br></pre></td></tr></table></figure>
-
-<p>各个参数的含义如下：</p>
-<ul>
-<li><strong>corePoolSize</strong>:指定线程池中的线程数量</li>
-<li><strong>maxmumPoolSize</strong>:指定了线程池中最大的线程数。</li>
-<li><strong>keepAliveTime</strong>:当线程池线程数量超过 corePoolSize 时，多余的空闲线程的存活时间，即超过 <strong>corePoolSize</strong> 的空闲线程在多长时间内会被销毁。</li>
-<li><strong>unit</strong>:keepAliveTime 的单位</li>
-<li><strong>workQueue</strong>:任务队列，被提交但尚未执行的任务</li>
-<li><strong>threadFactory</strong>:线程工厂，用于创建线程，一般默认的即可</li>
-<li><strong>RejectedExecutionHandler</strong>:拒绝策略，当任务过多来不及处理时，如何拒绝任务。</li>
-</ul>
-</li>
-<li><p>workQueue：提交但未执行的任务队列，它是个一个 BlockingQueue 接口的对象，仅存放 Runnable对象。根据实际使用的情况可以使用以下 BlockingQueue 接口</p>
-<ul>
-<li><p>直接提交队列：由 SynchronoursQueue 对象提供。该对象是一个特殊的 BlockingQueue。SynchronousQueue <strong>没有容量不会保存提交的任务</strong>，每一个插入操作都需要等待一个相应的删除操作，反之，每个删除操作都要等待对应的插入操作。如果进程数量已经达到最大值，则执行拒绝策略，因此使用该队列，通常要设置 很大的 maxnumPoolSize 值，否则很容易执行拒绝策略。</p>
-</li>
-<li><p>有界的任务队列：有界的任务队列可以使用 ArrayBlockingQueue 类实现，该类的构造函数需要一个参数，定义该队列的最大容量；当使用有界的任务队列时，若有新的任务需要执行：</p>
-<ul>
-<li>如果线程池的实际线程数小于 corePoolSize，则优先创建新的线程</li>
-<li>大于 corePoolSize:<ul>
-<li>等待队列未满：加入等待队列</li>
-<li>等待队列已满：在总数不大于 maximumPoolSize的前提下创建新的进程执行任务；大于 maximumPoolSize则执行拒绝策略</li>
-</ul>
-</li>
-</ul>
-<p>即：有界队列当且仅当任务队列装满，才可以将线程数提升到 corePoolSize 以上，通常情况下要确保核心线程数维持在 corePoolSize</p>
-</li>
-<li><p>无界的任务队列：无界任务队列可以通过 LinkedBlockingQueue 实现。</p>
-<ul>
-<li>通常情况下不存在任务入队失败的情况（前提是系统资源正常）</li>
-<li>新任务提交时，线程数小于 corePoolSize 时，线程池会生成新的线程执行任务</li>
-<li>当系统线程数达到 corePoolSize 后就不会继续增加了。若没空闲资源则进入等待队列；</li>
-<li>若任务创建和处理的速度差距很大，无界队列会保持快速增长，直至资源耗尽。</li>
-</ul>
-</li>
-<li><p>优先任务队列：</p>
-<ul>
-<li>具有优先级的队列</li>
-<li>通过 PriorityBlockingQueue 类实现，可以控制任务的执行先后顺序</li>
-<li>特殊的无界队列</li>
-</ul>
-</li>
-</ul>
-</li>
-</ol>
-<p>   总结：</p>
-<ul>
-<li>对于固定大小的线程池来说，线程数量不会动态变化，因此 corePoolSize 可以等于 maximumPoolSize</li>
-<li>newCachedThreadPool()返回的 corePoolSize 为 0，maximumPoolSize 无穷大的线程池，且空闲线程会在指定时间内（60s）被回收；</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Java并发编程</category>
-      </categories>
-      <tags>
-        <tag>线程池</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Java 并发编程（六）线程的创建</title>
     <url>/2021/01/08/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA/</url>
     <content><![CDATA[<h1 id="通过继承Thread类创建线程"><a href="#通过继承Thread类创建线程" class="headerlink" title="通过继承Thread类创建线程"></a>通过继承Thread类创建线程</h1><h2 id="继承-Thread创建线程"><a href="#继承-Thread创建线程" class="headerlink" title="继承 Thread创建线程"></a>继承 Thread创建线程</h2><p>（1）定义Thread类的子类，并重写该类的run方法，该run方法的方法体为创建新线程要完成的任务。</p>
@@ -1451,6 +1386,161 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>并发</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Java 并发编程（七）AQS（队列同步器）</title>
+    <url>/2021/01/08/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%83%EF%BC%89AQS%EF%BC%88%E9%98%9F%E5%88%97%E5%90%8C%E6%AD%A5%E5%99%A8%EF%BC%89/</url>
+    <content><![CDATA[<h1 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h1><p>AQS（ AbstractQueuedSynchronizer ）是一个用来构建锁和同步器（所谓同步，是指线程之间的通信、协作）的框架。Lock 包中的各种锁（如常见的 ReentrantLock, ReadWriteLock）,concurrent 包中的各种同步器（如 CountDownLatch, Semaphore, CyclicBarrier）都是基于 AQS 来构建；</p>
+<h1 id="源码与实现"><a href="#源码与实现" class="headerlink" title="源码与实现"></a>源码与实现</h1><h2 id="主要方法源码"><a href="#主要方法源码" class="headerlink" title="主要方法源码"></a>主要方法源码</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//共享变量，使用volatile修饰保证线程可见性</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">int</span> state;</span><br><span class="line"></span><br><span class="line"><span class="comment">//返回同步状态的当前值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> state;</span><br><span class="line">&#125;</span><br><span class="line"> <span class="comment">// 设置同步状态的值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(<span class="keyword">int</span> newState)</span> </span>&#123;</span><br><span class="line">    state = newState;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//原子操作（CAS操作）将同步状态值设置为给定值update如果当前同步状态的值等于expect（期望值）</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSetState</span><span class="params">(<span class="keyword">int</span> expect, <span class="keyword">int</span> update)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> unsafe.compareAndSwapInt(<span class="keyword">this</span>, stateOffset, expect, update);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>它使用一个 int变量表示同步状态，通过内置的 FIFO 队列来完成资源获取线程的排队工作，并且使用 CAS 操作进行状态的修改（即 protected 修饰的 getState()/setState()/compareAndSetState()）</p>
+<h2 id="AQS的实现分析"><a href="#AQS的实现分析" class="headerlink" title="AQS的实现分析"></a>AQS的实现分析</h2><h3 id="实现过程"><a href="#实现过程" class="headerlink" title="实现过程"></a>实现过程</h3><p>AQS 依赖内部的同步队列（基于 CLH队列锁实现的双向队列）来完成同步状态的管理，当线程获取同步状态失败时，同步器会构建一个 Node 节点对象加入到队列中，并阻塞当前线程，当同步状态释放时，会把首节点中的线程唤醒，使其再次尝试获取同步状态</p>
+<h4 id="节点组成"><a href="#节点组成" class="headerlink" title="节点组成"></a>节点组成</h4><p>节点对象包含：</p>
+<ul>
+<li>获取同步状态失败的线程引用</li>
+<li>等待状态</li>
+<li>前驱节点和后继节点</li>
+<li>节点的属性（名称和描述）</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Node</span> </span>&#123;</span><br><span class="line">        <span class="comment">/** Marker to indicate a node is waiting in shared mode */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> Node SHARED = <span class="keyword">new</span> Node();</span><br><span class="line">        <span class="comment">/** Marker to indicate a node is waiting in exclusive mode */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> Node EXCLUSIVE = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/** waitStatus value to indicate thread has cancelled */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> CANCELLED =  <span class="number">1</span>;</span><br><span class="line">        <span class="comment">/** waitStatus value to indicate successor&#x27;s thread needs unparking */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> SIGNAL    = -<span class="number">1</span>;</span><br><span class="line">        <span class="comment">/** waitStatus value to indicate thread is waiting on condition */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> CONDITION = -<span class="number">2</span>;</span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * waitStatus value to indicate the next acquireShared should</span></span><br><span class="line"><span class="comment">         * unconditionally propagate</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> PROPAGATE = -<span class="number">3</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * Status field, taking on only the values:</span></span><br><span class="line"><span class="comment">         *   SIGNAL:     The successor of this node is (or will soon be)</span></span><br><span class="line"><span class="comment">         *               blocked (via park), so the current node must</span></span><br><span class="line"><span class="comment">         *               unpark its successor when it releases or</span></span><br><span class="line"><span class="comment">         *               cancels. To avoid races, acquire methods must</span></span><br><span class="line"><span class="comment">         *               first indicate they need a signal,</span></span><br><span class="line"><span class="comment">         *               then retry the atomic acquire, and then,</span></span><br><span class="line"><span class="comment">         *               on failure, block.</span></span><br><span class="line"><span class="comment">         *   CANCELLED:  This node is cancelled due to timeout or interrupt.</span></span><br><span class="line"><span class="comment">         *               Nodes never leave this state. In particular,</span></span><br><span class="line"><span class="comment">         *               a thread with cancelled node never again blocks.</span></span><br><span class="line"><span class="comment">         *   CONDITION:  This node is currently on a condition queue.</span></span><br><span class="line"><span class="comment">         *               It will not be used as a sync queue node</span></span><br><span class="line"><span class="comment">         *               until transferred, at which time the status</span></span><br><span class="line"><span class="comment">         *               will be set to 0. (Use of this value here has</span></span><br><span class="line"><span class="comment">         *               nothing to do with the other uses of the</span></span><br><span class="line"><span class="comment">         *               field, but simplifies mechanics.)</span></span><br><span class="line"><span class="comment">         *   PROPAGATE:  A releaseShared should be propagated to other</span></span><br><span class="line"><span class="comment">         *               nodes. This is set (for head node only) in</span></span><br><span class="line"><span class="comment">         *               doReleaseShared to ensure propagation</span></span><br><span class="line"><span class="comment">         *               continues, even if other operations have</span></span><br><span class="line"><span class="comment">         *               since intervened.</span></span><br><span class="line"><span class="comment">         *   0:          None of the above</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The values are arranged numerically to simplify use.</span></span><br><span class="line"><span class="comment">         * Non-negative values mean that a node doesn&#x27;t need to</span></span><br><span class="line"><span class="comment">         * signal. So, most code doesn&#x27;t need to check for particular</span></span><br><span class="line"><span class="comment">         * values, just for sign.</span></span><br><span class="line"><span class="comment">         *</span></span><br><span class="line"><span class="comment">         * The field is initialized to 0 for normal sync nodes, and</span></span><br><span class="line"><span class="comment">         * CONDITION for condition nodes.  It is modified using CAS</span></span><br><span class="line"><span class="comment">         * (or when possible, unconditional volatile writes).</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">volatile</span> <span class="keyword">int</span> waitStatus;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">volatile</span> Node prev;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">volatile</span> Node next;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">volatile</span> Thread thread;</span><br><span class="line"></span><br><span class="line">        Node nextWaiter;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">isShared</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> nextWaiter == SHARED;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">final</span> Node <span class="title">predecessor</span><span class="params">()</span> <span class="keyword">throws</span> NullPointerException </span>&#123;</span><br><span class="line">            Node p = prev;</span><br><span class="line">            <span class="keyword">if</span> (p == <span class="keyword">null</span>)</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">            <span class="keyword">else</span></span><br><span class="line">                <span class="keyword">return</span> p;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Node() &#123;    <span class="comment">// Used to establish initial head or SHARED marker</span></span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Node(Thread thread, Node mode) &#123;     <span class="comment">// Used by addWaiter</span></span><br><span class="line">            <span class="keyword">this</span>.nextWaiter = mode;</span><br><span class="line">            <span class="keyword">this</span>.thread = thread;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        Node(Thread thread, <span class="keyword">int</span> waitStatus) &#123; <span class="comment">// Used by Condition</span></span><br><span class="line">            <span class="keyword">this</span>.waitStatus = waitStatus;</span><br><span class="line">            <span class="keyword">this</span>.thread = thread;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="节点状态"><a href="#节点状态" class="headerlink" title="节点状态"></a>节点状态</h4><table>
+<thead>
+<tr>
+<th>waitStatus</th>
+<th>状态描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>CANCELLED</td>
+<td>值为 1，由于在同步队列中等待的线程等待超时或者被中断，需要从同步队列中取消等待，节点进入该状态将不会变化</td>
+</tr>
+<tr>
+<td>SIGNAL</td>
+<td>值为-1，后继节点的线程处于等待状态，而当前节点的线程如果释放了同步状态或被取消，将会通知后继节点，使后继节点的线程得以运行</td>
+</tr>
+<tr>
+<td>CONDITION</td>
+<td>值为-2，节点在等待队列中，节点线程等待在 Condition 上，当其他线程对 Condition 调用了 signal()方法后，该节点将会从等待队列中转移到同步队列中，加入到对同步状态的获取中</td>
+</tr>
+<tr>
+<td>PROPAGATE</td>
+<td>值为-3，表示下一次共享式同步状态的获取将会无条件的被传播下去</td>
+</tr>
+</tbody></table>
+<h4 id="队列的基本数据结构"><a href="#队列的基本数据结构" class="headerlink" title="队列的基本数据结构"></a>队列的基本数据结构</h4><p>Node节点是构建 AQS 的基础,同步器拥有首节点（head）和尾结点（tail），没有成功获取到同步状态的线程将会成为节点加入到队列的尾部，同步队列的基本结构如下图：</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmgpis9v96j31ns0peq64.jpg"></p>
+<p>如上图所示，同步器中的每个节点包含两个节点引用（前驱节点和后继节点）。</p>
+<h4 id="入队与出队"><a href="#入队与出队" class="headerlink" title="入队与出队"></a>入队与出队</h4><ul>
+<li>入队：当一个线程获得同步状态，其他线程将无法获取到同步状态，转而被构造成一个节点并加入到同步队列中，而这个<strong>加入队列的过程必须保证线程安全</strong>，因此 AQS 提供了一个设置尾结点的方法：compareAndSetTail(Node expect, Node update)</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * CAS tail field. Used only by enq.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSetTail</span><span class="params">(Node expect, Node update)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> unsafe.compareAndSwapObject(<span class="keyword">this</span>, tailOffset, expect, update);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果参数 expect 就是当前队列的尾结点，则将新的 update 节点更新到旧尾结点之后，从而代替成为新的队列尾结点。</p>
+<ul>
+<li>出队：AQS队列遵循 FIFO 原则，当首节点所在的线程是否同步状态时，将会唤醒后继节点，而当后继节点成功获得同步状态时将自己设置成首节点，后继节点成功首节点的过程不需要保证线程安全，因为只有一个线程可以获得同步状态，只需要将首节点设置为原首节点的后继节点，并断开原首节点的 next 引用即可完成原首节点的出队与新首节点的更新。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * CAS head field. Used only by enq.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSetHead</span><span class="params">(Node update)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> unsafe.compareAndSwapObject(<span class="keyword">this</span>, headOffset, <span class="keyword">null</span>, update);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="独占式同步状态的获取与释放"><a href="#独占式同步状态的获取与释放" class="headerlink" title="独占式同步状态的获取与释放"></a>独占式同步状态的获取与释放</h1><h2 id="独占式的定义"><a href="#独占式的定义" class="headerlink" title="独占式的定义"></a>独占式的定义</h2><p>所谓独占式即在同一个时刻只能有一个线程能成功获取到同步状态。当某一线程成功（独占式）获得同步状态时，该线程会阻塞其他线程对临界区资源的访问。</p>
+<h2 id="获取和释放的过程"><a href="#获取和释放的过程" class="headerlink" title="获取和释放的过程"></a>获取和释放的过程</h2><h3 id="获取过程"><a href="#获取过程" class="headerlink" title="获取过程"></a>获取过程</h3><p>从上文Node 节点的源码中可以看到:提供了一个 final 常量来表示当前线程获得同步状态的方式，其中EXCLUSIVE表示以独占式获取同步状态。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/** Marker to indicate a node is waiting in exclusive mode */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">final</span> Node EXCLUSIVE = <span class="keyword">null</span>;</span><br></pre></td></tr></table></figure>
+
+<p>首先 AQS 提供了一个获得同步状态的方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Acquires in exclusive mode, ignoring interrupts.  Implemented</span></span><br><span class="line"><span class="comment">     * by invoking at least once &#123;<span class="doctag">@link</span> #tryAcquire&#125;,</span></span><br><span class="line"><span class="comment">     * returning on success.  Otherwise the thread is queued, possibly</span></span><br><span class="line"><span class="comment">     * repeatedly blocking and unblocking, invoking &#123;<span class="doctag">@link</span></span></span><br><span class="line"><span class="comment">     * #tryAcquire&#125; until success.  This method can be used</span></span><br><span class="line"><span class="comment">     * to implement method &#123;<span class="doctag">@link</span> Lock#lock&#125;.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> arg the acquire argument.  This value is conveyed to</span></span><br><span class="line"><span class="comment">     *        &#123;<span class="doctag">@link</span> #tryAcquire&#125; but is otherwise uninterpreted and</span></span><br><span class="line"><span class="comment">     *        can represent anything you like.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">acquire</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!tryAcquire(arg) &amp;&amp;</span><br><span class="line">            acquireQueued(addWaiter(Node.EXCLUSIVE), arg))</span><br><span class="line">            selfInterrupt();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>以独占模式获取，忽略中断。通过至少调用一次{@link #tryAcquire}实现，成功时返回。否则，线程将进入队列，可能会反复阻塞和解除阻塞，调用{@link #tryAcquire}直到成功。这个方法可以用来实现方法{@link Lock# Lock}。</p>
+<p>如果获取同步状态失败，则构建独占式同步节点，并通过 addWaiter(Node node)方法将该节点加入到同步队列的尾部，最后调用 acquireQueued(Node node, int arg)方法，使得该节点以死循环的方式获得同步状态。</p>
+<p>如果获取不到则阻塞节点中的线程，而被阻塞线程的唤醒主要依靠前驱节点的出队或阻塞线程被中断来实现。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Creates and enqueues node for current thread and given mode.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> mode Node.EXCLUSIVE for exclusive, Node.SHARED for shared</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> the new node</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> Node <span class="title">addWaiter</span><span class="params">(Node mode)</span> </span>&#123;</span><br><span class="line">        Node node = <span class="keyword">new</span> Node(Thread.currentThread(), mode);</span><br><span class="line">        <span class="comment">// Try the fast path of enq; backup to full enq on failure</span></span><br><span class="line">        Node pred = tail;</span><br><span class="line">        <span class="keyword">if</span> (pred != <span class="keyword">null</span>) &#123;</span><br><span class="line">            node.prev = pred;</span><br><span class="line">            <span class="keyword">if</span> (compareAndSetTail(pred, node)) &#123;</span><br><span class="line">                pred.next = node;</span><br><span class="line">                <span class="keyword">return</span> node;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        enq(node);</span><br><span class="line">        <span class="keyword">return</span> node;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>在 enq(final Node node)方法中，同步器通过“死循环”来保证节点的正确添加，在“死循环”中只有通过 CAS将节点设置成为尾结点之后，当前线程才能从方法中返回。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Inserts node into queue, initializing if necessary. See picture above.</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@param</span> node the node to insert</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@return</span> node&#x27;s predecessor</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">private</span> Node <span class="title">enq</span><span class="params">(<span class="keyword">final</span> Node node)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">           Node t = tail;</span><br><span class="line">           <span class="keyword">if</span> (t == <span class="keyword">null</span>) &#123; <span class="comment">// Must initialize</span></span><br><span class="line">               <span class="keyword">if</span> (compareAndSetHead(<span class="keyword">new</span> Node()))</span><br><span class="line">                   tail = head;</span><br><span class="line">           &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">               node.prev = t;</span><br><span class="line">               <span class="keyword">if</span> (compareAndSetTail(t, node)) &#123;</span><br><span class="line">                   t.next = node;</span><br><span class="line">                   <span class="keyword">return</span> t;</span><br><span class="line">               &#125;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>节点进入同步队列之后会进入自旋，每个节点都是自省地观察，当条件满足，获取到同步状态，就从自旋中退出。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Acquires in exclusive uninterruptible mode for thread already in</span></span><br><span class="line"><span class="comment">    * queue. Used by condition wait methods as well as acquire.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@param</span> node the node</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@param</span> arg the acquire argument</span></span><br><span class="line"><span class="comment">    * <span class="doctag">@return</span> &#123;<span class="doctag">@code</span> true&#125; if interrupted while waiting</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">acquireQueued</span><span class="params">(<span class="keyword">final</span> Node node, <span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">boolean</span> failed = <span class="keyword">true</span>;</span><br><span class="line">       <span class="keyword">try</span> &#123;</span><br><span class="line">           <span class="keyword">boolean</span> interrupted = <span class="keyword">false</span>;</span><br><span class="line">           <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">               <span class="keyword">final</span> Node p = node.predecessor();</span><br><span class="line">               <span class="keyword">if</span> (p == head &amp;&amp; tryAcquire(arg)) &#123;</span><br><span class="line">                   setHead(node);</span><br><span class="line">                   p.next = <span class="keyword">null</span>; <span class="comment">// help GC</span></span><br><span class="line">                   failed = <span class="keyword">false</span>;</span><br><span class="line">                   <span class="keyword">return</span> interrupted;</span><br><span class="line">               &#125;</span><br><span class="line">               <span class="keyword">if</span> (shouldParkAfterFailedAcquire(p, node) &amp;&amp;</span><br><span class="line">                   parkAndCheckInterrupt())</span><br><span class="line">                   interrupted = <span class="keyword">true</span>;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">           <span class="keyword">if</span> (failed)</span><br><span class="line">               cancelAcquire(node);</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上述方法中，当前线程在“死循环”中尝试获取同步状态，而只有前驱节点是头结点才能尝试获取同步状态，原因有以下两点：</p>
+<ul>
+<li>头结点是成功获取同步状态的节点，而头结点的线程释放同步状态之后，将会唤醒后继节点，后继节点的线程被唤醒后需要坚持自己的前驱节点是否是头结点。</li>
+<li>维护同步队列的 FIFIO 原则。</li>
+</ul>
+<h3 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h3><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmmhmof2rsj30u00xi78b.jpg"></p>
+<h3 id="释放过程"><a href="#释放过程" class="headerlink" title="释放过程"></a>释放过程</h3><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Releases in exclusive mode.  Implemented by unblocking one or</span></span><br><span class="line"><span class="comment"> * more threads if &#123;<span class="doctag">@link</span> #tryRelease&#125; returns true.</span></span><br><span class="line"><span class="comment"> * This method can be used to implement method &#123;<span class="doctag">@link</span> Lock#unlock&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> arg the release argument.  This value is conveyed to</span></span><br><span class="line"><span class="comment"> *        &#123;<span class="doctag">@link</span> #tryRelease&#125; but is otherwise uninterpreted and</span></span><br><span class="line"><span class="comment"> *        can represent anything you like.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span> the value returned from &#123;<span class="doctag">@link</span> #tryRelease&#125;</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">release</span><span class="params">(<span class="keyword">int</span> arg)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (tryRelease(arg)) &#123;</span><br><span class="line">        Node h = head;</span><br><span class="line">        <span class="keyword">if</span> (h != <span class="keyword">null</span> &amp;&amp; h.waitStatus != <span class="number">0</span>)</span><br><span class="line">            unparkSuccessor(h);</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该方法执行时会唤醒头结点的后继节点线程，通过unparkSuccessor方法来唤醒等待状态的线程。</p>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>线程池学习</title>
+    <url>/2021/01/06/Java%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<h3 id="核心线程池的内部实现"><a href="#核心线程池的内部实现" class="headerlink" title="核心线程池的内部实现"></a>核心线程池的内部实现</h3><p>一、ThreadPoolExecutor 类</p>
+<ol>
+<li><p>构造函数</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function">pubilic <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">int</span> maxmumPoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">long</span> keepAliveTime,</span></span></span><br><span class="line"><span class="function"><span class="params">                           TimeUnit unit, </span></span></span><br><span class="line"><span class="function"><span class="params">                           BolockingQueue&lt;Runnable&gt; workQueue,</span></span></span><br><span class="line"><span class="function"><span class="params">                           ThreadFactory threadFactory,</span></span></span><br><span class="line"><span class="function"><span class="params">                           RejectedExecutionHandler handler)</span></span></span><br></pre></td></tr></table></figure>
+
+<p>各个参数的含义如下：</p>
+<ul>
+<li><strong>corePoolSize</strong>:指定线程池中的线程数量</li>
+<li><strong>maxmumPoolSize</strong>:指定了线程池中最大的线程数。</li>
+<li><strong>keepAliveTime</strong>:当线程池线程数量超过 corePoolSize 时，多余的空闲线程的存活时间，即超过 <strong>corePoolSize</strong> 的空闲线程在多长时间内会被销毁。</li>
+<li><strong>unit</strong>:keepAliveTime 的单位</li>
+<li><strong>workQueue</strong>:任务队列，被提交但尚未执行的任务</li>
+<li><strong>threadFactory</strong>:线程工厂，用于创建线程，一般默认的即可</li>
+<li><strong>RejectedExecutionHandler</strong>:拒绝策略，当任务过多来不及处理时，如何拒绝任务。</li>
+</ul>
+</li>
+<li><p>workQueue：提交但未执行的任务队列，它是个一个 BlockingQueue 接口的对象，仅存放 Runnable对象。根据实际使用的情况可以使用以下 BlockingQueue 接口</p>
+<ul>
+<li><p>直接提交队列：由 SynchronoursQueue 对象提供。该对象是一个特殊的 BlockingQueue。SynchronousQueue <strong>没有容量不会保存提交的任务</strong>，每一个插入操作都需要等待一个相应的删除操作，反之，每个删除操作都要等待对应的插入操作。如果进程数量已经达到最大值，则执行拒绝策略，因此使用该队列，通常要设置 很大的 maxnumPoolSize 值，否则很容易执行拒绝策略。</p>
+</li>
+<li><p>有界的任务队列：有界的任务队列可以使用 ArrayBlockingQueue 类实现，该类的构造函数需要一个参数，定义该队列的最大容量；当使用有界的任务队列时，若有新的任务需要执行：</p>
+<ul>
+<li>如果线程池的实际线程数小于 corePoolSize，则优先创建新的线程</li>
+<li>大于 corePoolSize:<ul>
+<li>等待队列未满：加入等待队列</li>
+<li>等待队列已满：在总数不大于 maximumPoolSize的前提下创建新的进程执行任务；大于 maximumPoolSize则执行拒绝策略</li>
+</ul>
+</li>
+</ul>
+<p>即：有界队列当且仅当任务队列装满，才可以将线程数提升到 corePoolSize 以上，通常情况下要确保核心线程数维持在 corePoolSize</p>
+</li>
+<li><p>无界的任务队列：无界任务队列可以通过 LinkedBlockingQueue 实现。</p>
+<ul>
+<li>通常情况下不存在任务入队失败的情况（前提是系统资源正常）</li>
+<li>新任务提交时，线程数小于 corePoolSize 时，线程池会生成新的线程执行任务</li>
+<li>当系统线程数达到 corePoolSize 后就不会继续增加了。若没空闲资源则进入等待队列；</li>
+<li>若任务创建和处理的速度差距很大，无界队列会保持快速增长，直至资源耗尽。</li>
+</ul>
+</li>
+<li><p>优先任务队列：</p>
+<ul>
+<li>具有优先级的队列</li>
+<li>通过 PriorityBlockingQueue 类实现，可以控制任务的执行先后顺序</li>
+<li>特殊的无界队列</li>
+</ul>
+</li>
+</ul>
+</li>
+</ol>
+<p>   总结：</p>
+<ul>
+<li>对于固定大小的线程池来说，线程数量不会动态变化，因此 corePoolSize 可以等于 maximumPoolSize</li>
+<li>newCachedThreadPool()返回的 corePoolSize 为 0，maximumPoolSize 无穷大的线程池，且空闲线程会在指定时间内（60s）被回收；</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>线程池</tag>
       </tags>
   </entry>
 </search>
