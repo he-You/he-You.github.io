@@ -1552,4 +1552,116 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>线程池</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Java 并发编程（八）锁</title>
+    <url>/2021/01/15/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AB%EF%BC%89%E9%94%81/</url>
+    <content><![CDATA[<h1 id="Synchronized"><a href="#Synchronized" class="headerlink" title="Synchronized"></a><a href="https://he-you.github.io/2020/12/21/synchronized%20%E7%9A%84%E4%BD%BF%E7%94%A8%E5%8F%8A%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/">Synchronized</a></h1><h2 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h2><p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
+<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
+<h2 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h2><p>线程在执行同步块之前，JVM 会在当前线程的栈帧中创建用于存储锁记录的空间，并将对象头中的 Mark Word 复制到锁记录中，官方称之为 <strong>Displaced Mark Word</strong>，然后线程尝试使用 CAS 将对象头中的 Mark Word替换为指向锁记录的指针。如果成功，当前线程获得锁，如果失败则表示其他线程竞争锁，当前线程会尝试使用自旋来获得锁。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmpli30nr2j30rg150aco.jpg"></p>
+<h2 id="重量级锁"><a href="#重量级锁" class="headerlink" title="重量级锁"></a>重量级锁</h2><p>轻量级锁解锁时，<strong>使用 CAS 操作将 Displaced Mark Word 替换回到对象头</strong>，如果成功则表示没有出现竞争，如果失败表示当前锁存在竞争，此时锁就会膨胀成重量级锁。</p>
+<p>一<strong>旦锁升级到重量级锁，此时锁就无法恢复到轻量级锁状态</strong>，处于这个状态（重量级锁）不会出现自旋，其他线程尝试获得锁时都会被阻塞，知道当前持有重量级锁的线程释放锁之后再去唤醒这些锁，继续进行锁的竞争。</p>
+<table>
+<thead>
+<tr>
+<th>锁</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏向锁</td>
+<td>加锁与解锁不需要额外的消耗，执行效率高</td>
+<td>线程之间存在竞争时，会带来撤销锁的消耗</td>
+<td>只适用于一个线程访问同步块场景</td>
+</tr>
+<tr>
+<td>轻量级锁</td>
+<td>竞争的线程不会阻塞，提高程序的响应时间</td>
+<td>存在一直自旋消耗 CPU的情况</td>
+<td>追求响应时间</td>
+</tr>
+<tr>
+<td>重量级锁</td>
+<td>线程竞争不会出现自旋情况</td>
+<td>线程阻塞，响应时间慢</td>
+<td>追求吞吐量，同步块执行速度快</td>
+</tr>
+</tbody></table>
+<h1 id="监视器锁"><a href="#监视器锁" class="headerlink" title="监视器锁"></a>监视器锁</h1><p>Monitor监视器锁</p>
+<p>重量级锁，也就是通常所说的synchronized对象锁，<strong>锁标识为10</strong>，其中指针指向monitor对象（也称之为管程或者监视器锁）的起始地址。每个对象都存在一个monitor与之关联，对象与其monitor之间也存在着多种实现方式，如monitor可以与对象一起创建或者销毁或当前线程试图获取锁时自动生成，但当一个monitor被某线程持有后，它便处于锁定状态。在Java虚拟机（HotSpot）中，monitor是有ObjectMonitor实现的，其主要数据结构如下（位于HotSpot虚拟机源码ObjectMonitor.hpp文件，C++实现的）</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line">ObjectMonitor() &#123;</span><br><span class="line">    _header       = <span class="literal">NULL</span>;</span><br><span class="line">    _count        = <span class="number">0</span>;        <span class="comment">// 记录个数</span></span><br><span class="line">    _waiters      = <span class="number">0</span>,</span><br><span class="line">    _recursions   = <span class="number">0</span>;</span><br><span class="line">    _object       = <span class="literal">NULL</span>;</span><br><span class="line">    _owner        = <span class="literal">NULL</span>;    <span class="comment">// 记录当前持有锁的线程ID</span></span><br><span class="line">    _WaitSet      = <span class="literal">NULL</span>;    <span class="comment">// 等待池：处于wait状态的线程，会被加入到_WaitSet</span></span><br><span class="line">    _WaitSetLock  = <span class="number">0</span> ;</span><br><span class="line">    _Responsible  = <span class="literal">NULL</span> ;</span><br><span class="line">    _succ         = <span class="literal">NULL</span> ;</span><br><span class="line">    _cxq          = <span class="literal">NULL</span> ;</span><br><span class="line">    FreeNext      = <span class="literal">NULL</span> ;</span><br><span class="line">    _EntryList    = <span class="literal">NULL</span> ;    <span class="comment">// 锁池：处于等待锁block状态的线程，会被加入到该列表</span></span><br><span class="line">    _SpinFreq     = <span class="number">0</span> ;</span><br><span class="line">    _SpinClock    = <span class="number">0</span> ;</span><br><span class="line">    OwnerIsThread = <span class="number">0</span> ;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>ObjectMonitor 中有两个队列，<code>_WaitSet</code>和<code> _EntryList</code> ,用来保存ObjectWaiter 对象列表，每个等待锁的线程都会被封装成ObjectWaiter 对象，<code>_owner</code> 指向持有ObjectMonitor 对象的线程，当多个线程同时访问同一同步代码块或者同步方法时，首先会进入<code> _EntryList</code> 队列，当线程获取到monitor 后进入<code>_Owner</code> 区域并把 monitor中的 <code>_Owner</code> 变量设置为当前线程，同时monitor 中的计数器count 加1，若线程调用wait() 方法，将释放当前持有的monitor，<code>_owner</code>变量恢复为null，count 自减 1 ，同时该线程进入<code>_WaitSet</code> 集合中等待被唤醒。若当前线程执行完毕也将释放monitor（锁）并复位变量的值，以便其他线程进入获取monitor（锁）。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmplvc07vhj30gh0a0myq.jpg"></p>
+<p>Monitor对象包含以下三个字段：</p>
+<ul>
+<li>_<strong>owner</strong> 记录当前持有锁的线程ID</li>
+<li>_<strong>EntryList</strong> 是一个队列，记录所有阻塞等待锁的线程（阻塞队列，锁池）</li>
+<li>_<strong>WaitSet</strong> 也是一个队列，记录调用 wait() 方法并还未被通知的线程（等待池）</li>
+</ul>
+<p>当线程持有锁的时候，线程id等信息会拷贝进owner字段，其余线程会进入阻塞队列entrylist，当持有锁的线程执行wait方法，会立即释放锁进入waitset，当线程释放锁的时候，owner会被置空，公平锁条件下，entrylist中的线程会竞争锁，竞争成功的线程id会写入owner，其余线程继续在entrylist中等待。</p>
+<p>所以，monitor对象存在于每一个java对象的对象头（存储指针的指向），synchronized锁便是通过这种方式获取的，也是为什么java中任何对象都可以作为锁的原因，同时也是 notify/notifyAll/wait 方法等存在于顶级对象Object中的原因。</p>
+<h1 id="Lock-接口"><a href="#Lock-接口" class="headerlink" title="Lock 接口"></a>Lock 接口</h1><p>Lock接口提供的Synchronized 关键字不具备的主要特性</p>
+<table>
+<thead>
+<tr>
+<th>特性</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>尝试非阻塞地获取锁</td>
+<td>当前线程尝试获取锁，如果这一时刻没有被其他线程获取到，则成功获取并持有锁</td>
+</tr>
+<tr>
+<td>能被中断地获取锁</td>
+<td>获取到锁的线程能够响应中断，当获取待锁的线程被中断时，中断异常将会抛出，同时锁会被释放</td>
+</tr>
+<tr>
+<td>超时获取锁</td>
+<td>在指定的截止时间之前获取锁，如果截止时间到了仍旧无法获取锁，则返回</td>
+</tr>
+</tbody></table>
+<p>Lock提供的主要API</p>
+<ul>
+<li>void lock(); 获取锁，当锁获得后从该方法返回</li>
+<li>void lockInterruptibly() throws InterruptedException; 可中断地获取锁，和 lock()方法的不同在于该方法或响应中断，即在锁的获取中可以中断当前线程</li>
+<li>boolean tryLock();尝试非阻塞的获取锁，调用该方法后立即返回，如果能够获取则返回 true，否则返回 false</li>
+<li>boolean tryLock(long time, TimeUnit unit) throws InterruptedException;超时的获取锁，当线程在以下 3 种情况会返回：<ol>
+<li>当前线程在超时时间内获得锁</li>
+<li>当前线程在超时时间内被中断</li>
+<li>超时时间结束，返回 false</li>
+</ol>
+</li>
+<li> void unlock();释放锁</li>
+<li>Condition newCondition();获取等待通知组件，该组件和当前的锁绑定，当前线程只有获得了锁，才能调用该组件的 wait()方法，而调用后，当前线程将释放锁。</li>
+</ul>
+<h2 id="重入锁-ReentrantLock"><a href="#重入锁-ReentrantLock" class="headerlink" title="重入锁(ReentrantLock)"></a>重入锁(ReentrantLock)</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>顾名思义就是支持重进入的锁，表示该锁能够支持一个线程对资源的重复加锁。此外，该锁还支持获取锁时的公平与非公平性选择。所谓重进入是指任意线程在获取到锁之后能够再次获取该锁而不被锁阻塞。</p>
+<h3 id="实现"><a href="#实现" class="headerlink" title="实现"></a>实现</h3><p>实现可重新进入锁的特性需要解决两个问题：<code>线程再次获取锁</code>和<code>锁的最终释放</code></p>
+<p>ReentrantLock 是通过组合自定义同步器来实现锁的获取与释放，以非公平锁为例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Performs non-fair tryLock.  tryAcquire is implemented in</span></span><br><span class="line"><span class="comment">  * subclasses, but both need nonfair try for trylock method.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="function"><span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">nonfairTryAcquire</span><span class="params">(<span class="keyword">int</span> acquires)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">final</span> Thread current = Thread.currentThread();</span><br><span class="line">     <span class="keyword">int</span> c = getState();</span><br><span class="line">     <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">         <span class="keyword">if</span> (compareAndSetState(<span class="number">0</span>, acquires)) &#123;</span><br><span class="line">             setExclusiveOwnerThread(current);</span><br><span class="line">             <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="keyword">else</span> <span class="keyword">if</span> (current == getExclusiveOwnerThread()) &#123;</span><br><span class="line">         <span class="keyword">int</span> nextc = c + acquires;</span><br><span class="line">         <span class="keyword">if</span> (nextc &lt; <span class="number">0</span>) <span class="comment">// overflow</span></span><br><span class="line">             <span class="keyword">throw</span> <span class="keyword">new</span> Error(<span class="string">&quot;Maximum lock count exceeded&quot;</span>);</span><br><span class="line">         setState(nextc);</span><br><span class="line">         <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>该方法增加了再次获取同步状态的逻辑：</p>
+<p>通过判断当前线程是否为获取锁的线程来觉得获取操作是否成功，如果是获取锁的线程再次请求，则将同步状态值进行增加并返回 true,表示获取同步状态成功。成功获取锁的线程再次获取锁，只是增加了同步状态值。与之对应在释放锁的时候也需要减少同步状态值。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">tryRelease</span><span class="params">(<span class="keyword">int</span> releases)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> c = getState() - releases;</span><br><span class="line">    <span class="keyword">if</span> (Thread.currentThread() != getExclusiveOwnerThread())</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> IllegalMonitorStateException();</span><br><span class="line">    <span class="keyword">boolean</span> free = <span class="keyword">false</span>;</span><br><span class="line">    <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;</span><br><span class="line">        free = <span class="keyword">true</span>;</span><br><span class="line">        setExclusiveOwnerThread(<span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    setState(c);</span><br><span class="line">    <span class="keyword">return</span> free;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果该锁被获取了 n 次，那么 n-1次 tryRelease()方法必须返回 false,只有同步状态完全释放了才能返回 true。即 state最终值为 0 时将占有的线程设置为 null,并返回 true,表示锁释放成功。</p>
+<h3 id="公平锁与非公平锁"><a href="#公平锁与非公平锁" class="headerlink" title="公平锁与非公平锁"></a>公平锁与非公平锁</h3><p>在大多数应用场景中，锁的申请都是非公平的，也就是说在默认情况下系统只会在锁的等待队列中随机挑选一个线程，因此不能保证公平性。在 ReentrantLock中，提供了实现公平锁的构造方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Creates an instance of &#123;<span class="doctag">@code</span> ReentrantLock&#125; with the</span></span><br><span class="line"><span class="comment"> * given fairness policy.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fair &#123;<span class="doctag">@code</span> true&#125; if this lock should use a fair ordering policy</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ReentrantLock</span><span class="params">(<span class="keyword">boolean</span> fair)</span> </span>&#123;</span><br><span class="line">    sync = fair ? <span class="keyword">new</span> FairSync() : <span class="keyword">new</span> NonfairSync();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当参数 fair 为 true 时，表示锁是公平的。</p>
+<h4 id="公平锁和非公平锁的对比"><a href="#公平锁和非公平锁的对比" class="headerlink" title="公平锁和非公平锁的对比"></a>公平锁和非公平锁的对比</h4><ul>
+<li>公平锁的一大特点就是不会产生饥饿现象，每个等待的线程获取锁的机会都是相同的。而非公平锁则是随机在等待的线程中挑选一个线程，而且根据系统调度一个线程会倾向于再次获取已经持有的锁。</li>
+<li>公平锁为了达到公平性，会额外维护一个有序的队列，因此公平锁的实现成本更高且性能低下；而非公平锁的性能要好于非公平锁，同时极少的线程切换保证了更大的吞吐量。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
+      </tags>
+  </entry>
 </search>
