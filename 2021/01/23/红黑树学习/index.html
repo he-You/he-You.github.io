@@ -1,0 +1,253 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>红黑树 | he-You</title><meta name="keywords" content="树"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="红黑树的定义红黑树是二叉树的一种变种,为保证左右子树相对平衡不会出现极端情况(退化成斜树，可以理解为单链表)而采取节点上色的方案,将节点标记为红色或者黑色，在计算树的深度时只统计黑色节点的数量，不统计红色节点数量。 而保持左右子树深度相同的原因是减少树的最大深度，从而提高查询的效率，尽量维持左右子树的深度一致，避免某个子树深度过深的情况出现。 如果某个子树深度过深，查找算法的时间复杂度就下降为链表">
+<meta property="og:type" content="article">
+<meta property="og:title" content="红黑树">
+<meta property="og:url" content="https://he-you.github.io/2021/01/23/%E7%BA%A2%E9%BB%91%E6%A0%91%E5%AD%A6%E4%B9%A0/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="红黑树的定义红黑树是二叉树的一种变种,为保证左右子树相对平衡不会出现极端情况(退化成斜树，可以理解为单链表)而采取节点上色的方案,将节点标记为红色或者黑色，在计算树的深度时只统计黑色节点的数量，不统计红色节点数量。 而保持左右子树深度相同的原因是减少树的最大深度，从而提高查询的效率，尽量维持左右子树的深度一致，避免某个子树深度过深的情况出现。 如果某个子树深度过深，查找算法的时间复杂度就下降为链表">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs8obpqfj31900u0dz9.jpg">
+<meta property="article:published_time" content="2021-01-23T09:59:26.500Z">
+<meta property="article:modified_time" content="2021-01-23T10:00:43.178Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="树">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs8obpqfj31900u0dz9.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2021/01/23/%E7%BA%A2%E9%BB%91%E6%A0%91%E5%AD%A6%E4%B9%A0/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-01-23 18:00:43'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">26</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">18</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">7</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs8obpqfj31900u0dz9.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">红黑树</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-01-23T09:59:26.500Z" title="发表于 2021-01-23 17:59:26">2021-01-23</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-01-23T10:00:43.178Z" title="更新于 2021-01-23 18:00:43">2021-01-23</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/">数据结构</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="红黑树的定义"><a href="#红黑树的定义" class="headerlink" title="红黑树的定义"></a>红黑树的定义</h1><p>红黑树是二叉树的一种变种,为保证左右子树相对平衡不会出现极端情况(退化成斜树，可以理解为单链表)而采取节点上色的方案,将节点标记为红色或者黑色，在<strong>计算树的深度时只统计黑色节点的数量</strong>，不统计红色节点数量。</p>
+<p>而保持左右子树深度相同的原因是减少树的最大深度，从而提高查询的效率，尽量维持左右子树的深度一致，避免某个子树深度过深的情况出现。</p>
+<p>如果某个子树深度过深，查找算法的时间复杂度就下降为链表的时间复杂度O(n)，为了保证左右子树的平衡，红黑树定义了一些规则或者特点来维持平衡。</p>
+<h1 id="红黑树的主要特征"><a href="#红黑树的主要特征" class="headerlink" title="红黑树的主要特征"></a>红黑树的主要特征</h1><ul>
+<li>每个节点要么是黑色，要么是红色。（节点非黑即红）</li>
+<li>根节点为黑色</li>
+<li>每个叶子节点（NIL）是黑色（值得提醒注意的是，在Java中，叶子结点是为null的结点。）。</li>
+<li>如果一个节点是红色的，则它的子节点必须是黑色的。（也就是说父子节点不能同时为红色）</li>
+<li>从一个节点到该节点的每一个叶子子孙节点的所有路径上包含相同数目的黑节点。（这一点是平衡的关键）</li>
+<li>新插入节点默认为红色，插入后需要校验红黑树是否符合规则，不符合则需要进行操作。</li>
+</ul>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs0cp1mpj30fx0aq439.jpg"></p>
+<p>红黑树并不是一个完美平衡二叉查找树，从上图可以看到，根结点P的左子树显然比右子树高， 但左子树和右子树的黑结点的层数是相等的， 也即任意一个结点到到每个叶子结点的路径都包含数量相同的黑结点。 所以我们叫红黑树这种平衡为黑色完美平衡。</p>
+<p>我们把正在处理(遍历)的结点叫做当前结点，如下图中的D，它的父亲叫做父结点，它的父亲的另外一个子结点叫做兄弟结点，父亲的父亲叫做祖父结点。 </p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs0u437oj30kh0eqwor.jpg"></p>
+<p>HashMap在进行插入和删除时有可能会触发红黑树的插入平衡调整（balanceInsertion方法） 或删除平衡调整（balanceDeletion ）方法， 调整的方式主要有以下手段： </p>
+<p>左旋转（rotateLeft方法）、右旋转（rotateRight方法）、颜色反转（x.red = false、x.red = true）， 进行调整的原因是为了维持红黑树的数据结构。</p>
+<ul>
+<li><strong>左旋</strong>：以某个结点作为支点(旋转结点)，其右子结点变为旋转结点的父结点，右子结点的左子结点变为旋转结点的右子结点，左子结点保持不变。如图3。</li>
+<li><strong>右旋</strong>：以某个结点作为支点(旋转结点)，其左子结点变为旋转结点的父结点，左子结点的右子结点变为旋转结点的左子结点，右子结点保持不变。如图4。</li>
+<li><strong>变色</strong>：结点的颜色由红变黑或由黑变红。</li>
+</ul>
+<p>我们先忽略颜色，可以看到旋转操作不会影响旋转结点的父结点，父结点以上的结构还是保持不变的。 左旋只影响旋转结点和其右子树的结构，把右子树的结点往左子树挪了。 </p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs1tuyswj30kp073tdi.jpg"></p>
+<p>右旋只影响旋转结点和其左子树的结构，把左子树的结点往右子树挪了。 </p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs2cfiskj30kq06fn1i.jpg"></p>
+<p>所以旋转操作是局部的。另外可以看出旋转能保持红黑树平衡的一些端详了：当一边子树的结点少了，那么向另外一边子树“借”一些结点；当一边子树的结点多了，那么向另外一边子树“租”一些结点。</p>
+<h1 id="红黑树的遍历"><a href="#红黑树的遍历" class="headerlink" title="红黑树的遍历"></a>红黑树的遍历</h1><p>因为红黑树是一颗二叉平衡树，并且查找不会破坏树的平衡，所以查找跟二叉平衡树的查找无异：</p>
+<ul>
+<li><p>从根结点开始查找，把根结点设置为当前结点；</p>
+</li>
+<li><p>若当前结点为空，返回null；</p>
+</li>
+<li><p>若当前结点不为空，用当前结点的key跟查找key作比较；</p>
+</li>
+<li><p>若当前结点key等于查找key，那么该key就是查找目标，返回当前结点；</p>
+</li>
+<li><p>若当前结点key大于查找key，把当前结点的左子结点设置为当前结点，重复步骤2；</p>
+</li>
+<li><p>若当前结点key小于查找key，把当前结点的右子结点设置为当前结点，重复步骤2； </p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs35jvcyj30kv0fwadm.jpg"></p>
+<p>正由于红黑树总保持黑色完美平衡，所以它的查找最坏时间复杂度为O(2lgN)，也即整颗树刚好红黑相隔的时候。</p>
+</li>
+</ul>
+<h1 id="红黑树插入"><a href="#红黑树插入" class="headerlink" title="红黑树插入"></a>红黑树插入</h1><p>插入操作包括两部分工作：一查找插入的位置；二插入后自平衡。查找插入的父结点很简单，跟查找操作区别不大：</p>
+<ul>
+<li><p>从根结点开始查找；</p>
+</li>
+<li><p>若根结点为空，那么插入结点作为根结点，结束。</p>
+</li>
+<li><p>若根结点不为空，那么把根结点作为当前结点；</p>
+</li>
+<li><p>若当前结点为null，返回当前结点的父结点，结束。</p>
+</li>
+<li><p>若当前结点key等于查找key，那么该key所在结点就是插入结点，更新结点的值，结束。</p>
+</li>
+<li><p>若当前结点key大于查找key，把当前结点的左子结点设置为当前结点，重复步骤4；</p>
+</li>
+<li><p>若当前结点key小于查找key，把当前结点的右子结点设置为当前结点，重复步骤4；</p>
+</li>
+</ul>
+<p>  <img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs42qhpqj30l00j5wj1.jpg"></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2021/01/23/%E7%BA%A2%E9%BB%91%E6%A0%91%E5%AD%A6%E4%B9%A0/">https://he-you.github.io/2021/01/23/红黑树学习/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%A0%91/">树</a></div><div class="post_share"><div class="social-share" data-image="https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs8obpqfj31900u0dz9.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/01/21/JDK1.7-%E4%B8%AD%E7%9A%84HashMap%E6%BA%90%E7%A0%81/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/008eGmZEgy1gmvqahpxfmj31c00u0til.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">JDK1.7 中的HashMap源码</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%BA%A2%E9%BB%91%E6%A0%91%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="toc-number">1.</span> <span class="toc-text">红黑树的定义</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%BA%A2%E9%BB%91%E6%A0%91%E7%9A%84%E4%B8%BB%E8%A6%81%E7%89%B9%E5%BE%81"><span class="toc-number">2.</span> <span class="toc-text">红黑树的主要特征</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%BA%A2%E9%BB%91%E6%A0%91%E7%9A%84%E9%81%8D%E5%8E%86"><span class="toc-number">3.</span> <span class="toc-text">红黑树的遍历</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E7%BA%A2%E9%BB%91%E6%A0%91%E6%8F%92%E5%85%A5"><span class="toc-number">4.</span> <span class="toc-text">红黑树插入</span></a></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gmxs8obpqfj31900u0dz9.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
