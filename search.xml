@@ -2080,4 +2080,79 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>并发容器</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Spring 中的重要概念</title>
+    <url>/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h1 id="Spring-中的重要概念"><a href="#Spring-中的重要概念" class="headerlink" title="Spring 中的重要概念"></a>Spring 中的重要概念</h1><h2 id="Bean"><a href="#Bean" class="headerlink" title="Bean"></a>Bean</h2><h3 id="Bean与-Java对象的区别"><a href="#Bean与-Java对象的区别" class="headerlink" title="Bean与 Java对象的区别"></a>Bean与 Java对象的区别</h3><p>在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。</p>
+<h3 id="Bean的创建的方式"><a href="#Bean的创建的方式" class="headerlink" title="Bean的创建的方式"></a>Bean的创建的方式</h3><ul>
+<li>xml</li>
+<li>@Bean</li>
+<li>@Component</li>
+<li>BeanDefinition</li>
+</ul>
+<p>如何通过 BeanDefinition 创建 Bean?</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 定义了一个BeanDefinition</span></span><br><span class="line">AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</span><br><span class="line"><span class="comment">// 当前Bean对象的类型</span></span><br><span class="line">beanDefinition.setBeanClass(Person.class);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将BeanDefinition注册到BeanFactory中</span></span><br><span class="line">DefaultListableBeanFactory beanFactory = <span class="keyword">new</span> DefaultListableBeanFactory();</span><br><span class="line">beanFactory.registerBeanDefinition(<span class="string">&quot;person&quot;</span>, beanDefinition);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取Bean</span></span><br><span class="line">System.out.println(beanFactory.getBean(<span class="string">&quot;person&quot;</span>));</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Bean-的生命周期"><a href="#Bean-的生命周期" class="headerlink" title="Bean 的生命周期"></a>Bean 的生命周期</h3><p>bean对象从创建实例化初始化到最终销毁的过程</p>
+<h3 id="作用域"><a href="#作用域" class="headerlink" title="作用域"></a>作用域</h3><p>单例、原型、request、session</p>
+<h4 id="单例Bean-默认是单例"><a href="#单例Bean-默认是单例" class="headerlink" title="单例Bean-默认是单例"></a>单例Bean-默认是单例</h4><h5 id="单例池"><a href="#单例池" class="headerlink" title="单例池"></a>单例池</h5><p>存放 Spring 启动时创建的非懒加载、非抽象的单例 bean的集合，在单例模式下，调用 getBean(“beanName”)方法都会尝试从单例池中获取对应的 bean 对象。</p>
+<h4 id="原型Bean"><a href="#原型Bean" class="headerlink" title="原型Bean"></a>原型Bean</h4><p>Spring 调用 getBean(“beanName”)时，每次返回一个全新的 bean 对象</p>
+<h4 id="懒加载"><a href="#懒加载" class="headerlink" title="懒加载"></a>懒加载</h4><p>@Lazy,懒加载的 bean 不是在 Spring 启动的时候创建出来的，而是在第一次调用 getBean 创建的</p>
+<h2 id="BeanDefinition"><a href="#BeanDefinition" class="headerlink" title="BeanDefinition"></a>BeanDefinition</h2><h3 id="BeanDefiniton-的定义"><a href="#BeanDefiniton-的定义" class="headerlink" title="BeanDefiniton 的定义"></a>BeanDefiniton 的定义</h3><p>BeanDefinition 是Spring 中 bean 对象的定义，存放的是 bean 对象的属性信息，Spring 也是根据 BeanDefinition 的 bean 对象的定义创建 bean对象的</p>
+<h3 id="BeanDefinition-的获取"><a href="#BeanDefinition-的获取" class="headerlink" title="BeanDefinition 的获取"></a>BeanDefinition 的获取</h3><p>BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</p>
+<h3 id="BeanDefinition-的作用"><a href="#BeanDefinition-的作用" class="headerlink" title="BeanDefinition 的作用"></a>BeanDefinition 的作用</h3><p>管理和存储 Spring 中 bean 对象的定义，是一个 map 类型的容器，Spring 在启动时会根据 BeanDefinition 中的信息去创建对应的 bean对象。</p>
+<h3 id="XmlBeanDefinitonReader"><a href="#XmlBeanDefinitonReader" class="headerlink" title="XmlBeanDefinitonReader"></a>XmlBeanDefinitonReader</h3><p>用于读取 xml 资源文件中关于 bean 对象的定义，提供 bean对象的注册/移除功能</p>
+<h3 id="AnnotatedBeanDefinitionReader"><a href="#AnnotatedBeanDefinitionReader" class="headerlink" title="AnnotatedBeanDefinitionReader"></a>AnnotatedBeanDefinitionReader</h3><p>可以直接把某个类转换为BeanDefinition，并且会解析该类上的注解</p>
+<p>注：它能解析的注解是：@Conditional，@Scope、@Lazy、@Primary、@DependsOn、@Role、@Description</p>
+<h3 id="ClassPathBeanDefinitonScanner"><a href="#ClassPathBeanDefinitonScanner" class="headerlink" title="ClassPathBeanDefinitonScanner"></a>ClassPathBeanDefinitonScanner</h3><p>路径扫描器，扫描指定路径下的类，并将扫描到的具体注解的类加入到 BeanDefinition 容器中，如果没有@Component（@Service、@Controller 等@Component 的子类型注解）则不会加入 BeanDefinition 中.</p>
+<p>这个并不是BeanDefinitionReader，但是它的作用和BeanDefinitionReader类似，它可以进行扫描，可以实现对包路径的扫描，并对扫描到的类进行解析如果存在@Component注解，则会把这个类解析为一个BeanDefinition。</p>
+<h3 id="MetadataReader-元数据读取器"><a href="#MetadataReader-元数据读取器" class="headerlink" title="MetadataReader 元数据读取器"></a>MetadataReader 元数据读取器</h3><p>所谓元数据，是指：类名、类的注解、类的内部类、实现的方法、父类、被注解的方法，注解的类型等</p>
+<p>元数据读取器就是将元数据信息存入 BeanDefinition中</p>
+<h2 id="BeanFactory"><a href="#BeanFactory" class="headerlink" title="BeanFactory"></a>BeanFactory</h2><p>BeanFactory 是一个接口，用于实现创建bean 对象的工厂。</p>
+<h4 id="DefaultListableBeanFactory-BeanFactory-的核心实现类"><a href="#DefaultListableBeanFactory-BeanFactory-的核心实现类" class="headerlink" title="DefaultListableBeanFactory-BeanFactory 的核心实现类"></a>DefaultListableBeanFactory-BeanFactory 的核心实现类</h4><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfd6gqbfjj329m0u0gpu.jpg"></p>
+<h2 id="ApplicationContext–功能更加强大的-BeanFactory"><a href="#ApplicationContext–功能更加强大的-BeanFactory" class="headerlink" title="ApplicationContext–功能更加强大的 BeanFactory"></a>ApplicationContext–功能更加强大的 BeanFactory</h2><p><strong>AnnotationConfigApplicationContext</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AnnotationConfigRegistry</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Register one or more component classes to be processed.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Calls to &#123;<span class="doctag">@code</span> register&#125; are idempotent; adding the same</span></span><br><span class="line"><span class="comment">	 * component class more than once has no additional effect.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> componentClasses one or more component classes,</span></span><br><span class="line"><span class="comment">	 * e.g. &#123;<span class="doctag">@link</span> Configuration <span class="doctag">@Configuration</span>&#125; classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt;... componentClasses)</span></span>;<span class="comment">//  AnnotatedBeanDefinitionReader</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Perform a scan within the specified base packages.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> basePackages the packages to scan for component classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">scan</span><span class="params">(String... basePackages)</span></span>;  <span class="comment">// ClassPathBeanDefinitionScanner</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>void register(Class&lt;?&gt;… componentClasses);实现对AnnotatedBeanDefinitionReader的支持</li>
+<li>void scan(String… basePackages)实现对ClassPathBeanDefinitionScanner的支持</li>
+</ul>
+<p>注：无法直接注册单例 bean</p>
+<p>ApplicationContext具有的功能：</p>
+<ul>
+<li>获取系统环境信息</li>
+<li>获取 Bean 信息</li>
+<li>获取父子工厂 bean</li>
+<li>支持国际化 MessageSource</li>
+<li>事件发布功能</li>
+<li>获取资源文件 getResource</li>
+</ul>
+<h2 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h2><p>Bean的后置处理器，是 Spring 提供给程序员可以在 bean 的生命周期中对创建 bean 的过程进行干预，是属于BeanFactory中一个属性，通过对 BeanPostProcessor内部方的重写，可以在创建 bean的过程中实现跳过部分默认方法或功能。</p>
+<h2 id="BeanFactoryPostProcessor"><a href="#BeanFactoryPostProcessor" class="headerlink" title="BeanFactoryPostProcessor"></a>BeanFactoryPostProcessor</h2><p>Bean工厂的后置处理器，是属于ApplicationContext中的一个属性，是ApplicationContext在实例化一个BeanFactory后，可以利用BeanFactoryPostProcessor继续处理BeanFactory。</p>
+<p>通过BeanFactoryPostProcessor间接的设置BeanFactory，比如上文中的CustomEditorConfigurer就是一个BeanFactoryPostProcessor，我们可以通过它向BeanFactory中添加自定义的PropertyEditor。</p>
+<h2 id="FactoryBean"><a href="#FactoryBean" class="headerlink" title="FactoryBean"></a>FactoryBean</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>特殊的 bean,是个接口,有两个普通的方法和一个默认方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FactoryBean</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">	String OBJECT_TYPE_ATTRIBUTE = <span class="string">&quot;factoryBeanObjectType&quot;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function">T <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	Class&lt;?&gt; getObjectType();</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">isSingleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="具体的使用流程"><a href="#具体的使用流程" class="headerlink" title="具体的使用流程"></a>具体的使用流程</h3><p>调用 FactoryBean 的 getBean 方法会返回 getObject 中的对象，而不是 FactoryBean 这个类型的 Bean，且该对象（Bean）是在第一次 getBean 中生成并放入 FactoryBean 的缓存<code>FactoryBeanObjectCache</code>中。FactoryBean 中的 getObject()<code>相当于产生一个懒加载的 bean</code>。</p>
+<p>首先 applicationContext.getBean()从单例池中获取bean，判断这个 bean 是否是实现了 FactoryBean,如果是则通过 getObject 方法返回 bean,否则直接返回单例池中的 bean。</p>
+<p>如果需要获取 FactoryBean 这个类的 bean 需要在 beanName加上前缀“&amp;”若干个（Spring 内部会通过 do-while 循环处理掉前缀），源码中会对 beanName 进行判断，是否是获取类类型的 bean 还是 getObject 方法返回的 bean。</p>
+<p>注：使用缓存是为了保证 bean对象是单例的。</p>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p>整合第三方框架、如 mybatis</p>
+<h3 id="与BeanFactory的区别"><a href="#与BeanFactory的区别" class="headerlink" title="与BeanFactory的区别"></a>与BeanFactory的区别</h3><p>BeanFactory 是个创建 Bean 的工厂，可以产生 FactoryBean。产生的 bean 的类型是各种各样的</p>
+<p>FactoryBean 小工厂，产生的 bean 是同一个类型</p>
+<h3 id="与-bean-的区别"><a href="#与-bean-的区别" class="headerlink" title="与@bean 的区别"></a>与@bean 的区别</h3><p>@bean 功能单一，FactoryBean 可以实现其他接口，扩展更多的功能。</p>
+<h3 id="SmartFactoryBean"><a href="#SmartFactoryBean" class="headerlink" title="SmartFactoryBean"></a>SmartFactoryBean</h3><p>是 FactoryBean 的一种实现类，提供了一个判断是否立即初始化的方法</p>
+<ul>
+<li>isEagerInit()：是否立即初始化，true—-就不是懒加载 bean。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
 </search>

@@ -1,0 +1,255 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spring 中的重要概念 | he-You</title><meta name="keywords" content="Spring"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="Spring 中的重要概念BeanBean与 Java对象的区别在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。 Bean的创建的方式 xml @Bean @Component BeanDefinition  如何通过 BeanDefinition 创建 Bean? 1234567891011&#x2F;&#x2F; 定义了一个BeanDefinitionAbstrac">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring 中的重要概念">
+<meta property="og:url" content="https://he-you.github.io/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="Spring 中的重要概念BeanBean与 Java对象的区别在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。 Bean的创建的方式 xml @Bean @Component BeanDefinition  如何通过 BeanDefinition 创建 Bean? 1234567891011&#x2F;&#x2F; 定义了一个BeanDefinitionAbstrac">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfdcde6elj31900u0wxl.jpg">
+<meta property="article:published_time" content="2021-02-07T15:05:10.657Z">
+<meta property="article:modified_time" content="2021-02-07T15:05:10.657Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="Spring">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfdcde6elj31900u0wxl.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-02-07 23:05:10'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">31</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">23</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gnfdcde6elj31900u0wxl.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Spring 中的重要概念</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-02-07T15:05:10.657Z" title="发表于 2021-02-07 23:05:10">2021-02-07</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-02-07T15:05:10.657Z" title="更新于 2021-02-07 23:05:10">2021-02-07</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Spring/">Spring</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="Spring-中的重要概念"><a href="#Spring-中的重要概念" class="headerlink" title="Spring 中的重要概念"></a>Spring 中的重要概念</h1><h2 id="Bean"><a href="#Bean" class="headerlink" title="Bean"></a>Bean</h2><h3 id="Bean与-Java对象的区别"><a href="#Bean与-Java对象的区别" class="headerlink" title="Bean与 Java对象的区别"></a>Bean与 Java对象的区别</h3><p>在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。</p>
+<h3 id="Bean的创建的方式"><a href="#Bean的创建的方式" class="headerlink" title="Bean的创建的方式"></a>Bean的创建的方式</h3><ul>
+<li>xml</li>
+<li>@Bean</li>
+<li>@Component</li>
+<li>BeanDefinition</li>
+</ul>
+<p>如何通过 BeanDefinition 创建 Bean?</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 定义了一个BeanDefinition</span></span><br><span class="line">AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</span><br><span class="line"><span class="comment">// 当前Bean对象的类型</span></span><br><span class="line">beanDefinition.setBeanClass(Person.class);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将BeanDefinition注册到BeanFactory中</span></span><br><span class="line">DefaultListableBeanFactory beanFactory = <span class="keyword">new</span> DefaultListableBeanFactory();</span><br><span class="line">beanFactory.registerBeanDefinition(<span class="string">&quot;person&quot;</span>, beanDefinition);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取Bean</span></span><br><span class="line">System.out.println(beanFactory.getBean(<span class="string">&quot;person&quot;</span>));</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Bean-的生命周期"><a href="#Bean-的生命周期" class="headerlink" title="Bean 的生命周期"></a>Bean 的生命周期</h3><p>bean对象从创建实例化初始化到最终销毁的过程</p>
+<h3 id="作用域"><a href="#作用域" class="headerlink" title="作用域"></a>作用域</h3><p>单例、原型、request、session</p>
+<h4 id="单例Bean-默认是单例"><a href="#单例Bean-默认是单例" class="headerlink" title="单例Bean-默认是单例"></a>单例Bean-默认是单例</h4><h5 id="单例池"><a href="#单例池" class="headerlink" title="单例池"></a>单例池</h5><p>存放 Spring 启动时创建的非懒加载、非抽象的单例 bean的集合，在单例模式下，调用 getBean(“beanName”)方法都会尝试从单例池中获取对应的 bean 对象。</p>
+<h4 id="原型Bean"><a href="#原型Bean" class="headerlink" title="原型Bean"></a>原型Bean</h4><p>Spring 调用 getBean(“beanName”)时，每次返回一个全新的 bean 对象</p>
+<h4 id="懒加载"><a href="#懒加载" class="headerlink" title="懒加载"></a>懒加载</h4><p>@Lazy,懒加载的 bean 不是在 Spring 启动的时候创建出来的，而是在第一次调用 getBean 创建的</p>
+<h2 id="BeanDefinition"><a href="#BeanDefinition" class="headerlink" title="BeanDefinition"></a>BeanDefinition</h2><h3 id="BeanDefiniton-的定义"><a href="#BeanDefiniton-的定义" class="headerlink" title="BeanDefiniton 的定义"></a>BeanDefiniton 的定义</h3><p>BeanDefinition 是Spring 中 bean 对象的定义，存放的是 bean 对象的属性信息，Spring 也是根据 BeanDefinition 的 bean 对象的定义创建 bean对象的</p>
+<h3 id="BeanDefinition-的获取"><a href="#BeanDefinition-的获取" class="headerlink" title="BeanDefinition 的获取"></a>BeanDefinition 的获取</h3><p>BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</p>
+<h3 id="BeanDefinition-的作用"><a href="#BeanDefinition-的作用" class="headerlink" title="BeanDefinition 的作用"></a>BeanDefinition 的作用</h3><p>管理和存储 Spring 中 bean 对象的定义，是一个 map 类型的容器，Spring 在启动时会根据 BeanDefinition 中的信息去创建对应的 bean对象。</p>
+<h3 id="XmlBeanDefinitonReader"><a href="#XmlBeanDefinitonReader" class="headerlink" title="XmlBeanDefinitonReader"></a>XmlBeanDefinitonReader</h3><p>用于读取 xml 资源文件中关于 bean 对象的定义，提供 bean对象的注册/移除功能</p>
+<h3 id="AnnotatedBeanDefinitionReader"><a href="#AnnotatedBeanDefinitionReader" class="headerlink" title="AnnotatedBeanDefinitionReader"></a>AnnotatedBeanDefinitionReader</h3><p>可以直接把某个类转换为BeanDefinition，并且会解析该类上的注解</p>
+<p>注：它能解析的注解是：@Conditional，@Scope、@Lazy、@Primary、@DependsOn、@Role、@Description</p>
+<h3 id="ClassPathBeanDefinitonScanner"><a href="#ClassPathBeanDefinitonScanner" class="headerlink" title="ClassPathBeanDefinitonScanner"></a>ClassPathBeanDefinitonScanner</h3><p>路径扫描器，扫描指定路径下的类，并将扫描到的具体注解的类加入到 BeanDefinition 容器中，如果没有@Component（@Service、@Controller 等@Component 的子类型注解）则不会加入 BeanDefinition 中.</p>
+<p>这个并不是BeanDefinitionReader，但是它的作用和BeanDefinitionReader类似，它可以进行扫描，可以实现对包路径的扫描，并对扫描到的类进行解析如果存在@Component注解，则会把这个类解析为一个BeanDefinition。</p>
+<h3 id="MetadataReader-元数据读取器"><a href="#MetadataReader-元数据读取器" class="headerlink" title="MetadataReader 元数据读取器"></a>MetadataReader 元数据读取器</h3><p>所谓元数据，是指：类名、类的注解、类的内部类、实现的方法、父类、被注解的方法，注解的类型等</p>
+<p>元数据读取器就是将元数据信息存入 BeanDefinition中</p>
+<h2 id="BeanFactory"><a href="#BeanFactory" class="headerlink" title="BeanFactory"></a>BeanFactory</h2><p>BeanFactory 是一个接口，用于实现创建bean 对象的工厂。</p>
+<h4 id="DefaultListableBeanFactory-BeanFactory-的核心实现类"><a href="#DefaultListableBeanFactory-BeanFactory-的核心实现类" class="headerlink" title="DefaultListableBeanFactory-BeanFactory 的核心实现类"></a>DefaultListableBeanFactory-BeanFactory 的核心实现类</h4><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfd6gqbfjj329m0u0gpu.jpg"></p>
+<h2 id="ApplicationContext–功能更加强大的-BeanFactory"><a href="#ApplicationContext–功能更加强大的-BeanFactory" class="headerlink" title="ApplicationContext–功能更加强大的 BeanFactory"></a>ApplicationContext–功能更加强大的 BeanFactory</h2><p><strong>AnnotationConfigApplicationContext</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AnnotationConfigRegistry</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Register one or more component classes to be processed.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Calls to &#123;<span class="doctag">@code</span> register&#125; are idempotent; adding the same</span></span><br><span class="line"><span class="comment">	 * component class more than once has no additional effect.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> componentClasses one or more component classes,</span></span><br><span class="line"><span class="comment">	 * e.g. &#123;<span class="doctag">@link</span> Configuration <span class="doctag">@Configuration</span>&#125; classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt;... componentClasses)</span></span>;<span class="comment">//  AnnotatedBeanDefinitionReader</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Perform a scan within the specified base packages.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> basePackages the packages to scan for component classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">scan</span><span class="params">(String... basePackages)</span></span>;  <span class="comment">// ClassPathBeanDefinitionScanner</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>void register(Class&lt;?&gt;… componentClasses);实现对AnnotatedBeanDefinitionReader的支持</li>
+<li>void scan(String… basePackages)实现对ClassPathBeanDefinitionScanner的支持</li>
+</ul>
+<p>注：无法直接注册单例 bean</p>
+<p>ApplicationContext具有的功能：</p>
+<ul>
+<li>获取系统环境信息</li>
+<li>获取 Bean 信息</li>
+<li>获取父子工厂 bean</li>
+<li>支持国际化 MessageSource</li>
+<li>事件发布功能</li>
+<li>获取资源文件 getResource</li>
+</ul>
+<h2 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h2><p>Bean的后置处理器，是 Spring 提供给程序员可以在 bean 的生命周期中对创建 bean 的过程进行干预，是属于BeanFactory中一个属性，通过对 BeanPostProcessor内部方的重写，可以在创建 bean的过程中实现跳过部分默认方法或功能。</p>
+<h2 id="BeanFactoryPostProcessor"><a href="#BeanFactoryPostProcessor" class="headerlink" title="BeanFactoryPostProcessor"></a>BeanFactoryPostProcessor</h2><p>Bean工厂的后置处理器，是属于ApplicationContext中的一个属性，是ApplicationContext在实例化一个BeanFactory后，可以利用BeanFactoryPostProcessor继续处理BeanFactory。</p>
+<p>通过BeanFactoryPostProcessor间接的设置BeanFactory，比如上文中的CustomEditorConfigurer就是一个BeanFactoryPostProcessor，我们可以通过它向BeanFactory中添加自定义的PropertyEditor。</p>
+<h2 id="FactoryBean"><a href="#FactoryBean" class="headerlink" title="FactoryBean"></a>FactoryBean</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>特殊的 bean,是个接口,有两个普通的方法和一个默认方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FactoryBean</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">	String OBJECT_TYPE_ATTRIBUTE = <span class="string">&quot;factoryBeanObjectType&quot;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function">T <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	Class&lt;?&gt; getObjectType();</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">isSingleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="具体的使用流程"><a href="#具体的使用流程" class="headerlink" title="具体的使用流程"></a>具体的使用流程</h3><p>调用 FactoryBean 的 getBean 方法会返回 getObject 中的对象，而不是 FactoryBean 这个类型的 Bean，且该对象（Bean）是在第一次 getBean 中生成并放入 FactoryBean 的缓存<code>FactoryBeanObjectCache</code>中。FactoryBean 中的 getObject()<code>相当于产生一个懒加载的 bean</code>。</p>
+<p>首先 applicationContext.getBean()从单例池中获取bean，判断这个 bean 是否是实现了 FactoryBean,如果是则通过 getObject 方法返回 bean,否则直接返回单例池中的 bean。</p>
+<p>如果需要获取 FactoryBean 这个类的 bean 需要在 beanName加上前缀“&amp;”若干个（Spring 内部会通过 do-while 循环处理掉前缀），源码中会对 beanName 进行判断，是否是获取类类型的 bean 还是 getObject 方法返回的 bean。</p>
+<p>注：使用缓存是为了保证 bean对象是单例的。</p>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p>整合第三方框架、如 mybatis</p>
+<h3 id="与BeanFactory的区别"><a href="#与BeanFactory的区别" class="headerlink" title="与BeanFactory的区别"></a>与BeanFactory的区别</h3><p>BeanFactory 是个创建 Bean 的工厂，可以产生 FactoryBean。产生的 bean 的类型是各种各样的</p>
+<p>FactoryBean 小工厂，产生的 bean 是同一个类型</p>
+<h3 id="与-bean-的区别"><a href="#与-bean-的区别" class="headerlink" title="与@bean 的区别"></a>与@bean 的区别</h3><p>@bean 功能单一，FactoryBean 可以实现其他接口，扩展更多的功能。</p>
+<h3 id="SmartFactoryBean"><a href="#SmartFactoryBean" class="headerlink" title="SmartFactoryBean"></a>SmartFactoryBean</h3><p>是 FactoryBean 的一种实现类，提供了一个判断是否立即初始化的方法</p>
+<ul>
+<li>isEagerInit()：是否立即初始化，true—-就不是懒加载 bean。</li>
+</ul>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/">https://he-you.github.io/2021/02/07/Spring-中的重要概念/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Spring/">Spring</a></div><div class="post_share"><div class="social-share" data-image="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfdcde6elj31900u0wxl.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/01/31/Docker%E5%AE%89%E8%A3%85-Nacos/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/008eGmZEgy1gn6w86ffbej31680g4q40.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Docker安装 Nacos</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5"><span class="toc-number">1.</span> <span class="toc-text">Spring 中的重要概念</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Bean"><span class="toc-number">1.1.</span> <span class="toc-text">Bean</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Bean%E4%B8%8E-Java%E5%AF%B9%E8%B1%A1%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.1.1.</span> <span class="toc-text">Bean与 Java对象的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Bean%E7%9A%84%E5%88%9B%E5%BB%BA%E7%9A%84%E6%96%B9%E5%BC%8F"><span class="toc-number">1.1.2.</span> <span class="toc-text">Bean的创建的方式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Bean-%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="toc-number">1.1.3.</span> <span class="toc-text">Bean 的生命周期</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BD%9C%E7%94%A8%E5%9F%9F"><span class="toc-number">1.1.4.</span> <span class="toc-text">作用域</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8D%95%E4%BE%8BBean-%E9%BB%98%E8%AE%A4%E6%98%AF%E5%8D%95%E4%BE%8B"><span class="toc-number">1.1.4.1.</span> <span class="toc-text">单例Bean-默认是单例</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#%E5%8D%95%E4%BE%8B%E6%B1%A0"><span class="toc-number">1.1.4.1.1.</span> <span class="toc-text">单例池</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E5%8E%9F%E5%9E%8BBean"><span class="toc-number">1.1.4.2.</span> <span class="toc-text">原型Bean</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#%E6%87%92%E5%8A%A0%E8%BD%BD"><span class="toc-number">1.1.4.3.</span> <span class="toc-text">懒加载</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeanDefinition"><span class="toc-number">1.2.</span> <span class="toc-text">BeanDefinition</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#BeanDefiniton-%E7%9A%84%E5%AE%9A%E4%B9%89"><span class="toc-number">1.2.1.</span> <span class="toc-text">BeanDefiniton 的定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BeanDefinition-%E7%9A%84%E8%8E%B7%E5%8F%96"><span class="toc-number">1.2.2.</span> <span class="toc-text">BeanDefinition 的获取</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#BeanDefinition-%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="toc-number">1.2.3.</span> <span class="toc-text">BeanDefinition 的作用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#XmlBeanDefinitonReader"><span class="toc-number">1.2.4.</span> <span class="toc-text">XmlBeanDefinitonReader</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AnnotatedBeanDefinitionReader"><span class="toc-number">1.2.5.</span> <span class="toc-text">AnnotatedBeanDefinitionReader</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ClassPathBeanDefinitonScanner"><span class="toc-number">1.2.6.</span> <span class="toc-text">ClassPathBeanDefinitonScanner</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#MetadataReader-%E5%85%83%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E5%99%A8"><span class="toc-number">1.2.7.</span> <span class="toc-text">MetadataReader 元数据读取器</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeanFactory"><span class="toc-number">1.3.</span> <span class="toc-text">BeanFactory</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#DefaultListableBeanFactory-BeanFactory-%E7%9A%84%E6%A0%B8%E5%BF%83%E5%AE%9E%E7%8E%B0%E7%B1%BB"><span class="toc-number">1.3.0.1.</span> <span class="toc-text">DefaultListableBeanFactory-BeanFactory 的核心实现类</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ApplicationContext%E2%80%93%E5%8A%9F%E8%83%BD%E6%9B%B4%E5%8A%A0%E5%BC%BA%E5%A4%A7%E7%9A%84-BeanFactory"><span class="toc-number">1.4.</span> <span class="toc-text">ApplicationContext–功能更加强大的 BeanFactory</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeanPostProcessor"><span class="toc-number">1.5.</span> <span class="toc-text">BeanPostProcessor</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#BeanFactoryPostProcessor"><span class="toc-number">1.6.</span> <span class="toc-text">BeanFactoryPostProcessor</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FactoryBean"><span class="toc-number">1.7.</span> <span class="toc-text">FactoryBean</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%AE%9A%E4%B9%89"><span class="toc-number">1.7.1.</span> <span class="toc-text">定义</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%85%B7%E4%BD%93%E7%9A%84%E4%BD%BF%E7%94%A8%E6%B5%81%E7%A8%8B"><span class="toc-number">1.7.2.</span> <span class="toc-text">具体的使用流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF"><span class="toc-number">1.7.3.</span> <span class="toc-text">应用场景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%8EBeanFactory%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.7.4.</span> <span class="toc-text">与BeanFactory的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%8E-bean-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">1.7.5.</span> <span class="toc-text">与@bean 的区别</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SmartFactoryBean"><span class="toc-number">1.7.6.</span> <span class="toc-text">SmartFactoryBean</span></a></li></ol></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gnfdcde6elj31900u0wxl.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
