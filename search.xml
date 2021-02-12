@@ -1176,7 +1176,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </tr>
 </tbody></table>
 <p>其中：StoreLoad Barriers同时具备其他 3 个屏障的效果</p>
-<h3 id="as-if-serial语义"><a href="#as-if-serial语义" class="headerlink" title="as-if-serial语义"></a><strong>as-if-serial语义</strong></h3><p>as-if-serial语义的意思是：不管如果重排序，单线程程序执行结果不能被改变。编译器、runtime 和处理器都必须遵守 as-if-serial语义，因此不会对存在数据依赖关系的操作做重排序，因为会改变程序执行结果。</p>
+<h3 id="as-if-serial语义"><a href="#as-if-serial语义" class="headerlink" title="as-if-serial语义"></a><strong>as-if-serial语义</strong></h3><p>as-if-serial语义的意思是：不管是否发生重排序，单线程程序执行结果不能被改变。编译器、runtime 和处理器都必须遵守 as-if-serial语义，因此不会对存在数据依赖关系的操作做重排序，因为会改变程序执行结果。</p>
 <h2 id="happens-before"><a href="#happens-before" class="headerlink" title="happens-before"></a><strong>happens-before</strong></h2><p>JSR-133定义了如下happens-before规则：</p>
 <ul>
 <li>程序顺序规则： 一个线程中的每个操作，happens-before于该线程中的任意后续操作</li>
