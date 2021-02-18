@@ -901,7 +901,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（二）synchronized 关键字</title>
+    <title>Java 并发编程（三）synchronized 关键字</title>
     <url>/2020/12/21/synchronized%20%E7%9A%84%E4%BD%BF%E7%94%A8%E5%8F%8A%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/</url>
     <content><![CDATA[<h1 id="synchronized-的使用及实现原理"><a href="#synchronized-的使用及实现原理" class="headerlink" title="synchronized 的使用及实现原理"></a>synchronized 的使用及实现原理</h1><h2 id="synchronized关键字的使用"><a href="#synchronized关键字的使用" class="headerlink" title="synchronized关键字的使用"></a>synchronized关键字的使用</h2><h3 id="利用-synchronized-实现同步的-3-种形式"><a href="#利用-synchronized-实现同步的-3-种形式" class="headerlink" title="利用 synchronized 实现同步的 3 种形式"></a>利用 synchronized 实现同步的 3 种形式</h3><h4 id="对于普通的同步方法，锁的是当前实例对象"><a href="#对于普通的同步方法，锁的是当前实例对象" class="headerlink" title="对于普通的同步方法，锁的是当前实例对象"></a>对于普通的同步方法，锁的是当前实例对象</h4><p>所谓的实例对象锁就是用synchronized修饰实例对象中的实例方法(非静态方法)</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountingSync</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">    <span class="comment">//共享资源(临界资源)</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * synchronized 修饰实例方法</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>&#123;</span><br><span class="line">        i++;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000000</span>;j++)&#123;</span><br><span class="line">            increase();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        AccountingSync instance=<span class="keyword">new</span> AccountingSync();</span><br><span class="line">        Thread t1=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        Thread t2=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        System.out.println(i);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 输出结果:</span></span><br><span class="line"><span class="comment">     * 2000000</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -948,7 +948,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（三）Java 对象头与锁升级</title>
+    <title>Java 并发编程（四）Java 对象头与锁升级</title>
     <url>/2020/12/25/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%89%EF%BC%89Java-%E5%AF%B9%E8%B1%A1%E5%A4%B4%E4%B8%8E%E9%94%81%E5%8D%87%E7%BA%A7/</url>
     <content><![CDATA[<h1 id="对象头与对象布局"><a href="#对象头与对象布局" class="headerlink" title="对象头与对象布局"></a>对象头与对象布局</h1><h2 id="对象头的定义"><a href="#对象头的定义" class="headerlink" title="对象头的定义"></a>对象头的定义</h2><blockquote>
 <p><strong>object header</strong></p>
@@ -1086,7 +1086,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（四）Java内存模型</title>
+    <title>Java 并发编程（五）Java内存模型</title>
     <url>/2020/12/27/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%9B%9B%EF%BC%89Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</url>
     <content><![CDATA[<h2 id="现代计算机的内存模型"><a href="#现代计算机的内存模型" class="headerlink" title="现代计算机的内存模型"></a><strong>现代计算机的内存模型</strong></h2><p>在现代计算机中，CPU 指令的运行速度远超内存的存取速度，因此不得不在 CPU 和内存之间加入高速缓存来作为内存与处理器的缓冲。</p>
 <p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2ept801gj316u0tqdj4.jpg"></p>
@@ -1209,7 +1209,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（五）线程入门</title>
+    <title>Java 并发编程（六）线程入门</title>
     <url>/2021/01/04/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%BA%94%EF%BC%89%E7%BA%BF%E7%A8%8B%E5%85%A5%E9%97%A8/</url>
     <content><![CDATA[<h2 id="线程简介"><a href="#线程简介" class="headerlink" title="线程简介"></a>线程简介</h2><h3 id="什么是进程"><a href="#什么是进程" class="headerlink" title="什么是进程"></a>什么是进程</h3><p>进程（Process）是计算机系统资源分配和调度的基本单位，是操作系统结构的基础。进程是程序执行的基本执行实体；是线程的容器；</p>
 <h3 id="什么是线程"><a href="#什么是线程" class="headerlink" title="什么是线程"></a>什么是线程</h3><p>现代操作系统调度的最小单元，也被称为轻量级进程。每个线程都有自己的计数器，堆栈和局部变量等属性，并且可以访问共享的内存变量。</p>
@@ -1323,7 +1323,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（六）线程的创建</title>
+    <title>Java 并发编程（七）线程的创建</title>
     <url>/2021/01/08/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA/</url>
     <content><![CDATA[<h1 id="通过继承Thread类创建线程"><a href="#通过继承Thread类创建线程" class="headerlink" title="通过继承Thread类创建线程"></a>通过继承Thread类创建线程</h1><h2 id="继承-Thread创建线程"><a href="#继承-Thread创建线程" class="headerlink" title="继承 Thread创建线程"></a>继承 Thread创建线程</h2><p>（1）定义Thread类的子类，并重写该类的run方法，该run方法的方法体为创建新线程要完成的任务。</p>
 <p>（2）创建Thread子类的实例，即创建了线程对象。</p>
@@ -1401,7 +1401,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（七）AQS（队列同步器）</title>
+    <title>Java 并发编程（八）AQS（队列同步器）</title>
     <url>/2021/01/14/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%83%EF%BC%89AQS%EF%BC%88%E9%98%9F%E5%88%97%E5%90%8C%E6%AD%A5%E5%99%A8%EF%BC%89/</url>
     <content><![CDATA[<h1 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h1><p>AQS（ AbstractQueuedSynchronizer ）是一个用来构建锁和同步器（所谓同步，是指线程之间的通信、协作）的框架。Lock 包中的各种锁（如常见的 ReentrantLock, ReadWriteLock）,concurrent 包中的各种同步器（如 CountDownLatch, Semaphore, CyclicBarrier）都是基于 AQS 来构建；</p>
 <h1 id="源码与实现"><a href="#源码与实现" class="headerlink" title="源码与实现"></a>源码与实现</h1><h2 id="主要方法源码"><a href="#主要方法源码" class="headerlink" title="主要方法源码"></a>主要方法源码</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//共享变量，使用volatile修饰保证线程可见性</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">int</span> state;</span><br><span class="line"></span><br><span class="line"><span class="comment">//返回同步状态的当前值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getState</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> state;</span><br><span class="line">&#125;</span><br><span class="line"> <span class="comment">// 设置同步状态的值</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">setState</span><span class="params">(<span class="keyword">int</span> newState)</span> </span>&#123;</span><br><span class="line">    state = newState;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//原子操作（CAS操作）将同步状态值设置为给定值update如果当前同步状态的值等于expect（期望值）</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">final</span> <span class="keyword">boolean</span> <span class="title">compareAndSetState</span><span class="params">(<span class="keyword">int</span> expect, <span class="keyword">int</span> update)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> unsafe.compareAndSwapInt(<span class="keyword">this</span>, stateOffset, expect, update);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
@@ -1565,7 +1565,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（八）锁</title>
+    <title>Java 并发编程（九）锁</title>
     <url>/2021/01/15/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AB%EF%BC%89%E9%94%81/</url>
     <content><![CDATA[<h1 id="Synchronized"><a href="#Synchronized" class="headerlink" title="Synchronized"></a><a href="https://he-you.github.io/2020/12/21/synchronized%20%E7%9A%84%E4%BD%BF%E7%94%A8%E5%8F%8A%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/">Synchronized</a></h1><h2 id="偏向锁（可重入）"><a href="#偏向锁（可重入）" class="headerlink" title="偏向锁（可重入）"></a>偏向锁（可重入）</h2><p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
 <p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
@@ -1997,7 +1997,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java并发编程（九）ConcurrentHashMap</title>
+    <title>Java并发编程（十）ConcurrentHashMap</title>
     <url>/2021/01/21/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B9%9D%EF%BC%89ConcurrentHashMap/</url>
     <content><![CDATA[<h1 id="ConcurrentHashMap-简介"><a href="#ConcurrentHashMap-简介" class="headerlink" title="ConcurrentHashMap 简介"></a>ConcurrentHashMap 简介</h1><h1 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h1><h2 id="JDK1-8之前"><a href="#JDK1-8之前" class="headerlink" title="JDK1.8之前"></a>JDK1.8之前</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gn6yjawezej31fi0s0q4r.jpg"></p>
 <p>JDK1.8之前ConcurrentHashMap数据结构：<strong>Segment 数组 + HashEntry 数组 + 链表</strong>，其中 Segment 是实现线程安全的关键。Segment 是一种可重入锁，也是由 Segment 保证 ConcurrentHashMap 的线程安全。当 HashEntry数据发生变化时，必须先获取与它对应的 Segment 锁。Segment 的个数一旦<strong>初始化就不能改变</strong>，默认 Segment 的个数是 16 个，你也可以认为 ConcurrentHashMap 默认支持最多 16 个线程并发。</p>
