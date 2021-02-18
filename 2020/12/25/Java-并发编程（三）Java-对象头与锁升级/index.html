@@ -7,7 +7,7 @@
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg">
 <meta property="article:published_time" content="2020-12-25T15:49:07.972Z">
-<meta property="article:modified_time" content="2021-02-18T13:59:35.211Z">
+<meta property="article:modified_time" content="2021-02-18T14:46:47.407Z">
 <meta property="article:author" content="he-You">
 <meta property="article:tag" content="锁">
 <meta name="twitter:card" content="summary">
@@ -100,7 +100,7 @@ const getScript = url => new Promise((resolve, reject) => {
   isHome: false,
   isHighlightShrink: false,
   isToc: true,
-  postUpdate: '2021-02-18 21:59:35'
+  postUpdate: '2021-02-18 22:46:47'
 }</script><noscript><style type="text/css">
   #nav {
     opacity: 1
@@ -165,7 +165,7 @@ if (asideStatus !== undefined) {
    } else {
      document.documentElement.classList.remove('hide-aside')
    }
-}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">32</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">23</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Java 并发编程（四）Java 对象头与锁升级</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-12-25T15:49:07.972Z" title="发表于 2020-12-25 23:49:07">2020-12-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-02-18T13:59:35.211Z" title="更新于 2021-02-18 21:59:35">2021-02-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">Java并发编程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="对象头与对象布局"><a href="#对象头与对象布局" class="headerlink" title="对象头与对象布局"></a>对象头与对象布局</h1><h2 id="对象头的定义"><a href="#对象头的定义" class="headerlink" title="对象头的定义"></a>对象头的定义</h2><blockquote>
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">32</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">23</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/0081Kckwgy1glvvs2yojkj318z0u0x2d.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Java 并发编程（四）Java 对象头与锁升级</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2020-12-25T15:49:07.972Z" title="发表于 2020-12-25 23:49:07">2020-12-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-02-18T14:46:47.407Z" title="更新于 2021-02-18 22:46:47">2021-02-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/">Java并发编程</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="对象头与对象布局"><a href="#对象头与对象布局" class="headerlink" title="对象头与对象布局"></a>对象头与对象布局</h1><h2 id="对象头的定义"><a href="#对象头的定义" class="headerlink" title="对象头的定义"></a>对象头的定义</h2><blockquote>
 <p><strong>object header</strong></p>
 <p>Common structure at the beginning of every GC-managed heap object. (Every oop points to an object header.) Includes fundamental information about the heap object’s layout, type, GC state, <strong>synchronization state</strong>, and identity hash code. Consists of two words. In arrays it is immediately followed by a length field. Note that both Java objects and VM-internal objects have a common object header format.</p>
 </blockquote>
@@ -234,6 +234,7 @@ if (asideStatus !== undefined) {
 
 </li>
 </ol>
+<p>注：WIN/Linux/MacOS 都是采用小端模式，所以上述打印的对象布局，实际上要颠倒来看，比如00000001 00000000 00000000 00000000—–&gt; 00000000 00000000 00000000 00000001,对照上述 Mark Word的存储结构表来看，当前对象为无锁状态。 </p>
 <h1 id="锁升级与对比"><a href="#锁升级与对比" class="headerlink" title="锁升级与对比"></a>锁升级与对比</h1><h2 id="锁的类型"><a href="#锁的类型" class="headerlink" title="锁的类型"></a>锁的类型</h2><p>为了减少获得锁和释放锁时带来的性能消耗，JavaSE1.6引入了 4 种锁的状态，级别由低到高分别是：</p>
 <ul>
 <li>无锁状态</li>
@@ -246,10 +247,10 @@ if (asideStatus !== undefined) {
 <li><p>偏向锁</p>
 <p>1.1 引入偏向锁的目的</p>
 <p>大多数情况锁不仅不存在多线程竞争，而且总是一个线程多次获得，为了让线程获得锁的代价更低而引入了偏向锁。</p>
-<p>1.2 偏向锁的加锁过程</p>
+<p>1.2 <strong>偏向锁的加锁过程</strong></p>
 <p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
 <p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
-<p>1.3 偏向锁的撤销</p>
+<p>1.3 <strong>偏向锁的撤销</strong></p>
 <p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个全局安全点（这个时期没有正在执行的字节码）。</p>
 <p>首先会暂停拥有偏向锁的线程，检查该线程是否还处于活动状态，如果不是则将对象头设置为无锁状态；如果持有偏向锁的线程还在活动当中，持有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的 Mark Word 要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。</p>
 <p>1.4 偏向锁的关闭</p>
@@ -281,7 +282,7 @@ if (asideStatus !== undefined) {
 </tr>
 <tr>
 <td>轻量级锁</td>
-<td>竞争的线程不会阻塞，提高程序的响应时间</td>
+<td>竞争的线程不会阻塞（线程交替进行），提高程序的响应时间</td>
 <td>存在一直自旋消耗 CPU的情况</td>
 <td>追求响应时间</td>
 </tr>
