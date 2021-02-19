@@ -1003,7 +1003,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
 <p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
 <p>1.3 <strong>偏向锁的撤销</strong></p>
-<p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个全局安全点（这个时期没有正在执行的字节码）。</p>
+<p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个<strong>全局安全点</strong>（这个时期没有正在执行的字节码）。</p>
 <p>首先会暂停拥有偏向锁的线程，检查该线程是否还处于活动状态，如果不是则将对象头设置为无锁状态；如果持有偏向锁的线程还在活动当中，持有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的 Mark Word 要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。</p>
 <p>1.4 偏向锁的关闭</p>
 <p>偏向锁在 JDK6和 JDK7 中是默认启用的，但是在应用程序启动之后才激活。如果要关闭延迟，可以用 JVM参数设置：-XX:BiasedLockingStartuoDelay=0;</p>
@@ -1052,6 +1052,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <td>追求吞吐量，同步块执行速度快</td>
 </tr>
 </tbody></table>
+<h2 id="锁的加锁升级过程"><a href="#锁的加锁升级过程" class="headerlink" title="锁的加锁升级过程"></a>锁的加锁升级过程</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gntb43b1myj31ka0u049f.jpg"></p>
 ]]></content>
       <categories>
         <category>Java并发编程</category>
