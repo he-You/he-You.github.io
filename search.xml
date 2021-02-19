@@ -1052,7 +1052,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <td>追求吞吐量，同步块执行速度快</td>
 </tr>
 </tbody></table>
-<h2 id="锁的加锁升级过程"><a href="#锁的加锁升级过程" class="headerlink" title="锁的加锁升级过程"></a>锁的加锁升级过程</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gntb43b1myj31ka0u049f.jpg"></p>
+<h2 id="内置锁（Synchronized）的加锁升级过程"><a href="#内置锁（Synchronized）的加锁升级过程" class="headerlink" title="内置锁（Synchronized）的加锁升级过程"></a>内置锁（Synchronized）的加锁升级过程</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gntb43b1myj31ka0u049f.jpg"></p>
 ]]></content>
       <categories>
         <category>Java并发编程</category>
