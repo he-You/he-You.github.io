@@ -968,7 +968,9 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>注：（64位）JVM只能识别以8的倍数的对象，所以会根据实际情况对Java对象进行数据的填充，确保该对象的大小为8的倍数。（下文涉及对象头概念若无说明均为 64 位虚拟机环境）</p>
 <h2 id="Mark-Word的存储结构"><a href="#Mark-Word的存储结构" class="headerlink" title="Mark Word的存储结构"></a>Mark Word的存储结构</h2><p>32 位虚拟机</p>
 <p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gns3njjvxoj31840igju8.jpg"></p>
-<p>64 位虚拟机    <img src="https://note.youdao.com/yws/public/resource/ee257490aa10fc87bb8c3823ed1e5421/xmlnote/B5153EE0B15440EFB244D6A9422CA88F/14098" alt="0">对象头一共96bit=12byte,其中mark word占64bit 而klass pointer占32个bit;hotspot默认开启指针压缩（为了节省空间）开启指针压缩的参数：<code>-XX:+UseCompressedOops</code> ，所以klass pointer占32个bit,如果没开启指针压缩的虚拟机 klass pointer占64个bit。</p>
+<p>64 位虚拟机    </p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1go1cltqkrcj317g0daq74.jpg"></p>
+<p>对象头一共96bit=12byte,其中mark word占64bit 而klass pointer占32个bit;hotspot默认开启指针压缩（为了节省空间）开启指针压缩的参数：<code>-XX:+UseCompressedOops</code> ，所以klass pointer占32个bit,如果没开启指针压缩的虚拟机 klass pointer占64个bit。</p>
 <p>注：在 64 位虚拟机中，以下信息会被压缩：</p>
 <p>1.对象的全局静态变量(即类属性)</p>
 <p>2.对象头信息：64位平台下，原生对象头大小为16字节，压缩后为12字节</p>
@@ -1006,7 +1008,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个<strong>全局安全点</strong>（这个时期没有正在执行的字节码）。</p>
 <p>首先会暂停拥有偏向锁的线程，检查该线程是否还处于活动状态，如果不是则将对象头设置为无锁状态；如果持有偏向锁的线程还在活动当中，持有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的 Mark Word 要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。</p>
 <p>1.4 偏向锁的关闭</p>
-<p>偏向锁在 JDK6和 JDK7 中是默认启用的，但是在应用程序启动之后才激活。如果要关闭延迟，可以用 JVM参数设置：-XX:BiasedLockingStartuoDelay=0;</p>
+<p>偏向锁在 JDK6和 JDK7 中是默认启用的，但是在应用程序启动之后才激活。如果要关闭延迟，可以用 JVM参数设置：-XX:BiasedLockingStartupDelay=0;</p>
 <p>关闭偏向锁：**-XXUseBiasedLocking=false**</p>
 </li>
 <li><p>轻量级锁</p>
