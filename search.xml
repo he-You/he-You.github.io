@@ -2204,4 +2204,93 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Spring</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Java并发编程（十一）阻塞队列</title>
+    <url>/2021/02/24/Java%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%8D%81%E4%B8%80%EF%BC%89%E9%98%BB%E5%A1%9E%E9%98%9F%E5%88%97/</url>
+    <content><![CDATA[<h1 id="阻塞队列的定义"><a href="#阻塞队列的定义" class="headerlink" title="阻塞队列的定义"></a>阻塞队列的定义</h1><p><strong>阻塞队列（BlockingQueue）</strong>是一种支持两个附加（<code>阻塞的插入和移除</code>）操作的队列。阻塞的插入方法：当队列满时，队列会阻塞插入元素的线程，直到队列空间不满。阻塞的移除方法：当队列为空时，获取元素的线程会队列变为非空。</p>
+<p>根据队列中容量来分，阻塞队列可以分为两类：有界队列和无界队列。</p>
+<h1 id="常见的阻塞队列"><a href="#常见的阻塞队列" class="headerlink" title="常见的阻塞队列"></a>常见的阻塞队列</h1><p>JDK7提供了 7 种阻塞队列：</p>
+<ul>
+<li>ArrayBlockingQueue：一个由数组结构组成的有界阻塞队列。</li>
+<li>LinkedBlockingQueue：一个由链表结构组成的无界阻塞队列。</li>
+<li>PriorityBlockingQueue：一个支持优先级排序的无界阻塞队列。</li>
+<li>DelayQueue:一个使用优先队列实现的无界阻塞队列。</li>
+<li>SynchronousQueue:一个不存储元素的阻塞队列。</li>
+<li>LinkedTransferQueue:一个由链表结构组成的无界阻塞队列。</li>
+<li>LinkedBlockingDeque:一个由链表结构组成的双向阻塞队列。</li>
+</ul>
+<ol>
+<li><strong>ArrayBlockingQueue</strong></li>
+</ol>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ArrayBlockingQueue</span><span class="params">(<span class="keyword">int</span> capacity)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">this</span>(capacity, <span class="keyword">false</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">ArrayBlockingQueue</span><span class="params">(<span class="keyword">int</span> capacity, <span class="keyword">boolean</span> fair)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">if</span> (capacity &lt;= <span class="number">0</span>)</span><br><span class="line">         <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">     <span class="keyword">this</span>.items = <span class="keyword">new</span> Object[capacity];</span><br><span class="line">     lock = <span class="keyword">new</span> ReentrantLock(fair);</span><br><span class="line">     notEmpty = lock.newCondition();</span><br><span class="line">     notFull =  lock.newCondition();</span><br><span class="line"> &#125; </span><br></pre></td></tr></table></figure>
+
+<p>​        默认情况使用 ReentrantLock提供的非公平独占锁进行出入队操作，不保证线程的公平性。</p>
+<ol start="2">
+<li><p><strong>LinkedBlockingQueue</strong></p>
+<p>此队列的默认和最大长度为 Integer.MAX_VALUE。</p>
+</li>
+<li><p><strong>PriorityBlockingQueue</strong></p>
+<p>支持优先级的无界阻塞队列，默认采取自然顺序升序排列，也可以通过自定义类实现 compareTo()方法来指定元素排序规则，或者在初始化该队列时，指定构造参数 Comparator 来对元素进行排序。但是不能保证同优先级元素的顺序。</p>
+</li>
+<li><p><strong>DelayQueue</strong></p>
+<p>DelayQueue是支持延时获取元素的无界阻塞队列，是通过 PriorityQueue 实现的。队列中的元素必须实现 Delayed 接口，在创建元素时可以指定多久才能从队列中获取当前元素，即满足延迟的时长才能从队列中获取元素。</p>
+<p>主要的应用场景是：</p>
+</li>
+</ol>
+<ul>
+<li>缓存系统设计：可以将 DelayQueue 用来缓存元素的有效期，使用一个线程轮询 DelayQueue,一旦获取到元素表示缓存的有效期到了。</li>
+<li>定时任务调度：DelayQueue 用来保存当天执行的任务和执行时间，一旦从 DelayQueue 中获取到元素就开始执行任务</li>
+</ul>
+<ol start="5">
+<li><p><strong>SynchronousQueue</strong></p>
+<p>该阻塞队列是一个不存储元素的队列。每一个 put 操作必须等到一个 take 操作，否则不能继续添加元素，该队列是一个支持公平访问的队列，但是默认情况下是采用非公平方式的。</p>
+</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Creates a &#123;<span class="doctag">@code</span> SynchronousQueue&#125; with the specified fairness policy.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> fair if true, waiting threads contend in FIFO order for</span></span><br><span class="line"><span class="comment"> *        如果为true，则等待线程按照FIFO顺序进行竞争访问;</span></span><br><span class="line"><span class="comment"> *        access; otherwise the order is unspecified.</span></span><br><span class="line"><span class="comment"> *                否则顺序是未指定的。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">SynchronousQueue</span><span class="params">(<span class="keyword">boolean</span> fair)</span> </span>&#123;</span><br><span class="line">    transferer = fair ? <span class="keyword">new</span> TransferQueue&lt;E&gt;() : <span class="keyword">new</span> TransferStack&lt;E&gt;();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>​        SynchronousQueue不存储元素更多的是用来传递元素，负载将生产者线程处理的数据之间传递给消费者线        程。而且SynchronousQueue的吞吐量要高于 LinkedBlockingQueue 和 ArrayBlockingQueue。</p>
+<ol start="6">
+<li><p><strong>LinkedTransferQueue</strong></p>
+<p>该队列是由链表组成的无界 TransferQueue队列。相对于其他的阻塞队列多了 tryTransfer()和 transfer().</p>
+<ul>
+<li><p>transfer方法</p>
+<p>如果当前消费者正在等待消费元素（消费者使用 take()方法或者带时间限制的 poll()方法时），transfer方法可以将生产者传入的元素立即 transfer 给消费者。如果没有消费者等待接收元素，那么该方法会将元素存放到队列的 tail 节点，并等到被消费者消费才返回。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Node pred = tryAppend(s, haveData);(<span class="number">1</span>)</span><br><span class="line"><span class="keyword">if</span> (pred == <span class="keyword">null</span>)</span><br><span class="line">    <span class="keyword">continue</span> retry;           <span class="comment">// lost race vs opposite mode</span></span><br><span class="line"><span class="keyword">if</span> (how != ASYNC)</span><br><span class="line">    <span class="keyword">return</span> awaitMatch(s, pred, e, (how == TIMED), nanos);(<span class="number">2</span>)</span><br></pre></td></tr></table></figure>
+
+<p>代码(1)是试图将当前元素节点 s作为链表的 tail 节点。</p>
+<p>代码(2)是让 CPU 自旋等待消费者消费元素。并且设置了自旋时长，超时后使用 Thread.yield()方暂停当前执行的线程，并执行其他线程。</p>
+</li>
+<li><p>tryTransfer 方法</p>
+<p>该方法时用来试探生产者传入的元素是否能直接传给消费者。如果没有消费者等待接收元素，则返回 false。该方法与 transfer 方法的区别是该方法无论消费者是否接收，方法都会立即返回，而如果是使用了tryTransfer(E e,long timeout, TimeUnit unit)方法，那么则会等待指定的时间后返回，如果超时没有消费元素则返回 false,如果在超时时间之内消费了元素则返回 true。</p>
+</li>
+</ul>
+</li>
+<li><p><strong>LinkedBlockingDeque</strong></p>
+<p>该阻塞队列是由链表结构组成的双向阻塞队列。相比于其他阻塞队列，该队列多了 addFirst、addLast、offerFirst、offerLast、peekFirst和 peekLast 等方法，其中与 First 相关的方法表示获取、插入或者移除队列的第一个元素，与 Last 相关的方法表示获取、插入或者移除队列最后一个元素。</p>
+</li>
+</ol>
+<h1 id="阻塞队列的实现原理"><a href="#阻塞队列的实现原理" class="headerlink" title="阻塞队列的实现原理"></a>阻塞队列的实现原理</h1><p>消费者是如何感知队列是否存在元素？</p>
+<h2 id="使用通知模式实现"><a href="#使用通知模式实现" class="headerlink" title="使用通知模式实现"></a>使用通知模式实现</h2><p>所谓的通知模式，就是当生产者向满的队列里添加元素是会阻塞住生产者，当消费者消费完所有的队列元素时，会通知生产者当前队列可以。在 ArrayBlockingQueue 中，是通过 AQS 中的 Condition 队列实现的：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"> <span class="function"><span class="keyword">public</span> <span class="title">ArrayBlockingQueue</span><span class="params">(<span class="keyword">int</span> capacity, <span class="keyword">boolean</span> fair)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">if</span> (capacity &lt;= <span class="number">0</span>)</span><br><span class="line">         <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException();</span><br><span class="line">     <span class="keyword">this</span>.items = <span class="keyword">new</span> Object[capacity];</span><br><span class="line">     lock = <span class="keyword">new</span> ReentrantLock(fair);</span><br><span class="line">     notEmpty = lock.newCondition();</span><br><span class="line">     notFull =  lock.newCondition();</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Inserts the specified element at the tail of this queue, waiting</span></span><br><span class="line"><span class="comment">  * for space to become available if the queue is full.</span></span><br><span class="line"><span class="comment">  *</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@throws</span> InterruptedException &#123;<span class="doctag">@inheritDoc</span>&#125;</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@throws</span> NullPointerException &#123;<span class="doctag">@inheritDoc</span>&#125;</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(E e)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">     checkNotNull(e);</span><br><span class="line">     <span class="keyword">final</span> ReentrantLock lock = <span class="keyword">this</span>.lock;</span><br><span class="line">     lock.lockInterruptibly();</span><br><span class="line">     <span class="keyword">try</span> &#123;</span><br><span class="line">         <span class="keyword">while</span> (count == items.length)</span><br><span class="line">             notFull.await();</span><br><span class="line">         enqueue(e);</span><br><span class="line">     &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">         lock.unlock();</span><br><span class="line">     &#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"> <span class="function"><span class="keyword">public</span> E <span class="title">take</span><span class="params">()</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">     <span class="keyword">final</span> ReentrantLock lock = <span class="keyword">this</span>.lock;</span><br><span class="line">     lock.lockInterruptibly();</span><br><span class="line">     <span class="keyword">try</span> &#123;</span><br><span class="line">         <span class="keyword">while</span> (count == <span class="number">0</span>)</span><br><span class="line">             notEmpty.await();</span><br><span class="line">         <span class="keyword">return</span> dequeue();</span><br><span class="line">     &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">         lock.unlock();</span><br><span class="line">     &#125;</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Inserts element at current put position, advances, and signals.</span></span><br><span class="line"><span class="comment">  * Call only when holding lock.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">enqueue</span><span class="params">(E x)</span> </span>&#123;</span><br><span class="line">     <span class="comment">// assert lock.getHoldCount() == 1;</span></span><br><span class="line">     <span class="comment">// assert items[putIndex] == null;</span></span><br><span class="line">     <span class="keyword">final</span> Object[] items = <span class="keyword">this</span>.items;</span><br><span class="line">     items[putIndex] = x;</span><br><span class="line">     <span class="keyword">if</span> (++putIndex == items.length)</span><br><span class="line">         putIndex = <span class="number">0</span>;</span><br><span class="line">     count++;</span><br><span class="line">     notEmpty.signal();</span><br><span class="line"> &#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Extracts element at current take position, advances, and signals.</span></span><br><span class="line"><span class="comment">  * Call only when holding lock.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="function"><span class="keyword">private</span> E <span class="title">dequeue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     <span class="comment">// assert lock.getHoldCount() == 1;</span></span><br><span class="line">     <span class="comment">// assert items[takeIndex] != null;</span></span><br><span class="line">     <span class="keyword">final</span> Object[] items = <span class="keyword">this</span>.items;</span><br><span class="line">     <span class="meta">@SuppressWarnings(&quot;unchecked&quot;)</span></span><br><span class="line">     E x = (E) items[takeIndex];</span><br><span class="line">     items[takeIndex] = <span class="keyword">null</span>;</span><br><span class="line">     <span class="keyword">if</span> (++takeIndex == items.length)</span><br><span class="line">         takeIndex = <span class="number">0</span>;</span><br><span class="line">     count--;</span><br><span class="line">     <span class="keyword">if</span> (itrs != <span class="keyword">null</span>)</span><br><span class="line">         itrs.elementDequeued();</span><br><span class="line">     notFull.signal();</span><br><span class="line">     <span class="keyword">return</span> x;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码是与 ArrayBlockingQueue出入队相关方法。</p>
+<p>当向队列中插入元素时，如果队列不可用，则使用 LockSupport.park(this)来实现阻塞。而 park 的方法是调用本地方法的 unsafe.park()。该方法会阻塞当前线程，只有以下 4 种情况发生时，该方法才会返回：</p>
+<ul>
+<li>与 park 相对应的 unpark 执行或者已经执行(指的是 unpark 先执行，然后执行 park 的情况)时。</li>
+<li>线程被中断</li>
+<li>等待完 time 参数指定的（毫秒数）时长</li>
+<li>发生异常</li>
+</ul>
+<p>由于 unsafe 依赖本地方法，在不同的操作系统中实现方式也不同。</p>
+<p>park 方法在 Linux 中是通过系统方法 <strong>pthread_cond_wait</strong> 实现的，该方法是多线程的条件变量函数。</p>
+<p>unpark 方法在 Linux 中是通过 <strong>pthread_cond_singal</strong> 实现的。</p>
+<p>当线程被阻塞队列阻塞时，线程会进入 WATING （parking）状态。</p>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发编程</tag>
+      </tags>
+  </entry>
 </search>
