@@ -254,7 +254,7 @@
 <h2 id="倒排索引"><a href="#倒排索引" class="headerlink" title="倒排索引"></a>倒排索引</h2><p>传统关系型数据库一般采用<code>正排索引</code>进行数据检索，所谓正排索引就是通过根据索引找内容可以理解为通过 key去找到对应的完整的 value。而<code>倒排索引</code>实际上就是通过内容去搜索索引，可以理解为通过 value 找到对应的 key。</p>
 ]]></content>
       <categories>
-        <category>Java并发编程</category>
+        <category>ElasticSearch</category>
       </categories>
       <tags>
         <tag>Elasticsearch</tag>
