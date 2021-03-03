@@ -2293,4 +2293,56 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>并发编程</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Elasticsearch 学习（一）概念名称介绍</title>
+    <url>/2021/03/01/Elasticsearch%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h1 id="Elasticsearch中的重要概念"><a href="#Elasticsearch中的重要概念" class="headerlink" title="Elasticsearch中的重要概念"></a>Elasticsearch中的重要概念</h1><p>在介绍 Elasticsearch 的概念之前，先和传统关系型数据库进行对比</p>
+<table>
+<thead>
+<tr>
+<th align="center">关系型数据库</th>
+<th>DataBase</th>
+<th>Table</th>
+<th>Row</th>
+<th>Column</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Elasticsearch</td>
+<td>Index（索引库）</td>
+<td>Type（类型）</td>
+<td>Document（文档）</td>
+<td>Field(字段)</td>
+</tr>
+</tbody></table>
+<h2 id="索引-index"><a href="#索引-index" class="headerlink" title="索引 index"></a>索引 index</h2><p>根据上述与传统关系型数据的比对，可以知道在 Elasticsearch 中 index 相当于就是一个数据库，或者说是文档的集合。一个索引是由名字（必须全部是小写字母）进行标识的，而这个标识也是后面进行增删改查的关键。</p>
+<h2 id="映射-mapping"><a href="#映射-mapping" class="headerlink" title="映射 mapping"></a>映射 mapping</h2><p>mapping是ES对处理数据的方式和规则方面做一些限制，如某个字段的数据类型、默认 值、分词器、是否被索引等等，这些都是映射里面可以设置的，可以理解为查询条件，是 key:value形式的 json 数据。</p>
+<h2 id="字段-Field"><a href="#字段-Field" class="headerlink" title="字段 Field"></a>字段 Field</h2><p>根据上述与关系型数据库的比对可知，ES 的字段相当于传统关系型数据库的列。</p>
+<h2 id="字段类型-Type"><a href="#字段类型-Type" class="headerlink" title="字段类型 Type"></a>字段类型 Type</h2><p>每一个字段都应该有一个对应的类型，例如:Text、Keyword、Byte等。</p>
+<h2 id="文档-Document"><a href="#文档-Document" class="headerlink" title="文档 Document"></a>文档 Document</h2><p>在 ES中，文档相当于关系型数据的一行数据，是基础信息单元，以 JSON 格式来表示。</p>
+<h2 id="节点-Node"><a href="#节点-Node" class="headerlink" title="节点 Node"></a>节点 Node</h2><p>每个 ES 的实例即为一个节点，每个节点可以通过配置集群名称加入同一个集群，并共同提供服务。</p>
+<p>以下是一个 Node 节点的配置。</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 设置集群名称，集群内所有节点的名称必须一致</span></span><br><span class="line"><span class="attr">cluster.name:</span> <span class="string">my-application</span></span><br><span class="line"><span class="comment"># 设置节点名称，集群内节点名称必须唯一</span></span><br><span class="line"><span class="attr">node.name:</span> <span class="string">node-1</span></span><br><span class="line"><span class="comment"># 表示该节点会不会作为主节点，true表示会；false表示不会</span></span><br><span class="line"><span class="attr">node.master:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 当前节点是否用于存储数据，是：true、否：false</span></span><br><span class="line"><span class="attr">node.data:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 索引数据存放的位置</span></span><br><span class="line"><span class="comment"># 日志文件存放的位置</span></span><br><span class="line"><span class="comment">#path.logs: /path/to/logs</span></span><br><span class="line"><span class="comment"># 需要锁住物理内存，是：true、否：false</span></span><br><span class="line"><span class="comment">#bootstrap.memory_lock: true</span></span><br><span class="line"><span class="comment"># 系统调用过滤器检查，是：true、否：false</span></span><br><span class="line"><span class="attr">bootstrap.system_call_filter:</span> <span class="literal">false</span></span><br><span class="line"><span class="comment"># 监听地址，用于访问该es</span></span><br><span class="line"><span class="attr">network.host:</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span></span><br><span class="line"><span class="comment"># es对外提供的http端口，默认 9200</span></span><br><span class="line"><span class="attr">http.port:</span> <span class="number">9200</span></span><br><span class="line"><span class="comment"># TCP的默认监听端口，默认 9300</span></span><br><span class="line"><span class="attr">transport.tcp.port:</span> <span class="number">9300</span></span><br><span class="line"><span class="comment"># 是否支持跨域，是：true，在使用head插件时需要此配置</span></span><br><span class="line"><span class="attr">http.cors.enabled:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># “*” 表示支持所有域名</span></span><br><span class="line"><span class="attr">http.cors.allow-origin:</span> <span class="string">&quot;*&quot;</span></span><br><span class="line"><span class="comment"># 设置这个参数来保证集群中的节点可以知道其它N个有master资格的节点。默认为1，对于大的集群来说，可以设置大一点的值（2-4）</span></span><br><span class="line"><span class="attr">discovery.zen.minimum_master_nodes:</span> <span class="number">2</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，写入候选主节点的设备地址，在开启服务后可以被选为主节点</span></span><br><span class="line"><span class="attr">discovery.seed_hosts:</span> [<span class="string">&quot;127.0.0.1:9300&quot;</span>, <span class="string">&quot;127.0.0.1:9301&quot;</span>, <span class="string">&quot;127.0.0.1:9302&quot;</span>]</span><br><span class="line"><span class="comment"># 判断结点是否脱离时间配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">60s</span></span><br><span class="line"><span class="comment"># 判断结点是否脱离次数配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retries:</span> <span class="number">5</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，初始化一个新的集群时需要此配置来选举master</span></span><br><span class="line"><span class="attr">cluster.initial_master_nodes:</span> [<span class="string">&quot;node-1&quot;</span>, <span class="string">&quot;node-2&quot;</span>, <span class="string">&quot;node-3&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="集群-cluster"><a href="#集群-cluster" class="headerlink" title="集群 cluster"></a>集群 cluster</h2><p>多个节点组成的集合，同时提供索引和搜索功能。在一个集群里，可以拥有任意多个节点。而且，如果当前网络中没有运行任何 Elasticsearch节点，这时启动一个节点，会<strong>默认创建并加入一个叫 做“elasticsearch”的集群</strong>。不过在真实环境中集群中的实例个数一般为奇数个，方便进行 master选举.</p>
+<h2 id="分片-shards-和副本-replicas"><a href="#分片-shards-和副本-replicas" class="headerlink" title="分片(shards)和副本(replicas)"></a>分片(shards)和副本(replicas)</h2><h3 id="分片"><a href="#分片" class="headerlink" title="分片"></a>分片</h3><p>ES 将索引划分成多份，每一份叫做分片。这样可以解决单一节点存储大量数据导致检索数据响应慢的情况。</p>
+<p>每个分片本身也是一个功能完善相对独立的索引，可以放置到集群的任意一个节点上。</p>
+<p>分片的存在是对内容进行了<strong>水平扩容</strong>，也提高了并行操作的效率，进而提高了吞吐量。</p>
+<h3 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h3><p>见名知意，ES 提供了一种故障转移机制：即创建分片的一份或多份拷贝，这些拷贝称之为副本。</p>
+<p>副本存在的意义：</p>
+<ul>
+<li>当分片或街道失败时，副本会代替失效的分片或节点继续提供服务，提高了集群的容错能力，提供了高可用性。但值得注意的是：<code>副本不能与原分片处于同一个节点</code></li>
+<li>扩展搜索能力，搜索可以在所有的副本上并行运行每个索引可以被分成多个分片。一个索引有0个或者多个副本。一旦设置了副本，每个索引就有了主分片和副本分片，分片和副本的数量可以在索引创建的时候指定在索引创建之后，可以<strong>在任何时候动态地改变副本的数量，但是不能改变分片的数量</strong></li>
+</ul>
+<h2 id="倒排索引"><a href="#倒排索引" class="headerlink" title="倒排索引"></a>倒排索引</h2><p>传统关系型数据库一般采用<code>正排索引</code>进行数据检索，所谓正排索引就是通过根据索引找内容可以理解为通过 key去找到对应的完整的 value。而<code>倒排索引</code>实际上就是通过内容去搜索索引，可以理解为通过 value 找到对应的 key。</p>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>Elasticsearch</tag>
+      </tags>
+  </entry>
 </search>
