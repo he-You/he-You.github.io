@@ -2452,4 +2452,84 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Unsafe</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Redis核心数据结构与应用场景介绍</title>
+    <url>/2021/03/11/Redis%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<h1 id="Redis核心数据结构"><a href="#Redis核心数据结构" class="headerlink" title="Redis核心数据结构"></a>Redis核心数据结构</h1><p>在 Redis 中常用的核心数据结构有 5 种，分别是：string、hash、list、set、zset</p>
+<h2 id="String结构"><a href="#String结构" class="headerlink" title="String结构"></a>String结构</h2><h3 id="常用操作"><a href="#常用操作" class="headerlink" title="常用操作"></a>常用操作</h3><p><strong>字符串常用操作命令</strong></p>
+<ul>
+<li>set key value :存入字符串键值对</li>
+<li>mset key value[key value …]:批量存储字符串键值对</li>
+<li>setnx key value : 存入一个不存在的字符串键值对</li>
+<li>get key : 获取 key 对应的字符串键值</li>
+<li>mget key [key ..]:批量获取字符串键值</li>
+<li>del key: 删除一个键</li>
+<li>expire key seconds :设置键的过期时间（s）</li>
+</ul>
+<p><strong>原子加减</strong></p>
+<ul>
+<li>incr key ：将 key 中存储的数值值加 1</li>
+<li>decr key : 将 key 中存储的数字值减 1</li>
+<li>incrby key increment :将key所储存的值加上increment</li>
+<li>decrby key decrement : 将key所储存的值减去decrement</li>
+</ul>
+<p>string hash list set zset</p>
+<h3 id="常用场景"><a href="#常用场景" class="headerlink" title="常用场景"></a>常用场景</h3><ul>
+<li>单值缓存</li>
+<li>对象缓存：json 字符串</li>
+<li>分布式锁：setnx key:value true  返回 1 表示获取锁成功，返回 0 表示获取锁失败</li>
+<li>计数器： INCR </li>
+<li>Web 集群 session共享</li>
+<li>分布式系统全局序列号 INCRBY orderId 10000// redis 批量生成序列号减少和 redis的请求交互从而提升 redis 性能</li>
+</ul>
+<h2 id="Hash结构"><a href="#Hash结构" class="headerlink" title="Hash结构"></a>Hash结构</h2><h3 id="常用操作-1"><a href="#常用操作-1" class="headerlink" title="常用操作"></a>常用操作</h3><ul>
+<li><p>hest key field value ： 存储一个哈希表key的键值</p>
+</li>
+<li><p>hsetnx key field value ：存储一个不存在的哈希表key的键值，即如果哈希表不存在，一个新的哈希表被创建并进行 HSET 操作。如果字段已经存在于哈希表中，操作无效。设置成功，返回 1 。 如果给定字段已经存在且没有操作被执行，返回 0 。</p>
+</li>
+<li><p>hmset  key field value [field value …]：在一个哈希表key中存储多个键值对</p>
+</li>
+<li><p>hget key field：获取哈希表key对应的field键值</p>
+</li>
+<li><p>hmget key field [field …] ：批量获取哈希表key中多个field键值</p>
+</li>
+<li><p>hdel key field [field …] ：删除哈希表key中的field键值</p>
+</li>
+<li><p>hlen key ：返回哈希表key中field的数量</p>
+</li>
+<li><p>hgetall key ：返回哈希表key中所有的键值</p>
+</li>
+<li><p>hincrby key field increment：为哈希表key中field键的值加上增量increment</p>
+</li>
+</ul>
+<h3 id="对象缓存"><a href="#对象缓存" class="headerlink" title="对象缓存"></a>对象缓存</h3><p>hmset user prefix:name heyou prefix:age 24</p>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p><strong>电商购物车</strong></p>
+<p>1）以用户id为key</p>
+<p>2）商品id为field</p>
+<p>3）商品数量为value</p>
+<p>1)添加商品—-&gt;hset car:2021 iphone12pro 1</p>
+<p>2)增加数量—-&gt;hset car:2021 iphone12pro 1</p>
+<p>3)商品总数—-&gt;hlen car:2021</p>
+<p>4)删除商品—-&gt;hdel car:2021 iphone12pro</p>
+<p>获取购物车所有商品—-&gt;hgetall car:2021</p>
+<p>使用 hash 结构存储数据的优缺点如下：</p>
+<p><strong>优点</strong></p>
+<ul>
+<li>同类数据归类整合存储，方便对数据的管理</li>
+<li>相比于 String类型的数据操作消耗的内存和 cpu更小</li>
+<li>相比于 string 存储更节省空间</li>
+</ul>
+<p><strong>缺点</strong></p>
+<ul>
+<li>过期功能只能设置在 key 上，无法实现对 field 字段设置过期功能</li>
+<li>在 Redis 集群架构环境下不适合大规模使用，容易出现 big key 导致集群环境出现数据倾斜</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
 </search>
