@@ -2524,6 +2524,138 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li>过期功能只能设置在 key 上，无法实现对 field 字段设置过期功能</li>
 <li>在 Redis 集群架构环境下不适合大规模使用，容易出现 big key 导致集群环境出现数据倾斜</li>
 </ul>
+<h2 id="list-结构"><a href="#list-结构" class="headerlink" title="list 结构"></a>list 结构</h2><h3 id="常用操作-2"><a href="#常用操作-2" class="headerlink" title="常用操作"></a>常用操作</h3><ul>
+<li>Lpush key value [value…]：将一个或多个 value 值插入到 key 列表的最左边</li>
+<li>Rpush key  value [value…]：将一个或多个 value 值插入到 key 列表的最左边</li>
+<li>Lpop key： 从左边移除并返回 key 列表的元素</li>
+<li>Rpop key： 从右边移除并返回 key 列表的元素</li>
+<li>Lrange key start stop：返回列表 key 中指定区间内的元素，从下表 start 到 stop</li>
+<li>Blpop key [key..] timeout：从 key 列表最左边弹出一个元素，如果列表中没有元素，阻塞等待 timeout 秒，若 tiomeout=0则会一直等待</li>
+<li>Brpop key [key..] timeout：从 key 列表最右边弹出一个元素，如果列表中没有元素，阻塞等待 timeout 秒，若 tiomeout=0则会一直等待</li>
+</ul>
+<h3 id="应用场景-1"><a href="#应用场景-1" class="headerlink" title="应用场景"></a>应用场景</h3><p><strong>常用数据结构</strong></p>
+<p>Stack(栈) = LPUSH + LPOP</p>
+<p>Queue(队列）= LPUSH + RPOP</p>
+<p>Blocking MQ(阻塞队列）= LPUSH + BRPOP</p>
+<p><strong>信息流</strong></p>
+<p>将信息流对象根据时间倒序放入 list 中，然后依次消费。常见于微博微信朋友圈。</p>
+<h2 id="Set-结构"><a href="#Set-结构" class="headerlink" title="Set 结构"></a>Set 结构</h2><p>该集合无法添加重复元素</p>
+<h3 id="常用操作-3"><a href="#常用操作-3" class="headerlink" title="常用操作"></a>常用操作</h3><ul>
+<li>sadd key member [member…]：向集合 key 中存入元素，如果元素已经存在则忽略,不存在则新增</li>
+<li>srem key member [member…]: 从集合中 key 中移除元素</li>
+<li>Smembers key：获取集合key 中的所有元素</li>
+<li>scard key：获取集合 key 中所有元素的个数 </li>
+<li>sismember key member：判断 member 元素是否在集合 key 中</li>
+<li>srandmember key [count]：从集合 key 中随机选出 count 个元素，元素不从 key 中删除</li>
+<li>Spop key [count]:从集合 key 中随机选出 count 个元素并删除</li>
+</ul>
+<h3 id="运算操作"><a href="#运算操作" class="headerlink" title="运算操作"></a>运算操作</h3><ul>
+<li><p>SINTER key1 [key2 …]  ：交集运算</p>
+</li>
+<li><p>SINTERSTORE destination key1 [key2 ..] ：将key1和 key2交集结果存入新集合destination中</p>
+</li>
+<li><p>SUNION key1 [key2 ..]  ：并集运算</p>
+</li>
+<li><p>SUNIONSTORE destination key1 [key2 …] ：将key1和 key2并集结果存入新集合destination中</p>
+</li>
+<li><p>SDIFF key [key …] ：差集运算</p>
+</li>
+<li><p>SDIFFSTORE destination key1 [key2…] ：将key1和 key2差集结果存入新集合destination中</p>
+</li>
+</ul>
+<h3 id="应用场景-2"><a href="#应用场景-2" class="headerlink" title="应用场景"></a>应用场景</h3><p><strong>微信抽奖小程序</strong></p>
+<p>1）点击参与抽奖加入集合</p>
+<p>SADD key {userlD}</p>
+<p>2）查看参与抽奖所有用户</p>
+<p>SMEMBERS key  </p>
+<p>3）抽取count名中奖者</p>
+<p>SRANDMEMBER key [count] / SPOP key [count]</p>
+<p><strong>微信微博点赞，收藏，标签</strong></p>
+<ol>
+<li>点赞</li>
+</ol>
+<p>SADD like:{消息ID} {用户ID}</p>
+<ol start="2">
+<li>取消点赞</li>
+</ol>
+<p>SREM like:{消息ID} {用户ID}</p>
+<ol start="3">
+<li>检查用户是否点过赞</li>
+</ol>
+<p>SISMEMBER like:{消息ID} {用户ID}</p>
+<ol start="4">
+<li>获取点赞的用户列表</li>
+</ol>
+<p>SMEMBERS like:{消息ID}</p>
+<ol start="5">
+<li>获取点赞用户数</li>
+</ol>
+<p>SCARD like:{消息ID}</p>
+<p><strong>集合操作（交集、并集、差集）</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1goia9e82i6j31120lkdhl.jpg"></p>
+<p>SINTER set1 set2 set3 -&gt; { c }</p>
+<p>SUNION set1 set2 set3 -&gt;{ a,b,c,d,e }</p>
+<p>SDIFF set1 set2 set3 -&gt;{ a }</p>
+<p><strong>关注模型</strong></p>
+<ol>
+<li>z关注的人: </li>
+</ol>
+<p>z:set-&gt; {g, x}</p>
+<ol start="2">
+<li><p>y关注的人:</p>
+<p>y:set–&gt; {z, b, g, x}</p>
+</li>
+<li><p>g关注的人: </p>
+</li>
+</ol>
+<p>g:set-&gt; {z, y, b, x, xy)</p>
+<ol start="4">
+<li>z和y共同关注: </li>
+</ol>
+<p>SINTER z:set y:set–&gt; {g, x}</p>
+<ol start="5">
+<li>z关注的人也关注他(y): </li>
+</ol>
+<p>SISMEMBER g:set y </p>
+<p>SISMEMBER x y</p>
+<ol start="6">
+<li>我可能认识的人: </li>
+</ol>
+<p>SDIFF y:set z:Set-&gt;(z, b}</p>
+<p><strong>商品的筛选</strong></p>
+<p>根据商品的特性可以设置多个标签，每个标签设置成一个集合，最终实现多个标签进行筛选，也是通过集合的交集实现的。</p>
+<h2 id="Zset-有序集合"><a href="#Zset-有序集合" class="headerlink" title="Zset 有序集合"></a>Zset 有序集合</h2><h3 id="Zset-常用操作"><a href="#Zset-常用操作" class="headerlink" title="Zset 常用操作"></a>Zset 常用操作</h3><ul>
+<li><p>Zadd key score member [[score member]…] ：往有序集合key中加入带分值元素</p>
+</li>
+<li><p>Zrem key member [member …] ：从有序集合key中删除元素</p>
+</li>
+<li><p>Zscore key member：返回有序集合key中元素member的分值</p>
+</li>
+<li><p>Zincrby key increment member //为有序集合key中元素member的分值加上increment </p>
+</li>
+<li><p>Zcard key ：返回有序集合key中元素个数</p>
+</li>
+<li><p>Zrange key start stop [withScores] ：正序获取有序集合key从start下标到stop下标的元素[带上分值]</p>
+</li>
+<li><p>Zrevrange key start stop [withScores] ：倒序获取有序集合key从start下标到stop下标的元素[带上分值]</p>
+</li>
+</ul>
+<h3 id="集合操作"><a href="#集合操作" class="headerlink" title="集合操作"></a>集合操作</h3><ul>
+<li><p>ZUnionStore destkey numkeys key [key …] ：并集计算</p>
+</li>
+<li><p>ZinterStore destkey numkeys key [key …] ：交集计算</p>
+</li>
+</ul>
+<h3 id="应用场景-3"><a href="#应用场景-3" class="headerlink" title="应用场景"></a>应用场景</h3><p><strong>Zset集合操作实现排行榜</strong></p>
+<p>1）点击新闻</p>
+<p>Zincrby hotNews:20210313 1 学习 redis</p>
+<p>2）展示当日排行前十</p>
+<p>Zrevrange hotNews:20210313 0 9 withScores </p>
+<p>3）七日搜索榜单计算</p>
+<p>ZunionStore hotNews:20210306-20210313 7 </p>
+<p>hotNews:20210306 hotNews:20210307… hotNews:20210313</p>
+<p>4）展示七日排行前十</p>
+<p>ZREVRANGE hotNews:20210306-20210313 0 9 withScores</p>
 ]]></content>
       <categories>
         <category>Redis</category>
