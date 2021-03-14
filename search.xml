@@ -2665,7 +2665,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Redis持久化与主从架构</title>
+    <title>Redis持久化与主从与哨兵架构</title>
     <url>/2021/03/13/Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84/</url>
     <content><![CDATA[<h1 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h1><p>redis是一个内存数据库，数据保存在内存中，用内存的存储的优点就是读写效率高，也容易发生丢失（比如 断电）。而 redis持久化机制的就是为了在异常情况下保存和恢复数据。</p>
 <h2 id="RDB-Redis-DataBase-快照"><a href="#RDB-Redis-DataBase-快照" class="headerlink" title="RDB(Redis DataBase) 快照"></a>RDB(Redis DataBase) 快照</h2><p>RDB 快是 Redis 采用的默认持久化方式，该方式会将 redis 数据库快照保存在名为 dump.rdb 的二进制文件中。</p>
@@ -2784,6 +2784,16 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojko99ri2j213i0u0q6c.jpg"></p>
 <p>如果有很多从节点，为了缓解<code>主从复制风暴</code>(多个从节点同时复制主节点导致主节点压力过大)，可以做如 下架构，让部分从节点与从节点(与主节点同步)同步数据。</p>
 <p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojkqnhrljj20re0lm0u2.jpg"></p>
+<h2 id="Redis哨兵高可用架构"><a href="#Redis哨兵高可用架构" class="headerlink" title="Redis哨兵高可用架构"></a>Redis哨兵高可用架构</h2><p>与主从架构不同的是，哨兵架构下client端第一次从哨兵找出redis的主节点，后续就直接访问redis的主节点，不会每次都通过 sentinel代理访问redis的主节点，当redis的主节点发生变化，哨兵会第一时间感知到，并且将新的redis 主节点通知给client端(这里面redis的client端一般都实现了订阅功能，订阅sentinel发布的节点变动消息)</p>
+<p>注：sentinel哨兵是特殊的redis服务，不提供读写服务，主要用来监控redis实例节点。</p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1goju9j735fj21ic0tsgox.jpg"></p>
+<h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>与哨兵架构相关的配置是在sentinel.conf 文件中。</p>
+<p><strong>redis哨兵架构搭建步骤</strong></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、复制一份sentinel.conf文件</span><br><span class="line">cp sentinel.conf sentinel-26379.conf</span><br><span class="line"></span><br><span class="line">2、将相关配置修改为如下值：</span><br><span class="line">port 26379</span><br><span class="line">daemonize yes</span><br><span class="line">pidfile &quot;&#x2F;var&#x2F;run&#x2F;redis-sentinel-26379.pid&quot;</span><br><span class="line">logfile &quot;26379.log&quot;</span><br><span class="line">dir &quot;&#x2F;usr&#x2F;local&#x2F;redis-5.0.3&#x2F;data&quot;</span><br><span class="line"># sentinel monitor &lt;master-redis-name&gt; &lt;master-redis-ip&gt; &lt;master-redis-port&gt; &lt;quorum&gt;</span><br><span class="line"># quorum是一个数字，指明当有多少个sentinel认为一个master失效时(值一般为：sentinel总数&#x2F;2 + 1)，master才算真正失效</span><br><span class="line"># mymaster这个名字随便取，客户端访问时会用到</span><br><span class="line">sentinel monitor redis_master 127.0.0.1 6379 2   # quorum&#x3D;2</span><br><span class="line"></span><br><span class="line">3、启动sentinel哨兵实例</span><br><span class="line">src&#x2F;redis-sentinel sentinel-26379.conf</span><br><span class="line"></span><br><span class="line">4、查看sentinel的info信息</span><br><span class="line">src&#x2F;redis-cli -p 26379</span><br><span class="line">127.0.0.1:26379&gt;info</span><br><span class="line">可以看到Sentinel的info里已经识别出了redis的主从</span><br></pre></td></tr></table></figure>
+
+<p>当哨兵集群启动完毕后，会将哨兵集群的元数据信息通过追加的方式写入到所有的 sentinel 的配置文件中（文件的最下方）。</p>
+<p>当 redis 主节点宕机，哨兵集群就会重新选举新的 redis 节点成为主节点，同时修改所有 sentinel 节点配置文件的集群元数据信息。同时也会修改之前配置的 master 节点的端口，修改成当前选举出来的 master 节点的端口。</p>
+<p>如果之前挂掉的 master 节点再次启动时，哨兵集群根据集群元数据信息将此节点作为 salve 节点加入到集群中。</p>
 ]]></content>
       <categories>
         <category>Redis</category>
