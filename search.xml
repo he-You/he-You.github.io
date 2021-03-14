@@ -2664,4 +2664,132 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Redis</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Redis持久化与主从架构</title>
+    <url>/2021/03/13/Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84/</url>
+    <content><![CDATA[<h1 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h1><p>redis是一个内存数据库，数据保存在内存中，用内存的存储的优点就是读写效率高，也容易发生丢失（比如 断电）。而 redis持久化机制的就是为了在异常情况下保存和恢复数据。</p>
+<h2 id="RDB-Redis-DataBase-快照"><a href="#RDB-Redis-DataBase-快照" class="headerlink" title="RDB(Redis DataBase) 快照"></a>RDB(Redis DataBase) 快照</h2><p>RDB 快是 Redis 采用的默认持久化方式，该方式会将 redis 数据库快照保存在名为 dump.rdb 的二进制文件中。</p>
+<h3 id="save-命令"><a href="#save-命令" class="headerlink" title="save 命令"></a>save 命令</h3><p>在 redis.conf文件中，可以对 RDB 持久化的触发条件进行设置</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">save 900 1</span><br><span class="line">save 300 10</span><br><span class="line">save 60 10000</span><br></pre></td></tr></table></figure>
+
+<p>比如：<code>save 60 10000</code>该设置会让 redis 满足<code>60s 内至少有 1000 个 键被改动</code>这个条件时，redis 会自动保存此时间节点之前所有的数据，并存储在 dump.rdb 文件中。</p>
+<p>当然，也可以手动输入 save 命令进行持久化，但是会阻塞其他 redis 命令。每次命令执行都会将所有redis内存快照到一个新的rdb文件里，并覆盖原有rdb快照文件。</p>
+<h3 id="bgsave-命令"><a href="#bgsave-命令" class="headerlink" title="bgsave 命令"></a>bgsave 命令</h3><p>与 save 命令类似，该命令的作用也是对 redis 进行一次 RDB持久化。不过与 save 命令不同的是 Redis 借助了操作系统提供的<code>写时复制技术(Copy-On-Write)</code>,在执行 bgsave 命令时，bgsave 会从主线程 fork 一个子进程，并可以共享主线程中的所有内存数据，bgsave 子进程运行后，开始读取主线程的内存数据，并把它们写入 RDB 文件。</p>
+<p>此时，如果主线程对这些数据也都是读操作，那么，主线程和 bgsave 子进程相互不影响。但是，如果主线程要修改一块数据，那么，这块数据就会被复制一份，生成该数据的副本。然后，bgsave 子进程会把这个副本数据写入 RDB 文 件，而在这个过程中，主线程仍然可以直接修改原来的数据。</p>
+<h3 id="save-与-bgsave-的比对"><a href="#save-与-bgsave-的比对" class="headerlink" title="save 与 bgsave 的比对"></a>save 与 bgsave 的比对</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>save</th>
+<th>bgsave</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IO 类型</td>
+<td>同步</td>
+<td>异步</td>
+</tr>
+<tr>
+<td>是否阻塞其他 redis命令</td>
+<td>是</td>
+<td>否(生成子进程会有短暂阻塞)</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>O(n)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>优点</td>
+<td>不会消耗额外内存</td>
+<td>不阻塞客户端命令</td>
+</tr>
+<tr>
+<td>确定</td>
+<td>不阻塞客户端命令</td>
+<td>需要 fork 子进程，有额外的内存开销</td>
+</tr>
+</tbody></table>
+<p>注：配置自动生成的 rdb文件使用的命令是 bgsave。</p>
+<h2 id="AOF-Append-Only-File"><a href="#AOF-Append-Only-File" class="headerlink" title="AOF(Append Only File)"></a>AOF(Append Only File)</h2><p>RDB快照功能并不是非常耐久(durable): 如果 Redis 因为某些原因而造成故障停机， 那么服务器将丢失最近写入、且仍未保存到快照中的那些数据。于是， Redis 增加了一种完全耐久的持久化方 式: <code>AOF 持久化</code>，将修改的每一条指令记录进文件appendonly.aof中(先写入os cache，每隔一段时间 fsync到磁盘)</p>
+<h3 id="AOF介绍"><a href="#AOF介绍" class="headerlink" title="AOF介绍"></a>AOF介绍</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">*2</span><br><span class="line">$6</span><br><span class="line">SELECT</span><br><span class="line">$1</span><br><span class="line">0</span><br><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$5</span><br><span class="line">hello</span><br><span class="line">$5</span><br><span class="line">redis</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是一种resp协议格式数据，星号后面的数字代表命令有多少个参数，$号后面的数字代表这个参数有几 个字符 注意，如果执行带过期时间的set命令，aof文件里记录的是并不是执行的原始命令，而是记录key过期的 时间戳</p>
+<p>比如执行“set helloworld redis ex 1000”，对应aof文件里记录如下</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$10</span><br><span class="line">helloworld</span><br><span class="line">$5</span><br><span class="line">redis</span><br><span class="line">*3</span><br><span class="line">$9</span><br><span class="line">PEXPIREAT</span><br><span class="line">$10</span><br><span class="line">helloworld</span><br><span class="line">$13</span><br><span class="line">1615705330391</span><br></pre></td></tr></table></figure>
+
+<p>AOF 的方式进行持久化，每次执行命令都会将持久化信息追加到 AOF 文件中，当然也可以在 redis.conf 文件中配置 AOF 持久化的周期策略。</p>
+<ul>
+<li>appendfsync always:每次有新命令追加到 AOF 文件时就执行一次 fsync ，非常慢，也非常安全。 </li>
+<li> appendfsync everysec:每秒 fsync 一次，足够快，并且在故障时只会丢失 1 秒钟的数据。</li>
+<li>appendfsync no:从不 fsync ，将数据交给操作系统来处理。更快，也更不安全的选择。</li>
+</ul>
+<h3 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h3><p>AOF文件里可能有太多没用指令，所以AOF会定期根据内存的最新数据生成aof文件，AOF 重写会减少无用命令写入 aof文件中。</p>
+<p>可以通过以下两个配置控制 AOF 自动重写的频率：</p>
+<ul>
+<li>auto‐aof‐rewrite‐min‐size 64mb 该命令的作用是：aof文件至少要达到64M才会自动重写，文件太小恢复速度本来就很快，重写的意义不大</li>
+<li>auto‐aof‐rewrite‐percentage 100 该命令的作用是：aof文件自上一次重写后文件大小增长了100%则再次触发重写</li>
+</ul>
+<p>当然AOF还可以手动重写，进入redis客户端执行命令bgrewriteaof重写AOF 。</p>
+<p>注意，AOF重写redis会fork出一个子进程去做(与bgsave命令类似)，不会对redis正常命令处理有太多影响。</p>
+<h3 id="RDB-与-AOF-的比对"><a href="#RDB-与-AOF-的比对" class="headerlink" title="RDB 与 AOF 的比对"></a>RDB 与 AOF 的比对</h3><table>
+<thead>
+<tr>
+<th>持久化类型</th>
+<th>RDB</th>
+<th>AOF</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启动优先级</td>
+<td>低</td>
+<td>高</td>
+</tr>
+<tr>
+<td>体积</td>
+<td>小</td>
+<td>大</td>
+</tr>
+<tr>
+<td>恢复速度</td>
+<td>块</td>
+<td>慢</td>
+</tr>
+<tr>
+<td>数据安全性</td>
+<td>容易丢失数据</td>
+<td>由配置的策略决定</td>
+</tr>
+</tbody></table>
+<p>注：redis启动时如果既有rdb文件又有aof文件则优先选择aof文件恢复数据，因为aof 一般来说数据更全一点。</p>
+<h2 id="混合持久化"><a href="#混合持久化" class="headerlink" title="混合持久化"></a>混合持久化</h2><p>重启 Redis 时，我们很少使用 RDB来恢复内存状态，因为会丢失大量数据。我们通常使用 AOF 日志重 放，但是重放 AOF 日志性能相对 RDB来说要慢很多，这样在 Redis 实例很大的情况下，启动需要花费很 长的时间。 所谓混合持久化就是结合 RDB 和 AOF 进行持久化数据。</p>
+<p>使用混合持久化方式的前提是开启 AOF<code>aof‐use‐rdb‐preamble yes</code></p>
+<p>如果开启了混合持久化，AOF在重写时，不再是单纯将内存数据转换为RESP命令写入AOF文件，而是将 <strong>重写这一刻之前的内存做RDB快照</strong>处理，并且将RDB快照内容和增量的AOF修改内存数据的命令存在一 起，<strong>都写入新的AOF文件</strong>，新的文件一开始不叫appendonly.aof，等到重写完新的AOF文件才会进行改名，覆盖原有的AOF文件，完成新旧两个AOF文件的替换。</p>
+<p>于是在 Redis 重启的时候，可以先加载 RDB 的内容，然后再重放增量 AOF 日志就可以完全替代之前的 AOF 全量文件重放，因此重启效率大幅得到提升。</p>
+<h1 id="主从与哨兵架构"><a href="#主从与哨兵架构" class="headerlink" title="主从与哨兵架构"></a>主从与哨兵架构</h1><h2 id="Redis-主从架构"><a href="#Redis-主从架构" class="headerlink" title="Redis 主从架构"></a>Redis 主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojgg1xrl6j20nk0i0wf7.jpg"></p>
+<h3 id="搭建步骤"><a href="#搭建步骤" class="headerlink" title="搭建步骤"></a>搭建步骤</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、复制一份redis.conf文件</span><br><span class="line">2、将相关配置修改为如下值:</span><br><span class="line">port6380</span><br><span class="line"># 把pid进程号写入pidfile配置的文件</span><br><span class="line">pidfile &#x2F;var&#x2F;run&#x2F;redis_6380.pid </span><br><span class="line">logfile&quot;6380.log&quot;</span><br><span class="line"># 指定数据存放目录</span><br><span class="line">dir &#x2F;usr&#x2F;local&#x2F;redis‐5.0.3&#x2F;data&#x2F;6380  </span><br><span class="line"># 需要注释掉bind</span><br><span class="line">#bind127.0.0.1(bind绑定的是自己机器网卡的ip，如果有多块网卡可以配多个ip，代表允许客户端通 过机器的哪些网卡ip去访问，内网一般可以不配置bind，注释掉即可)</span><br><span class="line"></span><br><span class="line">3、配置主从复制</span><br><span class="line">#从本机6379的redis实例复制数据，Redis5.0之前使用 slaveof</span><br><span class="line">replicaof 127.0.0.1 6379</span><br><span class="line"># 配置从节点只读</span><br><span class="line">replica‐read‐only yes </span><br><span class="line"></span><br><span class="line">4、启动从节点</span><br><span class="line">redis‐serverredis.conf</span><br><span class="line"></span><br><span class="line">5、连接从节点</span><br><span class="line">redis‐cli ‐p 6380</span><br><span class="line">6、测试在6379实例上写数据，6380实例是否能及时同步新修改数据</span><br><span class="line">7、可以自己再配置一个6381的从节点</span><br></pre></td></tr></table></figure>
+
+<h2 id="主从架构原理"><a href="#主从架构原理" class="headerlink" title="主从架构原理"></a>主从架构原理</h2><p>当为master配置了一个slave，不管这个slave是否是第一次连接上Master，它都会发送一个PSYNC命令给master请求复制数据。</p>
+<p>master收到PSYNC命令后，会在后台进行数据持久化通过bgsave生成最新的rdb快照文件。</p>
+<p>持久化期间，master会继续接收客户端的请求，它会把这些可能修改数据集的请求缓存在内存中。</p>
+<p>当持久化进行完毕以后，master会把这份rdb文件数据集发送给slave，slave会把接收到的数据进行持久化生成rdb，然后 再加载到内存中。</p>
+<p>然后，master再将之前缓存在内存中的命令发送给slave。 当master与slave之间的连接由于某些原因而断开时，slave能够自动重连Master，如果master收到了多 个slave并发连接请求，它只会进行一次持久化，而不是一个连接一次，然后再把这一份持久化的数据发送 给多个并发连接的slave。</p>
+<p><strong>主从(全量)复制流程</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojjfkowa7j216l0u0n1d.jpg"></p>
+<p><strong>数据部分复制</strong></p>
+<p>当master和slave断开重连后，一般都会对整份数据进行复制。但从redis2.8版本开始，redis改用可以<strong>支持部分数据复制的命令PSYNC去master同步数据</strong>，slave与master能够在网络连接断开重连后只进行<code>部分数据复制(断点续传)</code>。</p>
+<p>master会在其内存中创建一个用于复制数据的缓存队列，缓存最近一段时间的数据，master和它所有的 slave都维护了复制的<code>数据下标offse</code>t和<code>master的进程id</code>.</p>
+<p>因此，当网络连接断开后，slave会请求master 继续进行未完成的复制，从所记录的数据下标开始。如果master进程id变化了，或者从节点数据下标 offset太旧，已经不在master的缓存队列里了，那么将会进行一次全量数据的复制。</p>
+<p><strong>主从复制(部分复制，断电续传)</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojko99ri2j213i0u0q6c.jpg"></p>
+<p>如果有很多从节点，为了缓解<code>主从复制风暴</code>(多个从节点同时复制主节点导致主节点压力过大)，可以做如 下架构，让部分从节点与从节点(与主节点同步)同步数据。</p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojkqnhrljj20re0lm0u2.jpg"></p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
 </search>

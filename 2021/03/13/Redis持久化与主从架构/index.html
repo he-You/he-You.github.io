@@ -1,0 +1,308 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Redis持久化与主从架构 | he-You</title><meta name="keywords" content="Redis"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="持久化redis是一个内存数据库，数据保存在内存中，用内存的存储的优点就是读写效率高，也容易发生丢失（比如 断电）。而 redis持久化机制的就是为了在异常情况下保存和恢复数据。 RDB(Redis DataBase) 快照RDB 快是 Redis 采用的默认持久化方式，该方式会将 redis 数据库快照保存在名为 dump.rdb 的二进制文件中。 save 命令在 redis.conf文件中，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis持久化与主从架构">
+<meta property="og:url" content="https://he-you.github.io/2021/03/13/Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="持久化redis是一个内存数据库，数据保存在内存中，用内存的存储的优点就是读写效率高，也容易发生丢失（比如 断电）。而 redis持久化机制的就是为了在异常情况下保存和恢复数据。 RDB(Redis DataBase) 快照RDB 快是 Redis 采用的默认持久化方式，该方式会将 redis 数据库快照保存在名为 dump.rdb 的二进制文件中。 save 命令在 redis.conf文件中，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg">
+<meta property="article:published_time" content="2021-03-13T07:38:19.340Z">
+<meta property="article:modified_time" content="2021-03-14T09:44:42.074Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="Redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2021/03/13/Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-14 17:44:42'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">38</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">27</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">8</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Redis持久化与主从架构</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-13T07:38:19.340Z" title="发表于 2021-03-13 15:38:19">2021-03-13</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-14T09:44:42.074Z" title="更新于 2021-03-14 17:44:42">2021-03-14</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Redis/">Redis</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="持久化"><a href="#持久化" class="headerlink" title="持久化"></a>持久化</h1><p>redis是一个内存数据库，数据保存在内存中，用内存的存储的优点就是读写效率高，也容易发生丢失（比如 断电）。而 redis持久化机制的就是为了在异常情况下保存和恢复数据。</p>
+<h2 id="RDB-Redis-DataBase-快照"><a href="#RDB-Redis-DataBase-快照" class="headerlink" title="RDB(Redis DataBase) 快照"></a>RDB(Redis DataBase) 快照</h2><p>RDB 快是 Redis 采用的默认持久化方式，该方式会将 redis 数据库快照保存在名为 dump.rdb 的二进制文件中。</p>
+<h3 id="save-命令"><a href="#save-命令" class="headerlink" title="save 命令"></a>save 命令</h3><p>在 redis.conf文件中，可以对 RDB 持久化的触发条件进行设置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">save 900 1</span><br><span class="line">save 300 10</span><br><span class="line">save 60 10000</span><br></pre></td></tr></table></figure>
+
+<p>比如：<code>save 60 10000</code>该设置会让 redis 满足<code>60s 内至少有 1000 个 键被改动</code>这个条件时，redis 会自动保存此时间节点之前所有的数据，并存储在 dump.rdb 文件中。</p>
+<p>当然，也可以手动输入 save 命令进行持久化，但是会阻塞其他 redis 命令。每次命令执行都会将所有redis内存快照到一个新的rdb文件里，并覆盖原有rdb快照文件。</p>
+<h3 id="bgsave-命令"><a href="#bgsave-命令" class="headerlink" title="bgsave 命令"></a>bgsave 命令</h3><p>与 save 命令类似，该命令的作用也是对 redis 进行一次 RDB持久化。不过与 save 命令不同的是 Redis 借助了操作系统提供的<code>写时复制技术(Copy-On-Write)</code>,在执行 bgsave 命令时，bgsave 会从主线程 fork 一个子进程，并可以共享主线程中的所有内存数据，bgsave 子进程运行后，开始读取主线程的内存数据，并把它们写入 RDB 文件。</p>
+<p>此时，如果主线程对这些数据也都是读操作，那么，主线程和 bgsave 子进程相互不影响。但是，如果主线程要修改一块数据，那么，这块数据就会被复制一份，生成该数据的副本。然后，bgsave 子进程会把这个副本数据写入 RDB 文 件，而在这个过程中，主线程仍然可以直接修改原来的数据。</p>
+<h3 id="save-与-bgsave-的比对"><a href="#save-与-bgsave-的比对" class="headerlink" title="save 与 bgsave 的比对"></a>save 与 bgsave 的比对</h3><table>
+<thead>
+<tr>
+<th>命令</th>
+<th>save</th>
+<th>bgsave</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>IO 类型</td>
+<td>同步</td>
+<td>异步</td>
+</tr>
+<tr>
+<td>是否阻塞其他 redis命令</td>
+<td>是</td>
+<td>否(生成子进程会有短暂阻塞)</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>O(n)</td>
+<td>O(n)</td>
+</tr>
+<tr>
+<td>优点</td>
+<td>不会消耗额外内存</td>
+<td>不阻塞客户端命令</td>
+</tr>
+<tr>
+<td>确定</td>
+<td>不阻塞客户端命令</td>
+<td>需要 fork 子进程，有额外的内存开销</td>
+</tr>
+</tbody></table>
+<p>注：配置自动生成的 rdb文件使用的命令是 bgsave。</p>
+<h2 id="AOF-Append-Only-File"><a href="#AOF-Append-Only-File" class="headerlink" title="AOF(Append Only File)"></a>AOF(Append Only File)</h2><p>RDB快照功能并不是非常耐久(durable): 如果 Redis 因为某些原因而造成故障停机， 那么服务器将丢失最近写入、且仍未保存到快照中的那些数据。于是， Redis 增加了一种完全耐久的持久化方 式: <code>AOF 持久化</code>，将修改的每一条指令记录进文件appendonly.aof中(先写入os cache，每隔一段时间 fsync到磁盘)</p>
+<h3 id="AOF介绍"><a href="#AOF介绍" class="headerlink" title="AOF介绍"></a>AOF介绍</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">*2</span><br><span class="line">$6</span><br><span class="line">SELECT</span><br><span class="line">$1</span><br><span class="line">0</span><br><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$5</span><br><span class="line">hello</span><br><span class="line">$5</span><br><span class="line">redis</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>这是一种resp协议格式数据，星号后面的数字代表命令有多少个参数，$号后面的数字代表这个参数有几 个字符 注意，如果执行带过期时间的set命令，aof文件里记录的是并不是执行的原始命令，而是记录key过期的 时间戳</p>
+<p>比如执行“set helloworld redis ex 1000”，对应aof文件里记录如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$10</span><br><span class="line">helloworld</span><br><span class="line">$5</span><br><span class="line">redis</span><br><span class="line">*3</span><br><span class="line">$9</span><br><span class="line">PEXPIREAT</span><br><span class="line">$10</span><br><span class="line">helloworld</span><br><span class="line">$13</span><br><span class="line">1615705330391</span><br></pre></td></tr></table></figure>
+
+<p>AOF 的方式进行持久化，每次执行命令都会将持久化信息追加到 AOF 文件中，当然也可以在 redis.conf 文件中配置 AOF 持久化的周期策略。</p>
+<ul>
+<li>appendfsync always:每次有新命令追加到 AOF 文件时就执行一次 fsync ，非常慢，也非常安全。 </li>
+<li> appendfsync everysec:每秒 fsync 一次，足够快，并且在故障时只会丢失 1 秒钟的数据。</li>
+<li>appendfsync no:从不 fsync ，将数据交给操作系统来处理。更快，也更不安全的选择。</li>
+</ul>
+<h3 id="AOF-重写"><a href="#AOF-重写" class="headerlink" title="AOF 重写"></a>AOF 重写</h3><p>AOF文件里可能有太多没用指令，所以AOF会定期根据内存的最新数据生成aof文件，AOF 重写会减少无用命令写入 aof文件中。</p>
+<p>可以通过以下两个配置控制 AOF 自动重写的频率：</p>
+<ul>
+<li>auto‐aof‐rewrite‐min‐size 64mb 该命令的作用是：aof文件至少要达到64M才会自动重写，文件太小恢复速度本来就很快，重写的意义不大</li>
+<li>auto‐aof‐rewrite‐percentage 100 该命令的作用是：aof文件自上一次重写后文件大小增长了100%则再次触发重写</li>
+</ul>
+<p>当然AOF还可以手动重写，进入redis客户端执行命令bgrewriteaof重写AOF 。</p>
+<p>注意，AOF重写redis会fork出一个子进程去做(与bgsave命令类似)，不会对redis正常命令处理有太多影响。</p>
+<h3 id="RDB-与-AOF-的比对"><a href="#RDB-与-AOF-的比对" class="headerlink" title="RDB 与 AOF 的比对"></a>RDB 与 AOF 的比对</h3><table>
+<thead>
+<tr>
+<th>持久化类型</th>
+<th>RDB</th>
+<th>AOF</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启动优先级</td>
+<td>低</td>
+<td>高</td>
+</tr>
+<tr>
+<td>体积</td>
+<td>小</td>
+<td>大</td>
+</tr>
+<tr>
+<td>恢复速度</td>
+<td>块</td>
+<td>慢</td>
+</tr>
+<tr>
+<td>数据安全性</td>
+<td>容易丢失数据</td>
+<td>由配置的策略决定</td>
+</tr>
+</tbody></table>
+<p>注：redis启动时如果既有rdb文件又有aof文件则优先选择aof文件恢复数据，因为aof 一般来说数据更全一点。</p>
+<h2 id="混合持久化"><a href="#混合持久化" class="headerlink" title="混合持久化"></a>混合持久化</h2><p>重启 Redis 时，我们很少使用 RDB来恢复内存状态，因为会丢失大量数据。我们通常使用 AOF 日志重 放，但是重放 AOF 日志性能相对 RDB来说要慢很多，这样在 Redis 实例很大的情况下，启动需要花费很 长的时间。 所谓混合持久化就是结合 RDB 和 AOF 进行持久化数据。</p>
+<p>使用混合持久化方式的前提是开启 AOF<code>aof‐use‐rdb‐preamble yes</code></p>
+<p>如果开启了混合持久化，AOF在重写时，不再是单纯将内存数据转换为RESP命令写入AOF文件，而是将 <strong>重写这一刻之前的内存做RDB快照</strong>处理，并且将RDB快照内容和增量的AOF修改内存数据的命令存在一 起，<strong>都写入新的AOF文件</strong>，新的文件一开始不叫appendonly.aof，等到重写完新的AOF文件才会进行改名，覆盖原有的AOF文件，完成新旧两个AOF文件的替换。</p>
+<p>于是在 Redis 重启的时候，可以先加载 RDB 的内容，然后再重放增量 AOF 日志就可以完全替代之前的 AOF 全量文件重放，因此重启效率大幅得到提升。</p>
+<h1 id="主从与哨兵架构"><a href="#主从与哨兵架构" class="headerlink" title="主从与哨兵架构"></a>主从与哨兵架构</h1><h2 id="Redis-主从架构"><a href="#Redis-主从架构" class="headerlink" title="Redis 主从架构"></a>Redis 主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojgg1xrl6j20nk0i0wf7.jpg"></p>
+<h3 id="搭建步骤"><a href="#搭建步骤" class="headerlink" title="搭建步骤"></a>搭建步骤</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">1、复制一份redis.conf文件</span><br><span class="line">2、将相关配置修改为如下值:</span><br><span class="line">port6380</span><br><span class="line"># 把pid进程号写入pidfile配置的文件</span><br><span class="line">pidfile &#x2F;var&#x2F;run&#x2F;redis_6380.pid </span><br><span class="line">logfile&quot;6380.log&quot;</span><br><span class="line"># 指定数据存放目录</span><br><span class="line">dir &#x2F;usr&#x2F;local&#x2F;redis‐5.0.3&#x2F;data&#x2F;6380  </span><br><span class="line"># 需要注释掉bind</span><br><span class="line">#bind127.0.0.1(bind绑定的是自己机器网卡的ip，如果有多块网卡可以配多个ip，代表允许客户端通 过机器的哪些网卡ip去访问，内网一般可以不配置bind，注释掉即可)</span><br><span class="line"></span><br><span class="line">3、配置主从复制</span><br><span class="line">#从本机6379的redis实例复制数据，Redis5.0之前使用 slaveof</span><br><span class="line">replicaof 127.0.0.1 6379</span><br><span class="line"># 配置从节点只读</span><br><span class="line">replica‐read‐only yes </span><br><span class="line"></span><br><span class="line">4、启动从节点</span><br><span class="line">redis‐serverredis.conf</span><br><span class="line"></span><br><span class="line">5、连接从节点</span><br><span class="line">redis‐cli ‐p 6380</span><br><span class="line">6、测试在6379实例上写数据，6380实例是否能及时同步新修改数据</span><br><span class="line">7、可以自己再配置一个6381的从节点</span><br></pre></td></tr></table></figure>
+
+<h2 id="主从架构原理"><a href="#主从架构原理" class="headerlink" title="主从架构原理"></a>主从架构原理</h2><p>当为master配置了一个slave，不管这个slave是否是第一次连接上Master，它都会发送一个PSYNC命令给master请求复制数据。</p>
+<p>master收到PSYNC命令后，会在后台进行数据持久化通过bgsave生成最新的rdb快照文件。</p>
+<p>持久化期间，master会继续接收客户端的请求，它会把这些可能修改数据集的请求缓存在内存中。</p>
+<p>当持久化进行完毕以后，master会把这份rdb文件数据集发送给slave，slave会把接收到的数据进行持久化生成rdb，然后 再加载到内存中。</p>
+<p>然后，master再将之前缓存在内存中的命令发送给slave。 当master与slave之间的连接由于某些原因而断开时，slave能够自动重连Master，如果master收到了多 个slave并发连接请求，它只会进行一次持久化，而不是一个连接一次，然后再把这一份持久化的数据发送 给多个并发连接的slave。</p>
+<p><strong>主从(全量)复制流程</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojjfkowa7j216l0u0n1d.jpg"></p>
+<p><strong>数据部分复制</strong></p>
+<p>当master和slave断开重连后，一般都会对整份数据进行复制。但从redis2.8版本开始，redis改用可以<strong>支持部分数据复制的命令PSYNC去master同步数据</strong>，slave与master能够在网络连接断开重连后只进行<code>部分数据复制(断点续传)</code>。</p>
+<p>master会在其内存中创建一个用于复制数据的缓存队列，缓存最近一段时间的数据，master和它所有的 slave都维护了复制的<code>数据下标offse</code>t和<code>master的进程id</code>.</p>
+<p>因此，当网络连接断开后，slave会请求master 继续进行未完成的复制，从所记录的数据下标开始。如果master进程id变化了，或者从节点数据下标 offset太旧，已经不在master的缓存队列里了，那么将会进行一次全量数据的复制。</p>
+<p><strong>主从复制(部分复制，断电续传)</strong></p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojko99ri2j213i0u0q6c.jpg"></p>
+<p>如果有很多从节点，为了缓解<code>主从复制风暴</code>(多个从节点同时复制主节点导致主节点压力过大)，可以做如 下架构，让部分从节点与从节点(与主节点同步)同步数据。</p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojkqnhrljj20re0lm0u2.jpg"></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2021/03/13/Redis%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84/">https://he-you.github.io/2021/03/13/Redis持久化与主从架构/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Redis/">Redis</a></div><div class="post_share"><div class="social-share" data-image="https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/03/11/Redis%E6%A0%B8%E5%BF%83%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E5%BA%94%E7%94%A8%E5%9C%BA%E6%99%AF%E4%BB%8B%E7%BB%8D/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Redis核心数据结构与应用场景介绍</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2021/03/11/Redis核心数据结构与应用场景介绍/" title="Redis核心数据结构与应用场景介绍"><img class="cover" src="https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2021-03-11</div><div class="title">Redis核心数据结构与应用场景介绍</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.</span> <span class="toc-text">持久化</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#RDB-Redis-DataBase-%E5%BF%AB%E7%85%A7"><span class="toc-number">1.1.</span> <span class="toc-text">RDB(Redis DataBase) 快照</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#save-%E5%91%BD%E4%BB%A4"><span class="toc-number">1.1.1.</span> <span class="toc-text">save 命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#bgsave-%E5%91%BD%E4%BB%A4"><span class="toc-number">1.1.2.</span> <span class="toc-text">bgsave 命令</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#save-%E4%B8%8E-bgsave-%E7%9A%84%E6%AF%94%E5%AF%B9"><span class="toc-number">1.1.3.</span> <span class="toc-text">save 与 bgsave 的比对</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#AOF-Append-Only-File"><span class="toc-number">1.2.</span> <span class="toc-text">AOF(Append Only File)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#AOF%E4%BB%8B%E7%BB%8D"><span class="toc-number">1.2.1.</span> <span class="toc-text">AOF介绍</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#AOF-%E9%87%8D%E5%86%99"><span class="toc-number">1.2.2.</span> <span class="toc-text">AOF 重写</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#RDB-%E4%B8%8E-AOF-%E7%9A%84%E6%AF%94%E5%AF%B9"><span class="toc-number">1.2.3.</span> <span class="toc-text">RDB 与 AOF 的比对</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%B7%B7%E5%90%88%E6%8C%81%E4%B9%85%E5%8C%96"><span class="toc-number">1.3.</span> <span class="toc-text">混合持久化</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E4%B8%8E%E5%93%A8%E5%85%B5%E6%9E%B6%E6%9E%84"><span class="toc-number">2.</span> <span class="toc-text">主从与哨兵架构</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#Redis-%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84"><span class="toc-number">2.1.</span> <span class="toc-text">Redis 主从架构</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E6%90%AD%E5%BB%BA%E6%AD%A5%E9%AA%A4"><span class="toc-number">2.1.1.</span> <span class="toc-text">搭建步骤</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%BB%E4%BB%8E%E6%9E%B6%E6%9E%84%E5%8E%9F%E7%90%86"><span class="toc-number">2.2.</span> <span class="toc-text">主从架构原理</span></a></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gohjxvvqxcj30u00a1t92.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
