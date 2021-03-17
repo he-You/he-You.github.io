@@ -2802,4 +2802,108 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Redis</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Redis高可用集群及相关问题</title>
+    <url>/2021/03/16/Redis%20%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/</url>
+    <content><![CDATA[<h1 id="Redis集群方案"><a href="#Redis集群方案" class="headerlink" title="Redis集群方案"></a>Redis集群方案</h1><h2 id="主从架构"><a href="#主从架构" class="headerlink" title="主从架构"></a>主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6nfl8tmj20nk0i0wf7.jpg"></p>
+<p>主从模式是最简单的实现高可用的方案，核心就是主从同步。主从同步的原理如下：</p>
+<ol>
+<li>slave发送psync命令到master</li>
+<li>master收到psync之后，执行bgsave，生成RDB全量文件</li>
+<li>master把slave的写命令记录到缓存</li>
+<li>bgsave执行完毕之后，发送RDB文件到slave，slave执行</li>
+<li>master发送缓存中的写命令到slave，slave执行</li>
+</ol>
+<h2 id="哨兵模式"><a href="#哨兵模式" class="headerlink" title="哨兵模式"></a>哨兵模式</h2><p>基于主从方案的缺点还是很明显的，假设master宕机，那么就不能写入数据，那么slave也就失去了作用，整个架构就不可用了，除非手动切换，主要原因就是因为没有自动故障转移机制。</p>
+<p>而哨兵(sentinel)的功能比单纯的主从架构全面的多了，它具备自动故障转移、集群监控、消息通知等功能。</p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6oddaczj21ic0tsgox.jpg"></p>
+<p>哨兵可以同时监视多个主从服务器，并且在被监视的master下线时，自动将某个slave提升为master，然后由新的master继续接收命令。</p>
+<ol>
+<li>初始化sentinel，将普通的redis代码替换成sentinel专用代码</li>
+<li>初始化masters字典和服务器信息，服务器信息主要保存ip:port，并记录实例的地址和ID</li>
+<li>创建和master的两个连接，命令连接和订阅连接，并且订阅sentinel:hello频道</li>
+<li>每隔10秒向master发送info命令，获取master和它下面所有slave的当前信息</li>
+<li>当发现master有新的slave之后，sentinel和新的slave同样建立两个连接，同时每个10秒发送info命令，更新master信息</li>
+<li>sentinel每隔1秒向所有服务器发送ping命令，如果某台服务器在配置的响应时间内连续返回无效回复，将会被标记为下线状态</li>
+<li>选举出sentinel leader，哨兵leader需要半数以上的sentinel同意</li>
+<li>哨兵 leader从已下线的的master所有slave中挑选一个，将其转换为master</li>
+<li>让所有的slave改为从新的master复制数据</li>
+<li>将原来的master设置为新的master的从服务器，当原来master重新回复连接时，就变成了新master的从服务器</li>
+</ol>
+<h2 id="高可用集群模式"><a href="#高可用集群模式" class="headerlink" title="高可用集群模式"></a>高可用集群模式</h2><p>redis集群是redis提供的分布式数据存储方案，集群通过数据分片sharding来进行数据的共享，同时提供复制和故障转移的功能。</p>
+<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6n9vqutj219o0so40h.jpg"></p>
+<h1 id="Redis-高可用集群搭建"><a href="#Redis-高可用集群搭建" class="headerlink" title="Redis 高可用集群搭建"></a>Redis 高可用集群搭建</h1><ol>
+<li>环境准备</li>
+<li>conf 文件修改</li>
+<li>命令注意事项</li>
+<li>验证集群</li>
+</ol>
+<h1 id="Redis-集群原理"><a href="#Redis-集群原理" class="headerlink" title="Redis 集群原理"></a>Redis 集群原理</h1><h2 id="节点通信"><a href="#节点通信" class="headerlink" title="节点通信"></a>节点通信</h2><p>一个redis集群由多个节点node组成，而多个node之间通过cluster meet命令来进行连接，节点的握手过程：</p>
+<ol>
+<li>节点A收到客户端的cluster meet命令</li>
+<li>A根据收到的IP地址和端口号，向B发送一条meet消息</li>
+<li>节点B收到meet消息返回pong</li>
+<li>A知道B收到了meet消息，返回一条ping消息，握手成功</li>
+<li>最后，节点A将会通过gossip协议把节点B的信息传播给集群中的其他节点，其他节点也将和B进行握手</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gon62iv437j31540n875t.jpg"></p>
+<p>维护集群的元数据（集群节点信息，主从关系等）有两种方式：集中式和 gossip。而 Redis Cluster 节点间采取的就是 gossip 协议进行通信。</p>
+<h3 id="gossip协议"><a href="#gossip协议" class="headerlink" title="gossip协议"></a>gossip协议</h3><p>gossip 是 redis 集群节点之间采用的一种通信协议，主要包括ping，pong，meet，fail等消息。</p>
+<ul>
+<li><p>meet:某个节点发送meet给新加入的节点，<strong>让新节点加入集群中</strong>，然后新节点就会开始与其他节点进行通信;</p>
+</li>
+<li><p> ping:每个节点都会频繁给其他节点发送ping，其中包含自己的状态还有自己维护的集群元数据，互相<strong>通过 ping交换元数据</strong>(类似自己感知到的集群节点增加和移除，hash slot信息等);</p>
+</li>
+<li><p>pong: 对ping和meet消息的返回，包含自己的状态和其他信息，也可以用于信息广播和更新;</p>
+</li>
+<li><p>fail: <strong>某个节点判断另一个节点fail</strong>之后，就发送fail给其他节点，通知其他节点，指定的节点宕机了。</p>
+</li>
+</ul>
+<p>gossip 协议的优点在于元数据的更新比较分散，不是集中在一个地方，请求会陆续更新到所有节点上，这样虽然有延时，但是降低了请求压力。</p>
+<p><strong>gossip通信的10000端口</strong> </p>
+<p>每个节点都有一个专门用于节点间gossip通信的端口，就是自己提供服务的端口号+10000，比如7001，那么 用于节点间通信的就是17001端口。 每个节点每隔一段时间都会往另外几个节点发送ping消息，同时其他节点接收到ping消息之后返回pong消息。</p>
+<p>注：gossip 协议保证的是数据的最终一致性。</p>
+<h2 id="槽位定位算法"><a href="#槽位定位算法" class="headerlink" title="槽位定位算法"></a>槽位定位算法</h2><p>在 Redis 集群中将所有数据划分成 <code>16384</code> 个存储位置，这些被称为 slots(槽位)，分散在 redis 集群中各个节点。</p>
+<p>集群中的每个节点可以处理0-16384个slot，当数据库16384个slot都有节点在处理时，集群处于上线状态，反之只要有一个slot没有得到处理都会处理下线状态。通过cluster addslots命令可以将slot指派给对应节点处理。</p>
+<p>当 redis cluster 的客户端连接集群时，客户端会在本地存储一份集群的槽位配置信息，并在槽位信息发生变动（节点生命状态发生变化）时及时的更新客户端保存的槽位信息。</p>
+<p><strong>数据定位</strong></p>
+<p>Cluster 默认会对 key 值使用 crc16 算法进行 hash 得到一个整数值，然后用这个整数值对 16384 进行<code>取模</code>来得到具体槽位。<br><code> HASH_SLOT = CRC16(key) mod 16384</code></p>
+<h2 id="跳转重定位"><a href="#跳转重定位" class="headerlink" title="跳转重定位"></a>跳转重定位</h2><p>当客户端向一个指定的节点A发生指令时，如果通过槽位定位发现请求的数据并不再A 管理的槽位范围之内，那么该节点A会向客户端发送跳转指令，告知客户端到正确的节点上执行指令，客户端在收到跳转指令后，会同步更新本地的槽位映射表缓存。</p>
+<h2 id="故障转移与选举原理"><a href="#故障转移与选举原理" class="headerlink" title="故障转移与选举原理"></a>故障转移与选举原理</h2><p>Redis Cluster的高可用性也体现在其优秀的故障转移机制和节点选举上。</p>
+<h3 id="故障转移"><a href="#故障转移" class="headerlink" title="故障转移"></a>故障转移</h3><p>如果节点A向节点B发送ping消息，节点B没有在规定的时间内响应pong，那么节点A会标记节点B为<strong>pfail</strong>疑似下线状态，同时把B的状态通过消息的形式发送给其他节点，如果<code>超过半数以上</code>的节点都标记B为pfail状态，B就会被标记为fail下线状态，此时将会发生故障转移，<code>优先从复制数据较多</code>的从节点选择一个成为主节点，并且接管下线节点的slot，整个过程和哨兵非常类似，都是基于Raft协议做选举。</p>
+<h3 id="选举流程"><a href="#选举流程" class="headerlink" title="选举流程"></a>选举流程</h3><p>由于挂掉的master 可能会有多个slave，从而存在多个slave竞争成为master节点的过程， 其过程如下: </p>
+<ol>
+<li><p>slave发现自己的master变为FAIL </p>
+</li>
+<li><p>将自己记录的集群currentEpoch（集群选举周期）加1，并广播FAILOVER_AUTH_REQUEST （错误转移请求）消息</p>
+</li>
+<li><p>其他节点收到该信息，只有master响应，判断请求者的合法性，并发送FAILOVER_AUTH_ACK，对每一个 epoch（周期）只发送一次ack（认可消息）</p>
+</li>
+<li><p>尝试failover的slave收集master返回的FAILOVER_AUTH_ACK </p>
+</li>
+<li><p>slave收到超过半数master的ack后变成新Master(这里解释了集群为什么至少需要三个主节点，如果只有两 个，当其中一个挂了，只剩一个主节点是不能选举成功的)</p>
+</li>
+<li><p>slave广播Pong消息通知其他集群节点。</p>
+</li>
+</ol>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gonb99d60nj30q819uznc.jpg"></p>
+<p>注：slave 节点并不是在主节点进入 fail 状态就马上发起选举，而是有一点的延迟，确保 FAIL 状态能够传播到集群中的其他节点。这个延迟时间Redis是通过公式计算出来的：</p>
+<p><code>DELAY = 500ms + random(0 ~ 500ms) + SLAVE_RANK * 1000ms</code></p>
+<p>其中SLAVE_RANK表示此slave已经从master复制数据的总量的rank。Rank越小代表已复制的数据越新。这种方 式下，持有最新数据的slave将会首先发起选举(理论上)，该节点成为新的 master 节点后数据也较为完整。</p>
+<h2 id="集群脑裂数据丢失问题"><a href="#集群脑裂数据丢失问题" class="headerlink" title="集群脑裂数据丢失问题"></a>集群脑裂数据丢失问题</h2><p>所谓脑裂数据丢失问题是指在没有过半机制的限制时，网络分区可能存在网络通信故障，导致 slave 节点错误判定 master 为 FAIL 状态，并发起集群选举成为 master，此时旧 master 恢复通信，导致旧 master 被迫成为 slave 节点，并同步新的 master 节点的数据，覆盖掉之前的节点数据。</p>
+<p><strong>如何规避</strong></p>
+<p>规避方法可以在redis配置里加上参数(这种方法不可能百分百避免数据丢失，参考集群leader选举机制):</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">min‐replicas‐to‐write 1 &#x2F;&#x2F;写数据成功最少同步的slave数量，这个数量可以模仿大于半数机制配置，比如 集群总共三个节点可以配置1，加上leader就是2，超过了半数</span><br></pre></td></tr></table></figure>
+
+<p>注:这个配置在一定程度上会影响集群的可用性，比如slave要是少于1个，这个集群就算leader正常也不能 提供服务了，需要具体场景权衡选择。</p>
+<p><strong>集群是否完整才能对外提供服务</strong></p>
+<p>当redis.conf的配置<code>cluster-require-full-coverage</code>为no时，表示当负责一个插槽的主库下线且没有相应的从 库进行故障恢复时，集群仍然可用，如果为yes则集群不可用。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>集群</tag>
+      </tags>
+  </entry>
 </search>
