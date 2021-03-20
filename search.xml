@@ -2906,4 +2906,90 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>集群</tag>
       </tags>
   </entry>
+  <entry>
+    <title>多级缓存架构与 Redis 常见问题与解决方案</title>
+    <url>/2021/03/19/%E5%A4%9A%E7%BA%A7%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E4%B8%8E%20Redis%20%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/</url>
+    <content><![CDATA[<h1 id="多级缓存架构"><a href="#多级缓存架构" class="headerlink" title="多级缓存架构"></a>多级缓存架构</h1><p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq7kxttl9j311f0u0dj6.jpg"></p>
+<p>如上图所示：改架构由LVS负载均衡、Nginx 负载均衡、web 层、缓存层、微服务层、DB 层组成。其中：</p>
+<ul>
+<li>LVS（Linux Virtual Server）即Linux虚拟服务器，Linux内核中实现了基于IP的数据请求负载均衡调度。终端用户的Web请求会发送给LVS调度器，调度器根据自己预设的算法决定将该请求发送给后端的某台Web服务器。</li>
+<li>Keepalived：用来防止服务器单点故障的发生，通过配合 Nginx 可以实现 web 前端服务的高可用。</li>
+<li>Nginx：热点数据放在 Nginx 本地缓存中</li>
+<li>Ehcache: 是一个<code>纯Java</code>的进程内<code>缓存框架</code>,是广泛使用的开源Java分布式缓存，面向通用缓存,Java EE和轻量级容器</li>
+</ul>
+<p>在多级缓存架构中，请求优先获取缓存中的数据，如果缓存层没有命中数据，则去 DB 存储层请求数据。</p>
+<h1 id="常见的-Redis-缓存问题"><a href="#常见的-Redis-缓存问题" class="headerlink" title="常见的 Redis 缓存问题"></a>常见的 Redis 缓存问题</h1><h2 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h2><p>所谓缓存穿透，是指查询了一个在各级缓存都不存在的数据，从而让数据请求直接到达 DB 进行查询。</p>
+<h3 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li><p>缓存空对象：如果缓存没命中，去数据库查询，如果数据库查询结果不存在，则构造一个空的对象缓存到 Redis 中，并设置过期时间。</p>
+</li>
+<li><p>**<a href="https://he-you.github.io/2021/01/05/%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8/">布隆过滤器</a>**：布隆过滤器就是一个大型的bit数组和几个不一样的无偏 hash 函数。所谓无偏就是能够把元素的 hash 值算得比较均匀。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq87ynfpkj31us0j0766.jpg"></p>
+</li>
+</ol>
+<p>向布隆过滤器中添加 key 时，会使用多个 hash 函数对 key 进行 hash 算得一个整数索引值然后对位数组长度 进行<code>取模运算</code>得到一个位置，每个 hash 函数都会算得一个不同的位置。再把位数组的这几个位置都置为 1 就 完成了 add 操作。</p>
+<p>向布隆过滤器询问 key 是否存在时，跟 add 一样，也会把 hash 的几个位置都算出来，看看位数组中这几个位 置是否都为 1，<strong>只要有一个位为 0，那么说明布隆过滤器中这个key 不存在</strong>。</p>
+<p>如果都是 1，这并不能说明这个 key 就一定存在，只是极有可能存在，因为这些位被置为 1 可能是因为其它的 key 存在所致。如果这个位数组 比较稀疏，这个概率就会很大，如果这个位数组比较拥挤，这个概率就会降低。 这种方法适用于数据命中不高、 数据相对固定、 实时性低(通常是数据集较大) 的应用场景， 代码维护较为复杂， 但是缓存空间占用很少。</p>
+<h2 id="缓存击穿"><a href="#缓存击穿" class="headerlink" title="缓存击穿"></a>缓存击穿</h2><p>缓存击穿又叫缓存失效，是指同一时间大批量的缓存过期，导致大量请求直接到达数据库，数据库瞬时压力过大甚至挂掉的场景。</p>
+<h3 id="解决方案-1"><a href="#解决方案-1" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li>在批量增加缓存数据时，将这批数据设置不同的过期时间。</li>
+<li>加锁更新，如果请求发现缓存中没有，对这个 key 进行加锁并去 DB 中查询对应的数据，更新到缓存中，后续请求就可以直接从缓存中获取数据。</li>
+</ol>
+<h2 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h2><p>缓存雪崩是指缓存层因为某些原因宕机，整个缓存服务不可用，使得大量请求直接打到存储层，存储层调用量急剧增加，造成存储层出现<code>级联宕机</code>的情况。</p>
+<h3 id="解决方案-2"><a href="#解决方案-2" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li>保证缓存服务的高可用</li>
+<li>增加限流中间件，在必要时进行熔断并降级</li>
+<li>提前预估流量，进行压测提前演练</li>
+</ol>
+<h2 id="热点-Key"><a href="#热点-Key" class="headerlink" title="热点 Key"></a>热点 Key</h2><p>所谓热点 key问题就是突然有几十万的请求去访问redis上的某个特定key，那么这样会造成流量过于集中，从而导致这台redis的服务器宕机进而引发雪崩。</p>
+<h3 id="解决方案-3"><a href="#解决方案-3" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li>提前将热点 key 分散到不同的服务器中，降低单一服务器的访问压力</li>
+<li>加入二级缓存，提前将热 key 数据加载到内存中，如果 redis 宕机，从内存中查询。</li>
+</ol>
+<h2 id="缓存重建优化"><a href="#缓存重建优化" class="headerlink" title="缓存重建优化"></a>缓存重建优化</h2><p>建缓存不能在短时间完成， 可能是一个复杂计算， 例如复杂的SQL、 多次IO、 多个依赖等。 在缓存失效的瞬间， 有大量线程来重建缓存， 造成后端负载加大， 甚至可能会让应用崩溃。</p>
+<h3 id="解决方案-4"><a href="#解决方案-4" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li>互斥锁</li>
+<li>提前使用互斥锁</li>
+<li>永不过期</li>
+</ol>
+<h2 id="缓存与数据库双写不一致"><a href="#缓存与数据库双写不一致" class="headerlink" title="缓存与数据库双写不一致"></a>缓存与数据库双写不一致</h2><p>在高并发场景下，不同线程之间的执行耗时可能不一样，当有多个线程同时操作 DB 和缓存时，就有可能出现数据库的值与缓存中的值不一致的情况。</p>
+<h3 id="解决方案-5"><a href="#解决方案-5" class="headerlink" title="解决方案"></a>解决方案</h3><ol>
+<li>对于并发几率小的数据（如用户个人数据），可以给缓存加上过期时间，每隔一段时间主动更新缓存</li>
+<li>当并发量大时，依然给缓存数据添加过期时间，定时刷新缓存</li>
+<li>当必须要保证双写一致时，可以通过添加分布式锁（读多写少的场景最好使用读写锁）保证线程串行化执行，这样可以有效规避双写不一致问题，但是使用分布式锁会出现性能问题</li>
+<li>引入阿里开源中间件 canal通过监听数据库的 binlog 日志去修改缓存，但是引入中间件会增加系统的复杂度</li>
+</ol>
+<h1 id="缓存清除策略"><a href="#缓存清除策略" class="headerlink" title="缓存清除策略"></a>缓存清除策略</h1><p>Redis 对于过期键提供了三种清除策略</p>
+<h2 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h2><p>惰性删除指的是当我们查询key的时候才对key进行检测，如果已经达到过期时间，则删除。显然，他有一个缺点就是如果这些过期的key没有被访问，那么他就一直无法被删除，而且一直占用内存。</p>
+<h2 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h2><p>定期删除指的是redis每隔一段时间对数据库做一次检查，删除里面的过期key。由于不可能对所有key去做轮询来删除，所以redis会每次随机取一些key去做检查和删除。</p>
+<img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq6x2dzjmj30q60ry3zz.jpg" style="zoom:40%;" />
+
+<h2 id="主动内存淘汰策略"><a href="#主动内存淘汰策略" class="headerlink" title="主动内存淘汰策略"></a>主动内存淘汰策略</h2><p>当Redis当前使用的内存超过 maxmemory 限定时，会触发主动清理策略，Redis 主动清理策略有 8 种，可以分为以下三种场景：</p>
+<h3 id="针对过期-key-的处理"><a href="#针对过期-key-的处理" class="headerlink" title="针对过期 key 的处理"></a>针对过期 key 的处理</h3><ul>
+<li><strong>volatile-ttl</strong>:在筛选时，会针对设置了过期时间的键值对，根据过期时间的先后进行删 除，越早过期的越先被删除。</li>
+<li> <strong>volatile-random</strong>:就像它的名称一样，在设置了过期时间的键值对中，进行随机删除。 </li>
+<li> <strong>volatile-lru</strong>:会使用 LRU 算法筛选设置了过期时间的键值对删除。</li>
+<li> <strong>volatile-lfu</strong>:会使用 LFU 算法筛选设置了过期时间的键值对删除。</li>
+</ul>
+<h3 id="针对所有-key-的处理"><a href="#针对所有-key-的处理" class="headerlink" title="针对所有 key 的处理"></a>针对所有 key 的处理</h3><ul>
+<li><strong>allkeys-random</strong>:从所有键值对中随机选择并删除数据。</li>
+<li><strong>allkeys-lru</strong>:使用 LRU 算法在所有数据中进行筛选删除。 </li>
+<li> <strong>allkeys-lfu</strong>:使用 LFU 算法在所有数据中进行筛选删除。</li>
+</ul>
+<h3 id="不处理"><a href="#不处理" class="headerlink" title="不处理"></a>不处理</h3><ul>
+<li>noeviction:不会剔除任何数据，拒绝所有写入操作并返回客户端错误信息”(error) OOM command not allowed when used memory”，此时Redis只响应读操作。</li>
+</ul>
+<p>注：</p>
+<ol>
+<li>LRU 算法即Least Recently Used，最近最少使用，Redis 用于淘汰长时间未被访问的数据，以<code>最近一次访问时间</code>作为参考。</li>
+<li>LFU 算法即Least Frequently Used，最不经常使用，Redis 用于淘汰最近一段时间被访问次数最少的数据，以<code>次数</code>作为衡量标准。</li>
+</ol>
+<p>对于热点数据，使用 LFU 更好一点。另外要根据自身业务类型，配置好maxmemory-policy(默认是noeviction)，推荐使用volatile-lru。如果不设置最大内存，当 Redis 内存超出物理内存限制时，内存的数据会开始和磁盘产生频繁的交换 (swap)，会让 Redis 的性能急剧下降。 当Redis运行在主从模式时，只有主<strong>结点才会执行过期删除策略</strong>，然后把删除操作”del key”同步到从结点删除数据。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
 </search>
