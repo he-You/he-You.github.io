@@ -2992,4 +2992,82 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Redis</tag>
       </tags>
   </entry>
+  <entry>
+    <title>MySQL 索引数据结构与相关问题</title>
+    <url>/2021/03/20/MySQL%20%E7%B4%A2%E5%BC%95%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/</url>
+    <content><![CDATA[<h1 id="索引的定义"><a href="#索引的定义" class="headerlink" title="索引的定义"></a>索引的定义</h1><ul>
+<li>索引是一种特殊的文件(InnoDB数据表上的索引是表空间的一个组成部分)，它们包含着对数据表里所有记录的引用指针。</li>
+<li>索引是一种数据结构。数据库索引，是数据库管理系统中一个<code>排好序</code>的数据结构，以协助快速查询、更新数据库表中数据。索引的实现通常使用B树及其变种B+树。</li>
+<li>更通俗的说，索引就相当于目录。为了方便查找书中的内容，通过对内容建立索引形成目录。索引是一个文件，它是要占据物理空间的。</li>
+</ul>
+<h1 id="如何创建索引"><a href="#如何创建索引" class="headerlink" title="如何创建索引"></a>如何创建索引</h1><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1.添加PRIMARY KEY（主键索引）</span><br><span class="line"></span><br><span class="line">ALTER TABLE &#96;table_name&#96; ADD PRIMARY KEY ( &#96;column&#96; ) </span><br><span class="line">2.添加UNIQUE(唯一索引)</span><br><span class="line"></span><br><span class="line">ALTER TABLE &#96;table_name&#96; ADD UNIQUE ( &#96;column&#96; ) </span><br><span class="line">3.添加INDEX(普通索引)</span><br><span class="line"></span><br><span class="line">ALTER TABLE &#96;table_name&#96; ADD INDEX index_name ( &#96;column&#96; )</span><br><span class="line">4.添加FULLTEXT(全文索引)</span><br><span class="line"></span><br><span class="line">ALTER TABLE &#96;table_name&#96; ADD FULLTEXT ( &#96;column&#96;) </span><br><span class="line">5.添加联合索引</span><br><span class="line"></span><br><span class="line">ALTER TABLE &#96;table_name&#96; ADD INDEX index_name ( &#96;column1&#96;, &#96;column2&#96;, &#96;column3&#96; )</span><br></pre></td></tr></table></figure>
+
+<h1 id="索引的种类"><a href="#索引的种类" class="headerlink" title="索引的种类"></a>索引的种类</h1><ul>
+<li>主键索引: 数据列不允许重复，不允许为NULL，一个表只能有一个主键。</li>
+<li>唯一索引: 数据列不允许重复，允许为NULL值，一个表允许多个列创建唯一索引。可以通过 ALTER TABLE table_name ADD UNIQUE (column); 创建唯一索引可以通过 ALTER TABLE table_name ADD UNIQUE (column1,column2); 创建唯一组合索引</li>
+<li>普通索引: 基本的索引类型，没有唯一性的限制，允许为NULL值。可以通过ALTER TABLE table_name ADD INDEX index_name (column);创建普通索引可以通过ALTER TABLE table_name ADD INDEX index_name(column1, column2, column3);创建组合索引。</li>
+<li>全文索引： 是目前搜索引擎使用的一种关键技术。可以通过ALTER TABLE table_name ADD FULLTEXT (column);创建全文索引</li>
+</ul>
+<p>注：当创建表结构时没有指定主键，MySQL 会优先选择数据不重复的列作为索引，如果不存在这样的列，则会创建虚拟的列，用于创建索引结构类似 row_id。</p>
+<h1 id="索引的基本原理与底层数据结构"><a href="#索引的基本原理与底层数据结构" class="headerlink" title="索引的基本原理与底层数据结构"></a>索引的基本原理与底层数据结构</h1><h2 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h2><p>索引用来快速地寻找那些具有特定值的记录。如果没有索引，一般来说执行查询时遍历整张表。<br>索引的原理很简单，就是把无序的数据变成有序的查询把创建了索引的列的内容进行排序对排序结果生成倒排表在倒排表内容上拼上数据地址链在查询的时候，先拿到倒排表内容，再取出数据地址链，从而拿到具体数据</p>
+<h2 id="索引的数据结构"><a href="#索引的数据结构" class="headerlink" title="索引的数据结构"></a>索引的数据结构</h2><p>既然索引是为了提高查询效率,而和搜索查询相关的数据结构有:</p>
+<ul>
+<li>B-Tree</li>
+<li>B+-Tree</li>
+<li>Hash结构</li>
+<li>二叉查找树</li>
+</ul>
+<p>索引的数据结构和具体<strong>存储引擎</strong>的实现有关，在MySQL中使用较多的索引有Hash索引，B+树索引等，而我们经常使用的InnoDB存储引擎的默认索引实现为：B+树索引。对于哈希索引来说，底层的数据结构就是哈希表，因此在绝大多数需求为单条记录查询的时候，可以选择哈希索引，查询性能最快；其余大部分场景，建议选择BTree索引。</p>
+<ul>
+<li><strong>B-Tree索引</strong></li>
+</ul>
+<p>mysql通过存储引擎取数据，基本上90%的人用的就是InnoDB了，按照实现方式分，InnoDB的索引类型目前只有两种：BTREE（B树）索引和HASH索引。B树索引是Mysql数据库中使用最频繁的索引类型，基本所有存储引擎都支持BTree索引。通常我们说的索引不出意外指的就是（B树）索引（实际是用B+树实现的，因为在查看表索引时，mysql一律打印BTREE，所以简称为B树索引）。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goqrbmv5shj31ca0na75d.jpg"></p>
+<ul>
+<li><strong>B+Tree性质</strong></li>
+</ul>
+<p>n棵子tree的节点包含n个关键字，不用来保存数据而是保存数据的索引。<br>所有的叶子结点中包含了全部关键字的信息，即指向含这些关键字记录的指针，且叶子结点本身依关键字的大小自小而大顺序链接。<br>所有的非终端结点可以看成是索引部分，结点中仅含其子数中的最大（或最小）关键字。<br>B+ 树中，数据对象的插入和删除仅在叶节点上进行。<br>B+树有2个头指针，一个是树的根节点，一个是最小关键码的叶节点。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goqrohbat8j31im0s6gnz.jpg"></p>
+<p><strong>为什么 MySQL采用 B+Tree 索引，而不是使用二叉查找树结构？</strong></p>
+<ol>
+<li><p>B+Tree 树的高度更低：普通的二叉查找树，一个节点最多有两个子节点，当存储大量数据时，树的高度就会很高，从而也会影响查询的效率。而 B+树，非叶子节点存储索引，叶子节点存储索引及其数据，这样一层叶子节点可以存储大量数据。</p>
+</li>
+<li><p>B+树的磁盘读写代价更低:B+树内部(非叶子节点)并没有指向关键信息的指针,只存放索引信息,不存放数据;因此内部节点相对B树更小如果将所有内部节点的索引信息存入同一盘块中,这个盘块能容纳更多的关键字,<br>一次性读入内存要查找的关键字也就越多,相对来说IO读写次数也就越少。</p>
+</li>
+<li><p>B+树的查询效率更加稳定。由于内部节点并不是最终指向文件内容的节点,而只是指向叶子节点的索引,所以任何查找都必须走一条从根节点到叶子节点的路,所有关键字查询的长度相同,也就是说每个数据的查询效率基本一致(O(logn))</p>
+</li>
+</ol>
+<ul>
+<li><strong>哈希索引</strong></li>
+</ul>
+<p>简要说下，类似于数据结构中简单实现的HASH表（散列表）一样，当我们在mysql中用哈希索引时，主要就是通过Hash算法（常见的Hash算法有直接定址法、平方取中法、折叠法、除数取余法、随机数法），将数据库字段数据转换成定长的Hash值，与这条数据的行指针一并存入Hash表的对应位置；如果发生Hash碰撞（两个不同关键字的Hash值相同），则在对应Hash键下以链表形式存储。当然这只是简略模拟图。</p>
+<p><strong>为什么不使用Hash结构作为数据库索引的数据结构?</strong></p>
+<p>Hash算法存在Hash碰撞,即不同的Key通过Hash算法得到的Hash值可能是一样的,即多个Key指向同一个Bucket,而Bucket中又是以链表的方式进行存储Key指向的数据所以:</p>
+<ul>
+<li>Hash索引比较的是进行Hash运算后的值也无法保证值的大小与Hash运算之前完全一样 ,仅仅能满足”=”与”in”,不能进行范围查询</li>
+<li>无法用来进行数据的排序操作 </li>
+<li>不能进行部分索引进行查询,因为对于组合索引,Hash运算在是对组合索引合并之后进行的,<br>而不是单独计算Hash值的,索引无法使用组合索引进行数据的查询 </li>
+<li>不能避免进行表扫描,因为Hash索引最终查询的还是Bucket中的entry,无法直接通过Hash值查询到数据</li>
+<li>遇到大量Hash值相等的情况性能不一定比B+Tree高</li>
+</ul>
+<h2 id="两种存储引擎索引对比"><a href="#两种存储引擎索引对比" class="headerlink" title="两种存储引擎索引对比"></a>两种存储引擎索引对比</h2><ul>
+<li>InnoDB索引是聚簇索引，MyISAM索引是非聚簇索引。</li>
+<li>InnoDB的主键索引的叶子节点存储着行数据，因此主键索引非常高效。</li>
+<li>MyISAM索引的叶子节点存储的是行数据地址，需要再寻址一次才能得到数据。</li>
+<li>InnoDB非主键索引的叶子节点存储的是主键和其他带索引的列数据，因此查询时做到覆盖索引会非常高效。</li>
+</ul>
+<h2 id="聚集索引与稀疏索引"><a href="#聚集索引与稀疏索引" class="headerlink" title="聚集索引与稀疏索引"></a>聚集索引与稀疏索引</h2><p>所谓聚集索引又称为聚簇索引，是指索引文件和数据文件是在一起的</p>
+<p>所谓稀疏索引又称之为非聚簇索引，索引文件和数据文件是分离的</p>
+<h2 id="使用自增主键索引的优势"><a href="#使用自增主键索引的优势" class="headerlink" title="使用自增主键索引的优势"></a>使用自增主键索引的优势</h2><p>用自增主键维护索引结构，可以避免 mysql 在维护索引结构时，叶子节点分裂，冗余节点进行平衡。而且对于 InnoDB 来说，聚簇索引也是主键索引。其他索引在查询是会进行回表操作，所谓回表即：二级索引查询到叶子节点中的主键位置，然后通过主键再次查询主键索引找到对应的数据。</p>
+<h2 id="联合索引与MySQL-最左前缀原则"><a href="#联合索引与MySQL-最左前缀原则" class="headerlink" title="联合索引与MySQL 最左前缀原则"></a>联合索引与MySQL 最左前缀原则</h2><h3 id="如何创建联合索引"><a href="#如何创建联合索引" class="headerlink" title="如何创建联合索引"></a>如何创建联合索引</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">ALTER TABLE &#96;table_name&#96; ADD INDEX index_name ( &#96;columnA&#96;, &#96;columnB&#96;, &#96;columnC&#96; )</span><br></pre></td></tr></table></figure>
+
+<p>当创建联合索引时，按照 A，B，C 的顺序维护索引结构的，按照表级维度来说只有 A 是排好顺序的，而 BC 字段只是在某个叶子节点是有序的，所以，对于联合索引来说，只有查询条件包含 columnA 这列时，联合索引才生效。这个规则或者说优先级即为最左前缀原则。</p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>索引</tag>
+      </tags>
+  </entry>
 </search>
