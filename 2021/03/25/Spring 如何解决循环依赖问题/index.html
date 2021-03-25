@@ -1,0 +1,226 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Spring 如何解决循环依赖问题 | he-You</title><meta name="keywords" content="循环依赖"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="什么是循环依赖简单来说就是两个对象互相调用对方的属性。A 依赖了 B,B 依赖了 A。正常情况下对象的相互依赖并不是一个问题。但是在 Spring 中，由于Spring对象并不是简单的 new 处理的对象，而是有自己的生命周期的，而这里说的循环依赖问题也就是在 Spring bean 对象的生命周期中出现的问题。 简述 SpringBean 的生命周期在 Spring中 bean 的创建过程大致如">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring 如何解决循环依赖问题">
+<meta property="og:url" content="https://he-you.github.io/2021/03/25/Spring%20%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="什么是循环依赖简单来说就是两个对象互相调用对方的属性。A 依赖了 B,B 依赖了 A。正常情况下对象的相互依赖并不是一个问题。但是在 Spring 中，由于Spring对象并不是简单的 new 处理的对象，而是有自己的生命周期的，而这里说的循环依赖问题也就是在 Spring bean 对象的生命周期中出现的问题。 简述 SpringBean 的生命周期在 Spring中 bean 的创建过程大致如">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gowifgc94kj30kk0dcjry.jpg">
+<meta property="article:published_time" content="2021-03-25T14:14:53.396Z">
+<meta property="article:modified_time" content="2021-03-25T14:17:58.445Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="循环依赖">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tva1.sinaimg.cn/large/008eGmZEgy1gowifgc94kj30kk0dcjry.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2021/03/25/Spring%20%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E9%97%AE%E9%A2%98/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2021-03-25 22:17:58'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">42</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">30</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">9</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gowifghv5cj30hx08cjrg.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">Spring 如何解决循环依赖问题</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2021-03-25T14:14:53.396Z" title="发表于 2021-03-25 22:14:53">2021-03-25</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2021-03-25T14:17:58.445Z" title="更新于 2021-03-25 22:17:58">2021-03-25</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/Spring/">Spring</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="什么是循环依赖"><a href="#什么是循环依赖" class="headerlink" title="什么是循环依赖"></a>什么是循环依赖</h1><p>简单来说就是两个对象互相调用对方的属性。A 依赖了 B,B 依赖了 A。正常情况下对象的相互依赖并不是一个问题。但是在 Spring 中，由于Spring对象并不是简单的 new 处理的对象，而是有自己的生命周期的，而这里说的循环依赖问题也就是在 Spring bean 对象的生命周期中出现的问题。</p>
+<h2 id="简述-SpringBean-的生命周期"><a href="#简述-SpringBean-的生命周期" class="headerlink" title="简述 SpringBean 的生命周期"></a>简述 SpringBean 的生命周期</h2><p>在 Spring中 bean 的创建过程大致如下：</p>
+<ol>
+<li>Spring 扫描 class 得到 BeanDefinition</li>
+<li>根据得到的 BeanDefinition 去开始生成 bean 对象</li>
+<li>首先更加 class 推断构造方法</li>
+<li>根据推断出来的构造方法进行反射得到一个对象，暂且称之为原始对象</li>
+<li>开始对原始对象填充属性（进行依赖注入）</li>
+<li>如果原始对象中有需要AOP 的方法，则通过这个原始对象生成一个代理对象</li>
+<li>将最终生成的代理对象（如果没有 AOP则放入经过后置处理器的对象）放入单例池中</li>
+</ol>
+<h2 id="循环依赖出现的条件"><a href="#循环依赖出现的条件" class="headerlink" title="循环依赖出现的条件"></a>循环依赖出现的条件</h2><p>假设有两个 service 类：AService 和 BService。AService中注入 BService, BService 中注入 AService。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AService</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Autowired</span></span><br><span class="line">	<span class="keyword">private</span> BService bService;</span><br><span class="line">	</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BService</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Autowired</span></span><br><span class="line">	<span class="keyword">private</span> AService aService;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当项目启动时，大致会经过以下流程：</p>
+<img src="https://tva1.sinaimg.cn/large/008eGmZEgy1govdzc0wt6j30u00ugtcu.jpg" style="zoom:60%;" />
+
+<p>总结来说，就是 beanA 的创建需要 注入beanB，因此需要获取 beanB，而 beanB 中又注入了 beanA 的属性，需要完整 beanA 对象，这样 beanA和 beanB 之间就出现了环，即 AB 出现了循环依赖。</p>
+<h1 id="解决循环依赖的思路"><a href="#解决循环依赖的思路" class="headerlink" title="解决循环依赖的思路"></a>解决循环依赖的思路</h1><p>由上可知，循环依赖的出现是 bean 对象创建过程需要从单例池中获取依赖的 bean 对象，而此时 bean 对象并未完成创建的生命周期，那能不能在 bean 创建过程之中就拿到 bean 对象呢？如果能拿到是不是能完成各自 bean 的创建得到最终完整的 bean 对象？</p>
+<h1 id="Spring-是如何解决循环依赖"><a href="#Spring-是如何解决循环依赖" class="headerlink" title="Spring 是如何解决循环依赖"></a>Spring 是如何解决循环依赖</h1><p>根据上面的思路，我们只需要用容器暂时存放不完整的 bean 对象，支持创建 bean 对象的属性填充即可。实际上，Spring 确实是通过一个容器存放早期的不完整的 bean 对象，来解决循环依赖的问题的。</p>
+<p>这个存放早期 bean 对象的容器为 <code>earlySingletonObjects</code>。</p>
+<h2 id="三级缓存"><a href="#三级缓存" class="headerlink" title="三级缓存"></a>三级缓存</h2><p>三级缓存是 Spring 解决循环依赖的一种方案</p>
+<h3 id="什么是三级缓存"><a href="#什么是三级缓存" class="headerlink" title="什么是三级缓存"></a>什么是三级缓存</h3><p>所谓三级缓存，其实就是 3 个 map容器：</p>
+<p>一级缓存：singletonObjects 即单例池，存放的是经过完整创建过程的 bean 对象</p>
+<p>二级缓存：earlySingletonObjects存放的是早期的不完整的 bean 对象</p>
+<p>三级缓存：singletonFactories，缓存的是ObjectFactory，表示对象工厂，用来创建某个对象的</p>
+<h3 id="Spring-解决循环依赖的具体实现"><a href="#Spring-解决循环依赖的具体实现" class="headerlink" title="Spring 解决循环依赖的具体实现"></a>Spring 解决循环依赖的具体实现</h3><p>A 的 bean创建过程中，在进行依赖注入之前，把 A 的原始对象放入缓存中，再进行依赖注入，此时A的Bean依赖了B的Bean，如果B的Bean不存在，则需要创建B的Bean。</p>
+<p>而创建B的Bean的过程和A一样，也是先创建一个B的原始对象，然后把B的原始对象提早暴露出来放入缓存中，然后在对B的原始对象进行依赖注入A，此时能从缓存中拿到A的原始对象（虽然是A的原始对象，还不是最终的Bean），B的原始对象依赖注入完了之后，B的生命周期结束，那么A的生命周期也能结束。</p>
+<img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gowhmob6mtj30u0150djl.jpg" style="zoom:70%;" />
+
+<p>如上图所示，加入二级缓存 earlySingletonObjects后，A的 bean 和 B 的 bean 就不需要在创建的过程中依赖单例池中的 bean了，只需要获取二级缓存中的早期 bean对象去完成各自 bean 的属性注入即可。</p>
+<h3 id="为什么是三级缓存"><a href="#为什么是三级缓存" class="headerlink" title="为什么是三级缓存"></a>为什么是三级缓存</h3><p>根据上述过程可以发现，使用 Spring的二级缓存就可以解决循环依赖的问题，那 Spring 为什么还要加上一个三级缓存<strong>singletonFactories</strong>呢。</p>
+<p>因为在 Spring bean对象的初始化后，Spring 提供了一个扩展点，即 BeanPostProcessor,后置处理器可以去对Bean进行加工，这个加工不仅仅只是能修改Bean的属性值，也可以替换掉当前Bean。</p>
+<p>因为，循环依赖是发生在属性注入过程中的，所以很有可能导致，<strong>注入给B对象的A对象和经历过完整生命周期之后的A对象，不是一个对象</strong>。这就是有问题的。</p>
+<p><strong>所以在这种情况下的循环依赖，Spring是解决不了的，因为在属性注入时，Spring也不知道A对象后续会经过哪些BeanPostProcessor以及会对A对象做什么处理</strong>。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2021/03/25/Spring%20%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E9%97%AE%E9%A2%98/">https://he-you.github.io/2021/03/25/Spring 如何解决循环依赖问题/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96/">循环依赖</a></div><div class="post_share"><div class="social-share" data-image="https://tva1.sinaimg.cn/large/008eGmZEgy1gowifgc94kj30kk0dcjry.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/03/20/MySQL%20%E7%B4%A2%E5%BC%95%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%9B%B8%E5%85%B3%E9%97%AE%E9%A2%98/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/008eGmZEly1goqs9iky9sj30b407hjre.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">MySQL 索引数据结构与相关问题</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96"><span class="toc-number">1.</span> <span class="toc-text">什么是循环依赖</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%AE%80%E8%BF%B0-SpringBean-%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="toc-number">1.1.</span> <span class="toc-text">简述 SpringBean 的生命周期</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E5%87%BA%E7%8E%B0%E7%9A%84%E6%9D%A1%E4%BB%B6"><span class="toc-number">1.2.</span> <span class="toc-text">循环依赖出现的条件</span></a></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E7%9A%84%E6%80%9D%E8%B7%AF"><span class="toc-number">2.</span> <span class="toc-text">解决循环依赖的思路</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#Spring-%E6%98%AF%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96"><span class="toc-number">3.</span> <span class="toc-text">Spring 是如何解决循环依赖</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E7%BA%A7%E7%BC%93%E5%AD%98"><span class="toc-number">3.1.</span> <span class="toc-text">三级缓存</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E4%B8%89%E7%BA%A7%E7%BC%93%E5%AD%98"><span class="toc-number">3.1.1.</span> <span class="toc-text">什么是三级缓存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Spring-%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="toc-number">3.1.2.</span> <span class="toc-text">Spring 解决循环依赖的具体实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E6%98%AF%E4%B8%89%E7%BA%A7%E7%BC%93%E5%AD%98"><span class="toc-number">3.1.3.</span> <span class="toc-text">为什么是三级缓存</span></a></li></ol></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://tva1.sinaimg.cn/large/008eGmZEgy1gowifghv5cj30hx08cjrg.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>

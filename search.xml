@@ -3073,4 +3073,50 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>索引</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Spring 如何解决循环依赖问题</title>
+    <url>/2021/03/25/Spring%20%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E9%97%AE%E9%A2%98/</url>
+    <content><![CDATA[<h1 id="什么是循环依赖"><a href="#什么是循环依赖" class="headerlink" title="什么是循环依赖"></a>什么是循环依赖</h1><p>简单来说就是两个对象互相调用对方的属性。A 依赖了 B,B 依赖了 A。正常情况下对象的相互依赖并不是一个问题。但是在 Spring 中，由于Spring对象并不是简单的 new 处理的对象，而是有自己的生命周期的，而这里说的循环依赖问题也就是在 Spring bean 对象的生命周期中出现的问题。</p>
+<h2 id="简述-SpringBean-的生命周期"><a href="#简述-SpringBean-的生命周期" class="headerlink" title="简述 SpringBean 的生命周期"></a>简述 SpringBean 的生命周期</h2><p>在 Spring中 bean 的创建过程大致如下：</p>
+<ol>
+<li>Spring 扫描 class 得到 BeanDefinition</li>
+<li>根据得到的 BeanDefinition 去开始生成 bean 对象</li>
+<li>首先更加 class 推断构造方法</li>
+<li>根据推断出来的构造方法进行反射得到一个对象，暂且称之为原始对象</li>
+<li>开始对原始对象填充属性（进行依赖注入）</li>
+<li>如果原始对象中有需要AOP 的方法，则通过这个原始对象生成一个代理对象</li>
+<li>将最终生成的代理对象（如果没有 AOP则放入经过后置处理器的对象）放入单例池中</li>
+</ol>
+<h2 id="循环依赖出现的条件"><a href="#循环依赖出现的条件" class="headerlink" title="循环依赖出现的条件"></a>循环依赖出现的条件</h2><p>假设有两个 service 类：AService 和 BService。AService中注入 BService, BService 中注入 AService。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AService</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Autowired</span></span><br><span class="line">	<span class="keyword">private</span> BService bService;</span><br><span class="line">	</span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Service</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BService</span> </span>&#123;</span><br><span class="line">	<span class="meta">@Autowired</span></span><br><span class="line">	<span class="keyword">private</span> AService aService;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">hello</span><span class="params">()</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当项目启动时，大致会经过以下流程：</p>
+<img src="https://tva1.sinaimg.cn/large/008eGmZEgy1govdzc0wt6j30u00ugtcu.jpg" style="zoom:60%;" />
+
+<p>总结来说，就是 beanA 的创建需要 注入beanB，因此需要获取 beanB，而 beanB 中又注入了 beanA 的属性，需要完整 beanA 对象，这样 beanA和 beanB 之间就出现了环，即 AB 出现了循环依赖。</p>
+<h1 id="解决循环依赖的思路"><a href="#解决循环依赖的思路" class="headerlink" title="解决循环依赖的思路"></a>解决循环依赖的思路</h1><p>由上可知，循环依赖的出现是 bean 对象创建过程需要从单例池中获取依赖的 bean 对象，而此时 bean 对象并未完成创建的生命周期，那能不能在 bean 创建过程之中就拿到 bean 对象呢？如果能拿到是不是能完成各自 bean 的创建得到最终完整的 bean 对象？</p>
+<h1 id="Spring-是如何解决循环依赖"><a href="#Spring-是如何解决循环依赖" class="headerlink" title="Spring 是如何解决循环依赖"></a>Spring 是如何解决循环依赖</h1><p>根据上面的思路，我们只需要用容器暂时存放不完整的 bean 对象，支持创建 bean 对象的属性填充即可。实际上，Spring 确实是通过一个容器存放早期的不完整的 bean 对象，来解决循环依赖的问题的。</p>
+<p>这个存放早期 bean 对象的容器为 <code>earlySingletonObjects</code>。</p>
+<h2 id="三级缓存"><a href="#三级缓存" class="headerlink" title="三级缓存"></a>三级缓存</h2><p>三级缓存是 Spring 解决循环依赖的一种方案</p>
+<h3 id="什么是三级缓存"><a href="#什么是三级缓存" class="headerlink" title="什么是三级缓存"></a>什么是三级缓存</h3><p>所谓三级缓存，其实就是 3 个 map容器：</p>
+<p>一级缓存：singletonObjects 即单例池，存放的是经过完整创建过程的 bean 对象</p>
+<p>二级缓存：earlySingletonObjects存放的是早期的不完整的 bean 对象</p>
+<p>三级缓存：singletonFactories，缓存的是ObjectFactory，表示对象工厂，用来创建某个对象的</p>
+<h3 id="Spring-解决循环依赖的具体实现"><a href="#Spring-解决循环依赖的具体实现" class="headerlink" title="Spring 解决循环依赖的具体实现"></a>Spring 解决循环依赖的具体实现</h3><p>A 的 bean创建过程中，在进行依赖注入之前，把 A 的原始对象放入缓存中，再进行依赖注入，此时A的Bean依赖了B的Bean，如果B的Bean不存在，则需要创建B的Bean。</p>
+<p>而创建B的Bean的过程和A一样，也是先创建一个B的原始对象，然后把B的原始对象提早暴露出来放入缓存中，然后在对B的原始对象进行依赖注入A，此时能从缓存中拿到A的原始对象（虽然是A的原始对象，还不是最终的Bean），B的原始对象依赖注入完了之后，B的生命周期结束，那么A的生命周期也能结束。</p>
+<img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gowhmob6mtj30u0150djl.jpg" style="zoom:70%;" />
+
+<p>如上图所示，加入二级缓存 earlySingletonObjects后，A的 bean 和 B 的 bean 就不需要在创建的过程中依赖单例池中的 bean了，只需要获取二级缓存中的早期 bean对象去完成各自 bean 的属性注入即可。</p>
+<h3 id="为什么是三级缓存"><a href="#为什么是三级缓存" class="headerlink" title="为什么是三级缓存"></a>为什么是三级缓存</h3><p>根据上述过程可以发现，使用 Spring的二级缓存就可以解决循环依赖的问题，那 Spring 为什么还要加上一个三级缓存<strong>singletonFactories</strong>呢。</p>
+<p>因为在 Spring bean对象的初始化后，Spring 提供了一个扩展点，即 BeanPostProcessor,后置处理器可以去对Bean进行加工，这个加工不仅仅只是能修改Bean的属性值，也可以替换掉当前Bean。</p>
+<p>因为，循环依赖是发生在属性注入过程中的，所以很有可能导致，<strong>注入给B对象的A对象和经历过完整生命周期之后的A对象，不是一个对象</strong>。这就是有问题的。</p>
+<p><strong>所以在这种情况下的循环依赖，Spring是解决不了的，因为在属性注入时，Spring也不知道A对象后续会经过哪些BeanPostProcessor以及会对A对象做什么处理</strong>。</p>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>循环依赖</tag>
+      </tags>
+  </entry>
 </search>
