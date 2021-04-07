@@ -3231,4 +3231,45 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Explain</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Nacos简介</title>
+    <url>/2021/04/07/Nacos%E7%AE%80%E4%BB%8B/</url>
+    <content><![CDATA[<h1 id="Nacos-是什么"><a href="#Nacos-是什么" class="headerlink" title="Nacos 是什么"></a>Nacos 是什么</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><blockquote>
+<p>Nacos 致力于帮助您发现、配置和管理微服务。Nacos 提供了一组简单易用的特性集，帮助您快速实现动态服务发现、服务配置、服务元数据及流量管理。</p>
+</blockquote>
+<p>简单来说 nacos 是一个微服务，是一个用于为其他服务提供注册和发现功能的服务</p>
+<p>Nacos 的关键特性包括:</p>
+<ul>
+<li>服务发现和服务健康监测</li>
+<li>动态配置服务</li>
+<li>动态 DNS 服务</li>
+<li>服务及其元数据管理</li>
+</ul>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p><img src="https://cdn.nlark.com/yuque/0/2019/jpeg/338441/1561217892717-1418fb9b-7faa-4324-87b9-f1740329f564.jpeg"></p>
+<blockquote>
+<h3 id="服务-Service"><a href="#服务-Service" class="headerlink" title="服务 (Service)"></a>服务 (Service)</h3><p>服务是指一个或一组软件功能（例如特定信息的检索或一组操作的执行），其目的是不同的客户端可以为不同的目的重用（例如通过跨进程的网络调用）。Nacos 支持主流的服务生态，如 Kubernetes Service、gRPC|Dubbo RPC Service 或者 Spring Cloud RESTful Service.</p>
+<h3 id="服务注册中心-Service-Registry"><a href="#服务注册中心-Service-Registry" class="headerlink" title="服务注册中心 (Service Registry)"></a>服务注册中心 (Service Registry)</h3><p>服务注册中心，它是服务，其实例及元数据的数据库。服务实例在启动时注册到服务注册表，并在关闭时注销。服务和路由器的客户端查询服务注册表以查找服务的可用实例。服务注册中心可能会调用服务实例的健康检查 API 来验证它是否能够处理请求。</p>
+<h3 id="服务元数据-Service-Metadata"><a href="#服务元数据-Service-Metadata" class="headerlink" title="服务元数据 (Service Metadata)"></a>服务元数据 (Service Metadata)</h3><p>服务元数据是指包括服务端点(endpoints)、服务标签、服务版本号、服务实例权重、路由规则、安全策略等描述服务的数据</p>
+<h3 id="服务提供方-Service-Provider"><a href="#服务提供方-Service-Provider" class="headerlink" title="服务提供方 (Service Provider)"></a>服务提供方 (Service Provider)</h3><p>是指提供可复用和可调用服务的应用方</p>
+<h3 id="服务消费方-Service-Consumer"><a href="#服务消费方-Service-Consumer" class="headerlink" title="服务消费方 (Service Consumer)"></a>服务消费方 (Service Consumer)</h3><p>是指会发起对某个服务调用的应用方</p>
+<h3 id="配置-Configuration"><a href="#配置-Configuration" class="headerlink" title="配置 (Configuration)"></a>配置 (Configuration)</h3><p>在系统开发过程中通常会将一些需要变更的参数、变量等从代码中分离出来独立管理，以独立的配置文件的形式存在。目的是让静态的系统工件或者交付物（如 WAR，JAR 包等）更好地和实际的物理运行环境进行适配。配置管理一般包含在系统部署的过程中，由系统管理员或者运维人员完成这个步骤。配置变更是调整系统运行时的行为的有效手段之一。</p>
+<h3 id="配置管理-Configuration-Management"><a href="#配置管理-Configuration-Management" class="headerlink" title="配置管理 (Configuration Management)"></a>配置管理 (Configuration Management)</h3><p>在数据中心中，系统中所有配置的编辑、存储、分发、变更管理、历史版本管理、变更审计等所有与配置相关的活动统称为配置管理。</p>
+<h3 id="名字服务-Naming-Service"><a href="#名字服务-Naming-Service" class="headerlink" title="名字服务 (Naming Service)"></a>名字服务 (Naming Service)</h3><p>提供分布式系统中所有对象(Object)、实体(Entity)的“名字”到关联的元数据之间的映射管理服务，例如 ServiceName -&gt; Endpoints Info, Distributed Lock Name -&gt; Lock Owner/Status Info, DNS Domain Name -&gt; IP List, 服务发现和 DNS 就是名字服务的2大场景。</p>
+<h3 id="配置服务-Configuration-Service"><a href="#配置服务-Configuration-Service" class="headerlink" title="配置服务 (Configuration Service)"></a>配置服务 (Configuration Service)</h3><p>在服务或者应用运行过程中，提供动态配置或者元数据以及配置管理的服务提供者</p>
+</blockquote>
+<h1 id="核心功能"><a href="#核心功能" class="headerlink" title="核心功能"></a>核心功能</h1><h2 id="服务注册"><a href="#服务注册" class="headerlink" title="服务注册"></a>服务注册</h2><p>Nacos 客户端通过发送 REST 请求向 Nacos服务端注册自己的服务，并将自己的服务相关的元数据（ip、端口等）存储在 map 中</p>
+<h2 id="服务心跳"><a href="#服务心跳" class="headerlink" title="服务心跳"></a>服务心跳</h2><p>在服务注册之后，Nacos 客户端会维护一个定时心跳来持续通知 Nacos 服务端，以此证明自己的存活状态，防止被服务端剔除。默认每隔 5 秒发送一次心跳。</p>
+<h2 id="服务同步"><a href="#服务同步" class="headerlink" title="服务同步"></a>服务同步</h2><p>在 Nacos 集群环境中，集群之间的节点会相互同步服务实例，保证服务信息在各个节点中的信息是一致的。</p>
+<h2 id="服务发现"><a href="#服务发现" class="headerlink" title="服务发现"></a>服务发现</h2><p>消费者服务在调用服务的时，会发送一个 REST 请求到 Nacos 服务端，并获取服务端内部的注册服务清单，缓存在 Nacos 客户端本地，并且之后会在本地定时拉去更新服务端上服务注册表信息。</p>
+<h2 id="服务健康检查"><a href="#服务健康检查" class="headerlink" title="服务健康检查"></a>服务健康检查</h2><p>Nacos Server会开启一个定时任务用来检查注册服务实例的健康情况，对于超过 15s没有收到客户端心跳的实例会将它的healthy属性置为false(客户端服务发现时不会发现)，如果某个实例超过30秒没有收到心跳，直接剔除该实例(被剔除的实例如果恢复发送心跳则会重新 注册)</p>
+<p>其中注册表的结构如下：</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gpbkmrvexwj311i0oaads.jpg"></p>
+]]></content>
+      <categories>
+        <category>SpringCloud alibaba</category>
+      </categories>
+      <tags>
+        <tag>注册中心</tag>
+      </tags>
+  </entry>
 </search>
