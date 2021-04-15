@@ -3272,4 +3272,81 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>注册中心</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Ribbon简介</title>
+    <url>/2021/04/12/Ribbon%E7%AE%80%E4%BB%8B/</url>
+    <content><![CDATA[<h1 id="负载均衡"><a href="#负载均衡" class="headerlink" title="负载均衡"></a>负载均衡</h1><h2 id="负载均衡的方案"><a href="#负载均衡的方案" class="headerlink" title="负载均衡的方案"></a>负载均衡的方案</h2><ol>
+<li><p>集中式（服务端）负载均衡</p>
+<p>在消费者和服务提供方中间使用独立的代理方式进行负载，有硬件的(比如<br>F5)，也有软件的(比如 Nginx)。</p>
+</li>
+<li><p>客户端负载均衡</p>
+<p>客户端更加自己的请求情况做负载均衡，如 Ribbon。</p>
+</li>
+</ol>
+<h2 id="负载均衡算法"><a href="#负载均衡算法" class="headerlink" title="负载均衡算法"></a>负载均衡算法</h2><p>常见的负载均衡算法有：</p>
+<ul>
+<li>随机：通过随机选择服务执行接口调用。</li>
+<li>轮询：将请求依次分配到不同的服务实例中，也是负载均衡默认实现。</li>
+<li>加权轮询：给不同的实例服务配置权重，并且根据权重进行请求的分发，权重高的服务实例会得到更多的请求。</li>
+<li>地址 Hash：通过客户端请求的地址的 Hash 值进行取模运算进行服务实例的调度。</li>
+<li>最小连接数：根据服务实例的请求积压情况将当前请求分发到压力小的服务器上。</li>
+</ul>
+<h1 id="什么是-Ribbon"><a href="#什么是-Ribbon" class="headerlink" title="什么是 Ribbon"></a>什么是 Ribbon</h1><p>Spring Cloud Ribbon是基于Netflix Ribbon 实现的一套<code>客户端的负载均衡工具</code>，Ribbon客户端组件提 供一系列的完善的配置，如超时，重试等。通过Load Balancer获取到服务提供的所有机器实例， Ribbon会自动基于某种规则(轮询，随机)去调用这些服务。Ribbon也可以实现我们自己的负载均衡算法。</p>
+<h2 id="Ribbon-模块"><a href="#Ribbon-模块" class="headerlink" title="Ribbon 模块"></a>Ribbon 模块</h2><ul>
+<li>ribbon-loadbalancer：负载均衡模块，可以独立使用，也可以与其他模块一起使用</li>
+<li>Ribbon：内置的负载均衡算法</li>
+<li>ribbon-eureka：基于 Eureka 封装的模块，可以完成对 Eureka 的集成</li>
+<li>ribbon-transport：基于 netty 实现对多协议的支持</li>
+<li>ribbon-httpclient：基于 Apache HttpClient 封装的 REST 客户端，集成了负载均衡模块，可以直接在项目中使 用来调用接口</li>
+<li>ribbon-example：Ribbon 使用代码示例</li>
+<li>ribbon-core：一些比较核心且具有通用性的代码，客户端 API 的一些配置和其他 API 的定义</li>
+</ul>
+<h2 id="Ribbon-的使用"><a href="#Ribbon-的使用" class="headerlink" title="Ribbon 的使用"></a>Ribbon 的使用</h2><h3 id="SpringCloud与-Ribbon-的整合"><a href="#SpringCloud与-Ribbon-的整合" class="headerlink" title="SpringCloud与 Ribbon 的整合"></a>SpringCloud与 Ribbon 的整合</h3><ol>
+<li><p>添加依赖</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line">&lt;!‐‐添加ribbon的依赖‐‐&gt;</span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.cloud<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring‐cloud‐starter‐netflix‐ribbon<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span>  <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>注：如果是 Spring cloud-alibaba，并采用 nacos 作为注册中心时，由于 nacos-discovery 包内部已经依赖了 ribbon，所以无需额外引入 Ribbon 依赖。</p>
+</li>
+<li><p>添加注解</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> heyou(heyou_0423 @ 163.com)</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2021/4/12 下午11:22</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RestConfig</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="meta">@LoadBalanced</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> RestTemplate <span class="title">restTemplate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> RestTemplate();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>修改请求方式</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Result <span class="title">findOrderByUserId</span><span class="params">(<span class="meta">@PathVariable(&quot;id&quot;)</span> Integer id)</span> </span>&#123;</span><br><span class="line">        log.info(<span class="string">&quot;根据userId:&quot;</span>+id+<span class="string">&quot;查询订单信息&quot;</span>);</span><br><span class="line">        <span class="comment">// 添加@LoadBalanced</span></span><br><span class="line">        String url = <span class="string">&quot;http://mall-order/order/findOrderByUserId/&quot;</span>+id;</span><br><span class="line">        Result result = restTemplate.getForObject(url,Result.class);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h2 id="Ribbon-重要接口"><a href="#Ribbon-重要接口" class="headerlink" title="Ribbon 重要接口"></a>Ribbon 重要接口</h2><ul>
+<li><strong>IClientConfig</strong>：Ribbon的客户端配置，默认采用DefaultClientConfigImpl实现。</li>
+<li><strong>IRule</strong>：Ribbon的负载均衡策略，默认采用ZoneAvoidanceRule实现，该策略能够在多区域环境下选出最佳区域的实例进行访问。</li>
+<li> <strong>IPing</strong>：Ribbon的实例检查策略，默认采用DummyPing实现，该检查策略是一个特殊的实现，实际上它并不会检查实例是否可用，而是始终返回true，默认认为所有服务实例都是可用的。</li>
+<li> <strong>ServerList</strong>：服务实例清单的维护机制，默认采用ConfigurationBasedServerList实现。 </li>
+<li><strong>ServerListFilter</strong>：服务实例清单过滤机制，默认采ZonePreferenceServerListFilter，该策略能够优先过滤出与请求方处于同区域的服务实例。</li>
+<li><strong>ILoadBalancer</strong>：负载均衡器，默认采用ZoneAwareLoadBalancer实现，它具备了区域感知的能力。</li>
+</ul>
+<h2 id="Ribbon负载均衡策略"><a href="#Ribbon负载均衡策略" class="headerlink" title="Ribbon负载均衡策略"></a>Ribbon负载均衡策略</h2><ol>
+<li><p><strong>RandomRule</strong>: 随机选择一个Server。</p>
+</li>
+<li><p><strong>RetryRule</strong>: 对选定的负载均衡策略机上重试机制，在一个配置时间段内当选择Server不成 功，则一直尝试使用subRule的方式选择一个可用的server。</p>
+</li>
+<li><p><strong>RoundRobinRule</strong>: 轮询选择， 轮询index，选择index对应位置的Server。</p>
+</li>
+<li><p><strong>AvailabilityFilteringRule</strong>: 过滤掉一直连接失败的被标记为circuit tripped的后端Server，并 过滤掉那些高并发的后端Server或者使用一个AvailabilityPredicate来包含过滤server的逻辑，其 实就是检查status里记录的各个Server的运行状态。</p>
+</li>
+<li><p> <strong>BestAvailableRule</strong>: 选择一个最小的并发请求的Server，逐个考察Server，如果Server被 tripped了，则跳过。</p>
+</li>
+<li><p><strong>WeightedResponseTimeRule</strong>: 根据响应时间加权，响应时间越长，权重越小，被选中的可 能性越低。</p>
+</li>
+<li><p><strong>ZoneAvoidanceRule</strong>: 默认的负载均衡策略，即复合判断Server所在区域的性能和 Server的可用性选择Server，在没有区域的环境下，类似于轮询(RandomRule)</p>
+</li>
+<li><p><strong>NacosRule</strong>: 同集群优先调用</p>
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>SpringCloud alibaba</category>
+      </categories>
+      <tags>
+        <tag>负载均衡器</tag>
+      </tags>
+  </entry>
 </search>
