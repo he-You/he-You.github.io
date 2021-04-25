@@ -3391,4 +3391,97 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>负载均衡器</tag>
       </tags>
   </entry>
+  <entry>
+    <title>微服务组件之 Feign</title>
+    <url>/2021/04/22/%E5%BE%AE%E6%9C%8D%E5%8A%A1%E7%BB%84%E4%BB%B6Feign/</url>
+    <content><![CDATA[<h1 id="什么是Feign"><a href="#什么是Feign" class="headerlink" title="什么是Feign"></a>什么是Feign</h1><p>Feign是Netflix开发的声明式、模板化的HTTP客户端，其灵感来自Retrofit、JAXRS-2.0以及WebSocket。 Feign可帮助我们更加便捷、优雅地调用HTTP API。</p>
+<p> Feign支持多种注解，例如Feign自带的注解或者JAX-RS注解等。Spring Cloud openfeign对Feign进行了 增强，使其支持Spring MVC注解，另外还整合了Ribbon和Eureka，从而使得Feign的使用更加方便</p>
+<h2 id="使用-Feign-的场合和优势"><a href="#使用-Feign-的场合和优势" class="headerlink" title="使用 Feign 的场合和优势"></a>使用 Feign 的场合和优势</h2><p>一般来说Java 调用接口有以下几种方式：</p>
+<ol>
+<li>Httpclient</li>
+<li>Okhttp</li>
+<li>HttpURLConnection</li>
+<li>RestTemplate</li>
+</ol>
+<p>之所以在微服务中推荐使用 Feign的方式进行服务间的调用，主要是减少项目中静态 URL 的配置，使代码更具有可读性。</p>
+<h1 id="Feign-的使用"><a href="#Feign-的使用" class="headerlink" title="Feign 的使用"></a>Feign 的使用</h1><h2 id="SpringCloud-Alibaba-整合-Feign"><a href="#SpringCloud-Alibaba-整合-Feign" class="headerlink" title="SpringCloud-Alibaba 整合 Feign"></a>SpringCloud-Alibaba 整合 Feign</h2><ol>
+<li><p>引入依赖</p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="comment">&lt;!-- openfeign 远程调用 --&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.springframework.cloud<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>spring-cloud-starter-openfeign<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>定义调用接口，并打上 @FeignClient注解</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@FeignClient(value = &quot;mall-order&quot;,path = &quot;/order&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OrderFeignService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@RequestMapping(&quot;/findOrderByUserId/&#123;userId&#125;&quot;)</span></span><br><span class="line">    <span class="function">Result <span class="title">findOrderByUserId</span><span class="params">(<span class="meta">@PathVariable(&quot;userId&quot;)</span> Integer userId)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>启动类开启@EnableFeignClients注解</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@SpringBootApplication(exclude = &#123;DataSourceAutoConfiguration.class, DruidDataSourceAutoConfigure.class&#125;)</span></span><br><span class="line"><span class="meta">@EnableFeignClients</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MallUserFeignDemoApplication</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        SpringApplication.run(MallUserFeignDemoApplication.class, args);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+</li>
+<li><p>发起调用，类似 mybatis 的使用，只需要将定义的接口 bean 注入到要使用的类中即可</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@RestController</span></span><br><span class="line"><span class="meta">@RequestMapping(&quot;/user&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">UserController</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Autowired</span></span><br><span class="line">    <span class="keyword">private</span> OrderFeignService orderFeignService;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@RequestMapping(value = &quot;/findOrderByUserId/&#123;id&#125;&quot;)</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Result <span class="title">findOrderByUserId</span><span class="params">(<span class="meta">@PathVariable(&quot;id&quot;)</span> Integer id)</span> </span>&#123;</span><br><span class="line">        <span class="comment">//feign调用</span></span><br><span class="line">        Result result = orderFeignService.findOrderByUserId(id);</span><br><span class="line">        <span class="keyword">return</span> result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h1 id="Spring-Cloud-Feign的自定义配置及使用"><a href="#Spring-Cloud-Feign的自定义配置及使用" class="headerlink" title="Spring Cloud Feign的自定义配置及使用"></a>Spring Cloud Feign的自定义配置及使用</h1><h2 id="日志配置"><a href="#日志配置" class="headerlink" title="日志配置"></a>日志配置</h2><ol>
+<li><p>全局配置类，指定日志级别</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FeignConfig</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 日志级别</span></span><br><span class="line"><span class="comment">     * 通过源码可以看到日志等级有 4 种，分别是：</span></span><br><span class="line"><span class="comment">     * NONE：不输出日志。</span></span><br><span class="line"><span class="comment">     * BASIC：只输出请求方法的 URL 和响应的状态码以及接口执行的时间。</span></span><br><span class="line"><span class="comment">     * HEADERS：将 BASIC 信息和请求头信息输出。</span></span><br><span class="line"><span class="comment">     * FULL：输出完整的请求信息。</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> Logger.<span class="function">Level <span class="title">feignLoggerLevel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Logger.Level.FULL;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">// 日志级别枚举</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">enum</span> <span class="title">Level</span> </span>&#123;</span><br><span class="line">        NONE,</span><br><span class="line">        BASIC,</span><br><span class="line">        HEADERS,</span><br><span class="line">        FULL;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="title">Level</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过源码可知，日志等级有 4 种，分别是：</p>
+<ul>
+<li>NONE：不记录任何日志(默认使用级别)，该级别性能最好，可以适用于生产环境</li>
+<li>BASIC：仅记录请求方法、URL、响应状态代码以及执行时间，可以使用于生产环境追踪问题</li>
+<li>HEADERS：记录BASIC级别的基础上，记录请求和响应的header</li>
+<li>FULL：记录请求和响应的header、body和元数据，一般用于开发环境进行问题的定位</li>
+</ul>
+</li>
+<li><p>局部配置-注解配置</p>
+<p>在@FeignClient 注解中指定使用的配置类使调用的微服务生效。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> heyou(heyou_0423 @ 163.com)</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2021/4/24 下午5:48</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@FeignClient(value = &quot;mall-order&quot;,path = &quot;/order&quot;,configuration = FeignConfig.class)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OrderFeignService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@RequestMapping(&quot;/findOrderByUserId/&#123;userId&#125;&quot;)</span></span><br><span class="line">    <span class="function">Result <span class="title">findOrderByUserId</span><span class="params">(<span class="meta">@PathVariable(&quot;userId&quot;)</span> Integer userId)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>注：当指定注解中的配置类时，该配置类不能添加@Configuration 注解。</p>
+</li>
+<li><p>局部配置-yml 配置</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">feign:</span></span><br><span class="line">	<span class="attr">client:</span></span><br><span class="line">		<span class="attr">config:</span></span><br><span class="line">			<span class="string">mall‐order:</span> <span class="comment">#对应微服务 </span></span><br><span class="line">			<span class="attr">loggerLevel:</span> <span class="string">FULL</span></span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<p>注：打印日志时，配置的日志目录需要准确，否则无法正常输出日志</p>
+<h2 id="契约配置"><a href="#契约配置" class="headerlink" title="契约配置"></a>契约配置</h2><p>Spring Cloud 在 Feign 的基础上做了扩展，可以让 Feign 支持 Spring MVC 的注解来调用。原生的 Feign 是不支持 Spring MVC 注解的，如果你想在 Spring Cloud 中使用原生的注解方式来定义客户端也是 可以的，通过配置契约来改变这个配置，Spring Cloud 中默认的是 SpringMvcContract。</p>
+<ol>
+<li><p>修改契约配置，支持原生 Feign 的注解</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * 使用Feign原生的注解配置</span></span><br><span class="line"><span class="comment">  * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="meta">@Bean</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> Contract <span class="title">feignContract</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     <span class="keyword">return</span> <span class="keyword">new</span> Contract.Default();</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>注：修改契约配置后，不再支持springmvc的注解，需要使用Feign原生的注解</p>
+</li>
+<li><p>使用原生 Feign 注解</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@FeignClient(value = &quot;mall‐order&quot;, path = &quot;/order&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">OrderFeignService</span> </span>&#123;</span><br><span class="line">    <span class="meta">@RequestLine(&quot;GET /findOrderByUserId/&#123;userId&#125;&quot;)</span></span><br><span class="line">    <span class="function">Result <span class="title">findOrderByUserId</span><span class="params">(<span class="meta">@Param(&quot;userId&quot;)</span> Integer userId)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>yml 配置契约 </p>
+<figure class="highlight xml"><table><tr><td class="code"><pre><span class="line">feign:</span><br><span class="line">  client:</span><br><span class="line">  	config:</span><br><span class="line">  		mall‐order: #对应微服务</span><br><span class="line">  			loggerLevel: FULL</span><br><span class="line">  contract: feign.Contract.Default #指定Feign原生注解契约配置</span><br></pre></td></tr></table></figure>
+
+</li>
+</ol>
+<h2 id="拦截器认证"><a href="#拦截器认证" class="headerlink" title="拦截器认证"></a>拦截器认证</h2><ol>
+<li><p>Feign配置 Basic认证</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FeignConfig</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 开启Basic认证</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> BasicAuthRequestInterceptor <span class="title">basicAuthRequestInterceptor</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> BasicAuthRequestInterceptor(<span class="string">&quot;heyou&quot;</span>,<span class="string">&quot;123456&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>每次 feign 发起http调用之前，会去执行拦截器中的逻辑</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">RequestInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Called for every request. Add data using methods on the supplied &#123;<span class="doctag">@link</span> RequestTemplate&#125;.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">apply</span><span class="params">(RequestTemplate var1)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>一般用于自定义 header 信息或者对 body 中的信息进行修改。</p>
+</li>
+<li><p>自定义拦截器认证</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FeignAuthRequestInterceptor</span> <span class="keyword">implements</span> <span class="title">RequestInterceptor</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">apply</span><span class="params">(RequestTemplate requestTemplate)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 业务逻辑  模拟认证逻辑</span></span><br><span class="line">        String access_token = UUID.randomUUID().toString();</span><br><span class="line">        requestTemplate.header(<span class="string">&quot;Authorization&quot;</span>,access_token);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">@Configuration</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FeignConfig</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="keyword">public</span> Logger.<span class="function">Level <span class="title">feignLoggerLevel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Logger.Level.FULL;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 自定义拦截器</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Bean</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> FeignAuthRequestInterceptor <span class="title">feignAuthRequestInterceptor</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> FeignAuthRequestInterceptor();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+</li>
+</ol>
+]]></content>
+      <categories>
+        <category>SpringCloud alibaba</category>
+      </categories>
+      <tags>
+        <tag>服务调用组件</tag>
+      </tags>
+  </entry>
 </search>
