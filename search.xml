@@ -3541,4 +3541,45 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>JDK11</tag>
       </tags>
   </entry>
+  <entry>
+    <title>JVM-运行时数据区与内存溢出异常</title>
+    <url>/2021/05/22/%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8/</url>
+    <content><![CDATA[<h1 id="JVM-内存模型"><a href="#JVM-内存模型" class="headerlink" title="JVM 内存模型"></a>JVM 内存模型</h1><h2 id="区域划分"><a href="#区域划分" class="headerlink" title="区域划分"></a>区域划分</h2><p>JVM 在执行 Java 程序的过程中会把 JVM 中的内存划分为若干不同的数据区域，这些区域由以下几个运行时数据区组成：</p>
+<img src="https://tva1.sinaimg.cn/large/008i3skNgy1gqrgdmsizyj30ok0eedhz.jpg" style="zoom:70%;" />
+
+<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>程序计数器在整个 JVM 中只占一块较小的内存区域，是<code>当前线程</code>执行的字节码的行号指示器，其作用是在字节码文件执行的时候通过<code>改变计数器的值</code>选取要执行的字节码指令，例如分支、循环、跳转、异常处理等指令都是由依赖程序计数器完成的。</p>
+<p>JVM的多线程是通过线程的轮流切换、分配处理器执行时间的方式实现的，在多核处理器环境中，每个线程都拥有自己的程序计数器，不同线程的计数器之间相互不影响，独立存储，即<strong>程序计数器是线程私有的</strong>。</p>
+<blockquote>
+<p>如果线程正在执行的是一个 Java 方法，则这个计数器记录的是正在执行的虚拟机字节码指令的地址；如果线程正在执行的是naive方法，则该线程的程序计数器值应为空。</p>
+</blockquote>
+<h3 id="Java-虚拟机栈"><a href="#Java-虚拟机栈" class="headerlink" title="Java 虚拟机栈"></a>Java 虚拟机栈</h3><p>Java 虚拟机栈也被称为 Java栈，也是线程私有的。其作用是用来描述 Java 方法执行的线程内存模型：每个方法在执行的时候，虚拟机都会同步创建一个<code>栈帧</code>用于存放局部变量表、操作数栈、动态连接、方法出口（返回地址）等信息。</p>
+<p><strong>方法从调用到执行完毕的过程其实就是栈帧在Java虚拟机栈中入栈到出栈的过程。</strong></p>
+<p><strong>栈帧（Stack Frame）</strong>是用于支持虚拟机进行方法调用和方法执行的数据结构。它是虚拟机运行时数据区中的java虚拟机栈的栈元素，其中：</p>
+<ol>
+<li>局部变量表</li>
+<li>操作数栈</li>
+<li>动态连接</li>
+<li>方法出口</li>
+</ol>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>本地方法栈与 Java 虚拟机栈作用类似，Java 栈是用来执行 Java 方法的，本地方法栈是服务与本地（Native）方法的，在 HotSpot虚拟机中之间将 Java 栈和本地方法栈合二为一。本地方法栈在栈深度溢出或栈扩展失败时抛出 StackOverflowError 和 OutOfMemoryError异常。</p>
+<h3 id="Java-堆"><a href="#Java-堆" class="headerlink" title="Java 堆"></a>Java 堆</h3><p>Java堆是 JVM内存中最大的一块，由虚拟机在启动时创建。是被所有线程共享的的一块区域，存放的是对象的实例，几乎所有的对象实例和数组都是在堆中完成分配的。</p>
+<p>Java 堆又被称为 GC 堆，是 垃圾收集器管理的内存区域，现在的垃圾收集器大部分都是基于分代收集理论设计的，所以 Java 堆中存在不同的分代空间（新生代、老年代、永久代、Eden区、Survivor 区等）这样对 Java 堆的细分目的都是为了更好的进行内存的回收已经更快的内存分配。</p>
+<blockquote>
+<p>并不是所有的对象都是在 Java 堆上创建的</p>
+</blockquote>
+<p>Java 堆的大小可以是固定的也可以是扩展的（通过参数-Xmx 和-Xms 设定），如果在 Java 堆中没有内存完成实例的分配，并且堆也无法扩展时，Java 虚拟机就会抛出 OOM 异常。</p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p>方法区是 JVM 用于存储已经被虚拟机加载的类型信息、常量、静态变量、即时编译后的代码缓存等数据。方法区与 Java 堆一样是所有线程共享的内存区域。</p>
+<h3 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h3><p>运行时常量池是方法区的一部分，所以也是所有线程共享的内存区域。Class 文件中除了有类的版本、字段、方法、接口等描述信息外、还有就是常量池表，是用于存放编译期生成的各种字面量与符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。</p>
+<blockquote>
+<p>运行时常量池相比于Class 文件常量池的另一个重要特点就是具备动态性，Java 语言并不要求常量一定只有在编译器才能产生，也就是说，并非预置入 Class 文件中常量池的内容才能进入方法区运行时常量池，运行期间也可以将新的常量放入池中，用的比较多的就是 String类的 intern()方法</p>
+</blockquote>
+<p>运行时常量池和方法区一样，当方法区/常量池无法再申请到内存时会抛出 OOM 异常。</p>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
+      </tags>
+  </entry>
 </search>
