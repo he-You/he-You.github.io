@@ -1436,6 +1436,59 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
+    <title>OAuth2.0</title>
+    <url>/2021/10/30/OAuth2.0%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<p>一、OAuth</p>
+<blockquote>
+<p>OAuth 引入了一个授权层，用来分离两种不同的角色：客户端和资源所有者。……资源所有者同意以后，资源服务器可以向客户端颁发令牌。客户端通过令牌，去请求数据。</p>
+</blockquote>
+<p>也就是说OAuth的核心作用就是向第三方应用颁发令牌</p>
+<p>二、OAuh2.0获得令牌的4种方式</p>
+<ul>
+<li>授权码（authorization-code）</li>
+<li>隐藏式（implicit）</li>
+<li>密码式（password）</li>
+<li>客户端凭证（client credentials）</li>
+</ul>
+<p>注：不管哪一种授权方式，第三方应用申请令牌之前，都必须先到系统备案，说明自己的身份，然后会拿到两个身份识别码：客户端 ID（client ID）和客户端密钥（client secret）。这是为了防止令牌被滥用，没有备案过的第三方应用，是不会拿到令牌的。</p>
+<p><strong>授权码（authorization code）方式，指的是第三方应用先申请一个授权码，然后再用该码获取令牌</strong></p>
+<p>该方式最常用，安全性最高，多使用在前后端分离的web应用，所有与资源服务器的通信都是在后端完成的，可以避免令牌泄漏</p>
+<p><strong>具体的流程</strong>：</p>
+<p>1.客户端A提供链接，由用户点击跳转到资源服务器端B，完成授权。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;code&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
+
+<p>在上面的实例URL中:</p>
+<p><code>response_type</code>参数表示要求返回授权码（<code>code</code>），</p>
+<p><code>client_id</code>参数让 B 知道是谁在请求，</p>
+<p><code>redirect_uri</code>参数是 B 接受或拒绝请求后的跳转网址，</p>
+<p><code>scope</code>参数表示要求的授权范围（这里是只读）</p>
+<p>2.在用户跳转之后，资源服务器B会要求用户进行登录，然后询问用户是否给予客户端A授权。当用户同意后，B回跳转到<code>redirect_uri</code>参数指定的网址。跳转时会回传一个授权码</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback?code&#x3D;AUTHORIZATION_CODE</span><br></pre></td></tr></table></figure>
+
+<p>上述的链接中的code参数就是授权码。</p>
+<p>3.当客户端服务A拿到授权码后，就可以向资源网站B请求令牌了。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;token?</span><br><span class="line"> client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line"> client_secret&#x3D;CLIENT_SECRET&amp;</span><br><span class="line"> grant_type&#x3D;authorization_code&amp;</span><br><span class="line"> code&#x3D;AUTHORIZATION_CODE&amp;</span><br><span class="line"> redirect_uri&#x3D;CALLBACK_URL</span><br></pre></td></tr></table></figure>
+
+<p>上面 URL 中:</p>
+<p><code>client_id</code>参数和<code>client_secret</code>参数用来让 B 确认 A 的身份（<code>client_secret</code>参数是保密的，因此只能在后端发请求），<code>grant_type</code>参数的值是<code>AUTHORIZATION_CODE</code>，表示采用的授权方式是授权码，<code>code</code>参数是上一步拿到的授权码，<code>redirect_uri</code>参数是令牌颁发后的回调网址。</p>
+<p>4.资源网站B收到请求后就会颁发令牌。具体是向<code>redirect_uri</code>指定的网址，发送一段JSON:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;    </span><br><span class="line">  &quot;access_token&quot;:&quot;ACCESS_TOKEN&quot;,</span><br><span class="line">  &quot;token_type&quot;:&quot;bearer&quot;,</span><br><span class="line">  &quot;expires_in&quot;:2592000,</span><br><span class="line">  &quot;refresh_token&quot;:&quot;REFRESH_TOKEN&quot;,</span><br><span class="line">  &quot;scope&quot;:&quot;read&quot;,</span><br><span class="line">  &quot;uid&quot;:100101,</span><br><span class="line">  &quot;info&quot;:&#123;...&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中JSON中的access_token字段就是令牌</p>
+<p><strong>第二种方式，允许直接向前端颁发令牌。这种方式没有授权码这个中间步骤，所以称为（授权码）”隐藏式”（implicit）。</strong></p>
+<p>该方式适用于没有后端服务的纯前端web服务</p>
+<p>首先A网址需要提供一个连接，要求用户跳转到B网站，授权用户数据给A使用</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;token&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>身份认证</category>
+      </categories>
+      <tags>
+        <tag>OAuth2.0</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Redis高可用集群及相关问题</title>
     <url>/2021/03/16/Redis%20%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/</url>
     <content><![CDATA[<h1 id="Redis集群方案"><a href="#Redis集群方案" class="headerlink" title="Redis集群方案"></a>Redis集群方案</h1><h2 id="主从架构"><a href="#主从架构" class="headerlink" title="主从架构"></a>主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6nfl8tmj20nk0i0wf7.jpg"></p>
@@ -3580,59 +3633,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>源码</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>OAuth2.0</title>
-    <url>/2021/10/30/OAuth2.0%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<p>一、OAuth</p>
-<blockquote>
-<p>OAuth 引入了一个授权层，用来分离两种不同的角色：客户端和资源所有者。……资源所有者同意以后，资源服务器可以向客户端颁发令牌。客户端通过令牌，去请求数据。</p>
-</blockquote>
-<p>也就是说OAuth的核心作用就是向第三方应用颁发令牌</p>
-<p>二、OAuh2.0获得令牌的4种方式</p>
-<ul>
-<li>授权码（authorization-code）</li>
-<li>隐藏式（implicit）</li>
-<li>密码式（password）</li>
-<li>客户端凭证（client credentials）</li>
-</ul>
-<p>注：不管哪一种授权方式，第三方应用申请令牌之前，都必须先到系统备案，说明自己的身份，然后会拿到两个身份识别码：客户端 ID（client ID）和客户端密钥（client secret）。这是为了防止令牌被滥用，没有备案过的第三方应用，是不会拿到令牌的。</p>
-<p><strong>授权码（authorization code）方式，指的是第三方应用先申请一个授权码，然后再用该码获取令牌</strong></p>
-<p>该方式最常用，安全性最高，多使用在前后端分离的web应用，所有与资源服务器的通信都是在后端完成的，可以避免令牌泄漏</p>
-<p><strong>具体的流程</strong>：</p>
-<p>1.客户端A提供链接，由用户点击跳转到资源服务器端B，完成授权。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;code&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
-
-<p>在上面的实例URL中:</p>
-<p><code>response_type</code>参数表示要求返回授权码（<code>code</code>），</p>
-<p><code>client_id</code>参数让 B 知道是谁在请求，</p>
-<p><code>redirect_uri</code>参数是 B 接受或拒绝请求后的跳转网址，</p>
-<p><code>scope</code>参数表示要求的授权范围（这里是只读）</p>
-<p>2.在用户跳转之后，资源服务器B会要求用户进行登录，然后询问用户是否给予客户端A授权。当用户同意后，B回跳转到<code>redirect_uri</code>参数指定的网址。跳转时会回传一个授权码</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback?code&#x3D;AUTHORIZATION_CODE</span><br></pre></td></tr></table></figure>
-
-<p>上述的链接中的code参数就是授权码。</p>
-<p>3.当客户端服务A拿到授权码后，就可以向资源网站B请求令牌了。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;token?</span><br><span class="line"> client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line"> client_secret&#x3D;CLIENT_SECRET&amp;</span><br><span class="line"> grant_type&#x3D;authorization_code&amp;</span><br><span class="line"> code&#x3D;AUTHORIZATION_CODE&amp;</span><br><span class="line"> redirect_uri&#x3D;CALLBACK_URL</span><br></pre></td></tr></table></figure>
-
-<p>上面 URL 中:</p>
-<p><code>client_id</code>参数和<code>client_secret</code>参数用来让 B 确认 A 的身份（<code>client_secret</code>参数是保密的，因此只能在后端发请求），<code>grant_type</code>参数的值是<code>AUTHORIZATION_CODE</code>，表示采用的授权方式是授权码，<code>code</code>参数是上一步拿到的授权码，<code>redirect_uri</code>参数是令牌颁发后的回调网址。</p>
-<p>4.资源网站B收到请求后就会颁发令牌。具体是向<code>redirect_uri</code>指定的网址，发送一段JSON:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;    </span><br><span class="line">  &quot;access_token&quot;:&quot;ACCESS_TOKEN&quot;,</span><br><span class="line">  &quot;token_type&quot;:&quot;bearer&quot;,</span><br><span class="line">  &quot;expires_in&quot;:2592000,</span><br><span class="line">  &quot;refresh_token&quot;:&quot;REFRESH_TOKEN&quot;,</span><br><span class="line">  &quot;scope&quot;:&quot;read&quot;,</span><br><span class="line">  &quot;uid&quot;:100101,</span><br><span class="line">  &quot;info&quot;:&#123;...&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>其中JSON中的access_token字段就是令牌</p>
-<p><strong>第二种方式，允许直接向前端颁发令牌。这种方式没有授权码这个中间步骤，所以称为（授权码）”隐藏式”（implicit）。</strong></p>
-<p>该方式适用于没有后端服务的纯前端web服务</p>
-<p>首先A网址需要提供一个连接，要求用户跳转到B网站，授权用户数据给A使用</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;token&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
-
-]]></content>
-      <categories>
-        <category>身份认证</category>
-      </categories>
-      <tags>
-        <tag>OAuth2.0</tag>
       </tags>
   </entry>
 </search>
