@@ -333,49 +333,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（一）基础概念介绍</title>
-    <url>/2020/12/16/Java%20%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5%E4%BB%8B%E7%BB%8D/</url>
-    <content><![CDATA[<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><h4 id="1-时间片"><a href="#1-时间片" class="headerlink" title="1.时间片"></a>1.时间片</h4><p>时间片是 CPU 分配给各个线程的时间，CPU 是通过时间片分配算法来循环执行任务的。</p>
-<p><strong>Q：什么是上下文切换？</strong></p>
-<p>A：当当前任务所在的时间片结束时，切换之前会保持上一个任务的状态，以便下次切换回这个任务时可以加载这个任务的状态。所以任务<strong>从保存到再次加载的过程</strong>就是一次上下文切换</p>
-<p><strong>Q：上下文切换有什么影响？</strong></p>
-<p>A：上下文的切换是有开销的，主要体现在多线程环境下，<strong>上下文的切换会影响任务的执行耗时</strong>。所以，多线程不一定比单线程更快（多线程还有创建线程的开销）</p>
-<p><strong>Q：如何减少上下文的切换？</strong></p>
-<p>A：减少上下文切换的方法有：无锁并发编程 、CAS 算法、使用最少线程和使用协程</p>
-<ul>
-<li>无锁并发编程：在多线程环境中，尽量不使用锁，如将数据的 ID 用 Hash 算法取模分段，不同的线程处理不同段的数据。</li>
-<li>CAS 算法：Compare And Set 比较赋值，原子操作，不需要加锁</li>
-<li>使用最少线程：避免创建不需要的线程，避免大量线程处于等待状态</li>
-<li>协程：在单线程里实现多任务的任务调度，并在单线程里维持多个任务间的切换</li>
-</ul>
-<h3 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h3><p><strong>Q：什么是同步，什么是异步？</strong></p>
-<p>A：同步（Synchronous）:任务的结果需要内部执行完处理逻辑之后才能拿到；异步（Asynchronous）:更像消息的传递，调用立即返回，但是任务的执行在另一个线程中继续</p>
-<h3 id="并发与并行"><a href="#并发与并行" class="headerlink" title="并发与并行"></a>并发与并行</h3><p>Q：什么是并发，什么是并行？</p>
-<p>A：并发是指一段时间内多个任务交替进行，而并行是真正意义上的多个任务同时执行；单核 CPU 是不存在真实的并行的，毕竟一个 CPU一次只能执行一个指令，真正的并行存在于多核 CPU 的系统中</p>
-<h3 id="临界区"><a href="#临界区" class="headerlink" title="临界区"></a>临界区</h3><p>临界区是指一种公共资源或共享数据，可以被多个线程使用（读取），但是每次只能由一个线程使用（修改），一旦临界区资源被占用，其他线程只能等待。</p>
-<h3 id="线程与进程"><a href="#线程与进程" class="headerlink" title="线程与进程"></a>线程与进程</h3><h4 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h4><p><strong>线程</strong>与进程相似，但线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享同一块内存空间和一组系统资源，所以系统在产生一个线程，或是在各个线程之间作切换工作时，负担要比进程小得多，也正因为如此，线程也被称为轻量级进程。</p>
-<h4 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h4><p><strong>进程</strong>是程序的一次执行过程，是<strong>系统运行程序的基本单位</strong>，因此进程是动态的。系统运行一个程序即是一个进程从创建，运行到消亡的过程。简单来说，一个进程就是一个执行中的程序，它在计算机中一个指令接着一个指令地执行着，同时，每个进程还占有某些系统资源如 CPU 时间，内存空间，文件，输入输出设备的使用权等等。换句话说，当程序在执行时，将会被操作系统载入内存中。</p>
-<h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><p><strong>Q：什么是死锁？</strong></p>
-<p>A：两个线程互相等待对方释放锁</p>
-<p><strong>Q：死锁产生的原因是什么？</strong></p>
-<p>A：释放锁之前出现异常，没能执行释放锁的操作；亦或释放锁的操作出现异常，导致锁无法正常释放。</p>
-<p><strong>Q：如何避免死锁？</strong></p>
-<p>A：避免死锁的常见方式：</p>
-<ul>
-<li>避免一个线程获得多个锁</li>
-<li>避免一个线程在锁内同时占用多个临界区资源，尽量一个线程内只占用一个资源</li>
-<li>为锁定时，使用 Lock.tryLock(timeOut)替代内部锁机制</li>
-<li>对于数据库锁，加锁和解锁必须在同一个数据库连接里，否则会出现解锁失败的情况。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Java并发编程</category>
-      </categories>
-      <tags>
-        <tag>并发</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>JDK11新特性</title>
     <url>/2021/04/29/JDK11%E6%96%B0%E7%89%B9%E6%80%A7/</url>
     <content><![CDATA[<h1 id="局部变量的类型推断"><a href="#局部变量的类型推断" class="headerlink" title="局部变量的类型推断"></a>局部变量的类型推断</h1><p>所谓局部变量的类型推断，即在命名局部变量时，不指定具体的变量类型，直接用 var，变量类型交由编译器进行判断。</p>
@@ -430,6 +387,49 @@
       </categories>
       <tags>
         <tag>JDK11</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Java 并发编程（一）基础概念介绍</title>
+    <url>/2020/12/16/Java%20%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%80%EF%BC%89%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5%E4%BB%8B%E7%BB%8D/</url>
+    <content><![CDATA[<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><h4 id="1-时间片"><a href="#1-时间片" class="headerlink" title="1.时间片"></a>1.时间片</h4><p>时间片是 CPU 分配给各个线程的时间，CPU 是通过时间片分配算法来循环执行任务的。</p>
+<p><strong>Q：什么是上下文切换？</strong></p>
+<p>A：当当前任务所在的时间片结束时，切换之前会保持上一个任务的状态，以便下次切换回这个任务时可以加载这个任务的状态。所以任务<strong>从保存到再次加载的过程</strong>就是一次上下文切换</p>
+<p><strong>Q：上下文切换有什么影响？</strong></p>
+<p>A：上下文的切换是有开销的，主要体现在多线程环境下，<strong>上下文的切换会影响任务的执行耗时</strong>。所以，多线程不一定比单线程更快（多线程还有创建线程的开销）</p>
+<p><strong>Q：如何减少上下文的切换？</strong></p>
+<p>A：减少上下文切换的方法有：无锁并发编程 、CAS 算法、使用最少线程和使用协程</p>
+<ul>
+<li>无锁并发编程：在多线程环境中，尽量不使用锁，如将数据的 ID 用 Hash 算法取模分段，不同的线程处理不同段的数据。</li>
+<li>CAS 算法：Compare And Set 比较赋值，原子操作，不需要加锁</li>
+<li>使用最少线程：避免创建不需要的线程，避免大量线程处于等待状态</li>
+<li>协程：在单线程里实现多任务的任务调度，并在单线程里维持多个任务间的切换</li>
+</ul>
+<h3 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h3><p><strong>Q：什么是同步，什么是异步？</strong></p>
+<p>A：同步（Synchronous）:任务的结果需要内部执行完处理逻辑之后才能拿到；异步（Asynchronous）:更像消息的传递，调用立即返回，但是任务的执行在另一个线程中继续</p>
+<h3 id="并发与并行"><a href="#并发与并行" class="headerlink" title="并发与并行"></a>并发与并行</h3><p>Q：什么是并发，什么是并行？</p>
+<p>A：并发是指一段时间内多个任务交替进行，而并行是真正意义上的多个任务同时执行；单核 CPU 是不存在真实的并行的，毕竟一个 CPU一次只能执行一个指令，真正的并行存在于多核 CPU 的系统中</p>
+<h3 id="临界区"><a href="#临界区" class="headerlink" title="临界区"></a>临界区</h3><p>临界区是指一种公共资源或共享数据，可以被多个线程使用（读取），但是每次只能由一个线程使用（修改），一旦临界区资源被占用，其他线程只能等待。</p>
+<h3 id="线程与进程"><a href="#线程与进程" class="headerlink" title="线程与进程"></a>线程与进程</h3><h4 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h4><p><strong>线程</strong>与进程相似，但线程是一个比进程更小的执行单位。一个进程在其执行的过程中可以产生多个线程。与进程不同的是同类的多个线程共享同一块内存空间和一组系统资源，所以系统在产生一个线程，或是在各个线程之间作切换工作时，负担要比进程小得多，也正因为如此，线程也被称为轻量级进程。</p>
+<h4 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h4><p><strong>进程</strong>是程序的一次执行过程，是<strong>系统运行程序的基本单位</strong>，因此进程是动态的。系统运行一个程序即是一个进程从创建，运行到消亡的过程。简单来说，一个进程就是一个执行中的程序，它在计算机中一个指令接着一个指令地执行着，同时，每个进程还占有某些系统资源如 CPU 时间，内存空间，文件，输入输出设备的使用权等等。换句话说，当程序在执行时，将会被操作系统载入内存中。</p>
+<h3 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h3><p><strong>Q：什么是死锁？</strong></p>
+<p>A：两个线程互相等待对方释放锁</p>
+<p><strong>Q：死锁产生的原因是什么？</strong></p>
+<p>A：释放锁之前出现异常，没能执行释放锁的操作；亦或释放锁的操作出现异常，导致锁无法正常释放。</p>
+<p><strong>Q：如何避免死锁？</strong></p>
+<p>A：避免死锁的常见方式：</p>
+<ul>
+<li>避免一个线程获得多个锁</li>
+<li>避免一个线程在锁内同时占用多个临界区资源，尽量一个线程内只占用一个资源</li>
+<li>为锁定时，使用 Lock.tryLock(timeOut)替代内部锁机制</li>
+<li>对于数据库锁，加锁和解锁必须在同一个数据库连接里，否则会出现解锁失败的情况。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Java并发编程</category>
+      </categories>
+      <tags>
+        <tag>并发</tag>
       </tags>
   </entry>
   <entry>
@@ -1322,47 +1322,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Nacos简介</title>
-    <url>/2021/04/07/Nacos%E7%AE%80%E4%BB%8B/</url>
-    <content><![CDATA[<h1 id="Nacos-是什么"><a href="#Nacos-是什么" class="headerlink" title="Nacos 是什么"></a>Nacos 是什么</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><blockquote>
-<p>Nacos 致力于帮助您发现、配置和管理微服务。Nacos 提供了一组简单易用的特性集，帮助您快速实现动态服务发现、服务配置、服务元数据及流量管理。</p>
-</blockquote>
-<p>简单来说 nacos 是一个微服务，是一个用于为其他服务提供注册和发现功能的服务</p>
-<p>Nacos 的关键特性包括:</p>
-<ul>
-<li>服务发现和服务健康监测</li>
-<li>动态配置服务</li>
-<li>动态 DNS 服务</li>
-<li>服务及其元数据管理</li>
-</ul>
-<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p><img src="https://cdn.nlark.com/yuque/0/2019/jpeg/338441/1561217892717-1418fb9b-7faa-4324-87b9-f1740329f564.jpeg"></p>
-<blockquote>
-<h3 id="服务-Service"><a href="#服务-Service" class="headerlink" title="服务 (Service)"></a>服务 (Service)</h3><p>服务是指一个或一组软件功能（例如特定信息的检索或一组操作的执行），其目的是不同的客户端可以为不同的目的重用（例如通过跨进程的网络调用）。Nacos 支持主流的服务生态，如 Kubernetes Service、gRPC|Dubbo RPC Service 或者 Spring Cloud RESTful Service.</p>
-<h3 id="服务注册中心-Service-Registry"><a href="#服务注册中心-Service-Registry" class="headerlink" title="服务注册中心 (Service Registry)"></a>服务注册中心 (Service Registry)</h3><p>服务注册中心，它是服务，其实例及元数据的数据库。服务实例在启动时注册到服务注册表，并在关闭时注销。服务和路由器的客户端查询服务注册表以查找服务的可用实例。服务注册中心可能会调用服务实例的健康检查 API 来验证它是否能够处理请求。</p>
-<h3 id="服务元数据-Service-Metadata"><a href="#服务元数据-Service-Metadata" class="headerlink" title="服务元数据 (Service Metadata)"></a>服务元数据 (Service Metadata)</h3><p>服务元数据是指包括服务端点(endpoints)、服务标签、服务版本号、服务实例权重、路由规则、安全策略等描述服务的数据</p>
-<h3 id="服务提供方-Service-Provider"><a href="#服务提供方-Service-Provider" class="headerlink" title="服务提供方 (Service Provider)"></a>服务提供方 (Service Provider)</h3><p>是指提供可复用和可调用服务的应用方</p>
-<h3 id="服务消费方-Service-Consumer"><a href="#服务消费方-Service-Consumer" class="headerlink" title="服务消费方 (Service Consumer)"></a>服务消费方 (Service Consumer)</h3><p>是指会发起对某个服务调用的应用方</p>
-<h3 id="配置-Configuration"><a href="#配置-Configuration" class="headerlink" title="配置 (Configuration)"></a>配置 (Configuration)</h3><p>在系统开发过程中通常会将一些需要变更的参数、变量等从代码中分离出来独立管理，以独立的配置文件的形式存在。目的是让静态的系统工件或者交付物（如 WAR，JAR 包等）更好地和实际的物理运行环境进行适配。配置管理一般包含在系统部署的过程中，由系统管理员或者运维人员完成这个步骤。配置变更是调整系统运行时的行为的有效手段之一。</p>
-<h3 id="配置管理-Configuration-Management"><a href="#配置管理-Configuration-Management" class="headerlink" title="配置管理 (Configuration Management)"></a>配置管理 (Configuration Management)</h3><p>在数据中心中，系统中所有配置的编辑、存储、分发、变更管理、历史版本管理、变更审计等所有与配置相关的活动统称为配置管理。</p>
-<h3 id="名字服务-Naming-Service"><a href="#名字服务-Naming-Service" class="headerlink" title="名字服务 (Naming Service)"></a>名字服务 (Naming Service)</h3><p>提供分布式系统中所有对象(Object)、实体(Entity)的“名字”到关联的元数据之间的映射管理服务，例如 ServiceName -&gt; Endpoints Info, Distributed Lock Name -&gt; Lock Owner/Status Info, DNS Domain Name -&gt; IP List, 服务发现和 DNS 就是名字服务的2大场景。</p>
-<h3 id="配置服务-Configuration-Service"><a href="#配置服务-Configuration-Service" class="headerlink" title="配置服务 (Configuration Service)"></a>配置服务 (Configuration Service)</h3><p>在服务或者应用运行过程中，提供动态配置或者元数据以及配置管理的服务提供者</p>
-</blockquote>
-<h1 id="核心功能"><a href="#核心功能" class="headerlink" title="核心功能"></a>核心功能</h1><h2 id="服务注册"><a href="#服务注册" class="headerlink" title="服务注册"></a>服务注册</h2><p>Nacos 客户端通过发送 REST 请求向 Nacos服务端注册自己的服务，并将自己的服务相关的元数据（ip、端口等）存储在 map 中</p>
-<h2 id="服务心跳"><a href="#服务心跳" class="headerlink" title="服务心跳"></a>服务心跳</h2><p>在服务注册之后，Nacos 客户端会维护一个定时心跳来持续通知 Nacos 服务端，以此证明自己的存活状态，防止被服务端剔除。默认每隔 5 秒发送一次心跳。</p>
-<h2 id="服务同步"><a href="#服务同步" class="headerlink" title="服务同步"></a>服务同步</h2><p>在 Nacos 集群环境中，集群之间的节点会相互同步服务实例，保证服务信息在各个节点中的信息是一致的。</p>
-<h2 id="服务发现"><a href="#服务发现" class="headerlink" title="服务发现"></a>服务发现</h2><p>消费者服务在调用服务的时，会发送一个 REST 请求到 Nacos 服务端，并获取服务端内部的注册服务清单，缓存在 Nacos 客户端本地，并且之后会在本地定时拉去更新服务端上服务注册表信息。</p>
-<h2 id="服务健康检查"><a href="#服务健康检查" class="headerlink" title="服务健康检查"></a>服务健康检查</h2><p>Nacos Server会开启一个定时任务用来检查注册服务实例的健康情况，对于超过 15s没有收到客户端心跳的实例会将它的healthy属性置为false(客户端服务发现时不会发现)，如果某个实例超过30秒没有收到心跳，直接剔除该实例(被剔除的实例如果恢复发送心跳则会重新 注册)</p>
-<p>其中注册表的结构如下：</p>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gpbkmrvexwj311i0oaads.jpg"></p>
-]]></content>
-      <categories>
-        <category>SpringCloud alibaba</category>
-      </categories>
-      <tags>
-        <tag>注册中心</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>MySQL Explain工具介绍</title>
     <url>/2021/04/04/MySQL-Explain%E5%B7%A5%E5%85%B7/</url>
     <content><![CDATA[<h1 id="Explain工具的作用"><a href="#Explain工具的作用" class="headerlink" title="Explain工具的作用"></a>Explain工具的作用</h1><p>简单来说，explain 关键字是用于模拟执行 SQL 语句，分析 SQL查询语句的性能情况，如果 from 中包含子查询，仍会执行该子查询，将结果放入临时表中。</p>
@@ -1433,6 +1392,128 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>Explain</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Nacos简介</title>
+    <url>/2021/04/07/Nacos%E7%AE%80%E4%BB%8B/</url>
+    <content><![CDATA[<h1 id="Nacos-是什么"><a href="#Nacos-是什么" class="headerlink" title="Nacos 是什么"></a>Nacos 是什么</h1><h2 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h2><blockquote>
+<p>Nacos 致力于帮助您发现、配置和管理微服务。Nacos 提供了一组简单易用的特性集，帮助您快速实现动态服务发现、服务配置、服务元数据及流量管理。</p>
+</blockquote>
+<p>简单来说 nacos 是一个微服务，是一个用于为其他服务提供注册和发现功能的服务</p>
+<p>Nacos 的关键特性包括:</p>
+<ul>
+<li>服务发现和服务健康监测</li>
+<li>动态配置服务</li>
+<li>动态 DNS 服务</li>
+<li>服务及其元数据管理</li>
+</ul>
+<h2 id="架构"><a href="#架构" class="headerlink" title="架构"></a>架构</h2><p><img src="https://cdn.nlark.com/yuque/0/2019/jpeg/338441/1561217892717-1418fb9b-7faa-4324-87b9-f1740329f564.jpeg"></p>
+<blockquote>
+<h3 id="服务-Service"><a href="#服务-Service" class="headerlink" title="服务 (Service)"></a>服务 (Service)</h3><p>服务是指一个或一组软件功能（例如特定信息的检索或一组操作的执行），其目的是不同的客户端可以为不同的目的重用（例如通过跨进程的网络调用）。Nacos 支持主流的服务生态，如 Kubernetes Service、gRPC|Dubbo RPC Service 或者 Spring Cloud RESTful Service.</p>
+<h3 id="服务注册中心-Service-Registry"><a href="#服务注册中心-Service-Registry" class="headerlink" title="服务注册中心 (Service Registry)"></a>服务注册中心 (Service Registry)</h3><p>服务注册中心，它是服务，其实例及元数据的数据库。服务实例在启动时注册到服务注册表，并在关闭时注销。服务和路由器的客户端查询服务注册表以查找服务的可用实例。服务注册中心可能会调用服务实例的健康检查 API 来验证它是否能够处理请求。</p>
+<h3 id="服务元数据-Service-Metadata"><a href="#服务元数据-Service-Metadata" class="headerlink" title="服务元数据 (Service Metadata)"></a>服务元数据 (Service Metadata)</h3><p>服务元数据是指包括服务端点(endpoints)、服务标签、服务版本号、服务实例权重、路由规则、安全策略等描述服务的数据</p>
+<h3 id="服务提供方-Service-Provider"><a href="#服务提供方-Service-Provider" class="headerlink" title="服务提供方 (Service Provider)"></a>服务提供方 (Service Provider)</h3><p>是指提供可复用和可调用服务的应用方</p>
+<h3 id="服务消费方-Service-Consumer"><a href="#服务消费方-Service-Consumer" class="headerlink" title="服务消费方 (Service Consumer)"></a>服务消费方 (Service Consumer)</h3><p>是指会发起对某个服务调用的应用方</p>
+<h3 id="配置-Configuration"><a href="#配置-Configuration" class="headerlink" title="配置 (Configuration)"></a>配置 (Configuration)</h3><p>在系统开发过程中通常会将一些需要变更的参数、变量等从代码中分离出来独立管理，以独立的配置文件的形式存在。目的是让静态的系统工件或者交付物（如 WAR，JAR 包等）更好地和实际的物理运行环境进行适配。配置管理一般包含在系统部署的过程中，由系统管理员或者运维人员完成这个步骤。配置变更是调整系统运行时的行为的有效手段之一。</p>
+<h3 id="配置管理-Configuration-Management"><a href="#配置管理-Configuration-Management" class="headerlink" title="配置管理 (Configuration Management)"></a>配置管理 (Configuration Management)</h3><p>在数据中心中，系统中所有配置的编辑、存储、分发、变更管理、历史版本管理、变更审计等所有与配置相关的活动统称为配置管理。</p>
+<h3 id="名字服务-Naming-Service"><a href="#名字服务-Naming-Service" class="headerlink" title="名字服务 (Naming Service)"></a>名字服务 (Naming Service)</h3><p>提供分布式系统中所有对象(Object)、实体(Entity)的“名字”到关联的元数据之间的映射管理服务，例如 ServiceName -&gt; Endpoints Info, Distributed Lock Name -&gt; Lock Owner/Status Info, DNS Domain Name -&gt; IP List, 服务发现和 DNS 就是名字服务的2大场景。</p>
+<h3 id="配置服务-Configuration-Service"><a href="#配置服务-Configuration-Service" class="headerlink" title="配置服务 (Configuration Service)"></a>配置服务 (Configuration Service)</h3><p>在服务或者应用运行过程中，提供动态配置或者元数据以及配置管理的服务提供者</p>
+</blockquote>
+<h1 id="核心功能"><a href="#核心功能" class="headerlink" title="核心功能"></a>核心功能</h1><h2 id="服务注册"><a href="#服务注册" class="headerlink" title="服务注册"></a>服务注册</h2><p>Nacos 客户端通过发送 REST 请求向 Nacos服务端注册自己的服务，并将自己的服务相关的元数据（ip、端口等）存储在 map 中</p>
+<h2 id="服务心跳"><a href="#服务心跳" class="headerlink" title="服务心跳"></a>服务心跳</h2><p>在服务注册之后，Nacos 客户端会维护一个定时心跳来持续通知 Nacos 服务端，以此证明自己的存活状态，防止被服务端剔除。默认每隔 5 秒发送一次心跳。</p>
+<h2 id="服务同步"><a href="#服务同步" class="headerlink" title="服务同步"></a>服务同步</h2><p>在 Nacos 集群环境中，集群之间的节点会相互同步服务实例，保证服务信息在各个节点中的信息是一致的。</p>
+<h2 id="服务发现"><a href="#服务发现" class="headerlink" title="服务发现"></a>服务发现</h2><p>消费者服务在调用服务的时，会发送一个 REST 请求到 Nacos 服务端，并获取服务端内部的注册服务清单，缓存在 Nacos 客户端本地，并且之后会在本地定时拉去更新服务端上服务注册表信息。</p>
+<h2 id="服务健康检查"><a href="#服务健康检查" class="headerlink" title="服务健康检查"></a>服务健康检查</h2><p>Nacos Server会开启一个定时任务用来检查注册服务实例的健康情况，对于超过 15s没有收到客户端心跳的实例会将它的healthy属性置为false(客户端服务发现时不会发现)，如果某个实例超过30秒没有收到心跳，直接剔除该实例(被剔除的实例如果恢复发送心跳则会重新 注册)</p>
+<p>其中注册表的结构如下：</p>
+<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gpbkmrvexwj311i0oaads.jpg"></p>
+]]></content>
+      <categories>
+        <category>SpringCloud alibaba</category>
+      </categories>
+      <tags>
+        <tag>注册中心</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>OAuth2.0</title>
+    <url>/2021/10/30/OAuth2.0%E5%AD%A6%E4%B9%A0/</url>
+    <content><![CDATA[<p>一、OAuth</p>
+<blockquote>
+<p>OAuth 引入了一个授权层，用来分离两种不同的角色：客户端和资源所有者。……资源所有者同意以后，资源服务器可以向客户端颁发令牌。客户端通过令牌，去请求数据。</p>
+</blockquote>
+<p>也就是说OAuth的核心作用就是向第三方应用颁发令牌</p>
+<p>二、OAuh2.0获得令牌的4种方式</p>
+<ul>
+<li>授权码（authorization-code）</li>
+<li>隐藏式（implicit）</li>
+<li>密码式（password）</li>
+<li>客户端凭证（client credentials）</li>
+</ul>
+<p>注：不管哪一种授权方式，第三方应用申请令牌之前，都必须先到系统备案，说明自己的身份，然后会拿到两个身份识别码：客户端 ID（client ID）和客户端密钥（client secret）。这是为了防止令牌被滥用，没有备案过的第三方应用，是不会拿到令牌的。</p>
+<p><strong>授权码（authorization code）方式，指的是第三方应用先申请一个授权码，然后再用该码获取令牌</strong></p>
+<p>该方式最常用，安全性最高，多使用在前后端分离的web应用，所有与资源服务器的通信都是在后端完成的，可以避免令牌泄漏</p>
+<p><strong>具体的流程</strong>：</p>
+<p>1.客户端A提供链接，由用户点击跳转到资源服务器端B，完成授权。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6psyuv6gj30zo0f6js7.jpg"></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;code&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
+
+<p>在上面的实例URL中:</p>
+<p><code>response_type</code>参数表示要求返回授权码（<code>code</code>），</p>
+<p><code>client_id</code>参数让 B 知道是谁在请求，</p>
+<p><code>redirect_uri</code>参数是 B 接受或拒绝请求后的跳转网址，</p>
+<p><code>scope</code>参数表示要求的授权范围（这里是只读）</p>
+<p>2.在用户跳转之后，资源服务器B会要求用户进行登录，然后询问用户是否给予客户端A授权。当用户同意后，B回跳转到<code>redirect_uri</code>参数指定的网址。跳转时会回传一个授权码</p>
+<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6pt43g27j310a0cywfd.jpg"></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback?code&#x3D;AUTHORIZATION_CODE</span><br></pre></td></tr></table></figure>
+
+<p>上述的链接中的code参数就是授权码。</p>
+<p>3.当客户端服务A拿到授权码后，就可以向资源网站B请求令牌了。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptcep83j30ys0cymy5.jpg"></p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;token?</span><br><span class="line"> client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line"> client_secret&#x3D;CLIENT_SECRET&amp;</span><br><span class="line"> grant_type&#x3D;authorization_code&amp;</span><br><span class="line"> code&#x3D;AUTHORIZATION_CODE&amp;</span><br><span class="line"> redirect_uri&#x3D;CALLBACK_URL</span><br></pre></td></tr></table></figure>
+
+<p>上面 URL 中:</p>
+<p><code>client_id</code>参数和<code>client_secret</code>参数用来让 B 确认 A 的身份（<code>client_secret</code>参数是保密的，因此只能在后端发请求），<code>grant_type</code>参数的值是<code>AUTHORIZATION_CODE</code>，表示采用的授权方式是授权码，<code>code</code>参数是上一步拿到的授权码，<code>redirect_uri</code>参数是令牌颁发后的回调网址。</p>
+<p>4.资源网站B收到请求后就会颁发令牌。</p>
+<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptkivhoj310i0cat9s.jpg"></p>
+<p>具体是向<code>redirect_uri</code>指定的网址，发送一段JSON:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;    </span><br><span class="line">  &quot;access_token&quot;:&quot;ACCESS_TOKEN&quot;,</span><br><span class="line">  &quot;token_type&quot;:&quot;bearer&quot;,</span><br><span class="line">  &quot;expires_in&quot;:2592000,</span><br><span class="line">  &quot;refresh_token&quot;:&quot;REFRESH_TOKEN&quot;,</span><br><span class="line">  &quot;scope&quot;:&quot;read&quot;,</span><br><span class="line">  &quot;uid&quot;:100101,</span><br><span class="line">  &quot;info&quot;:&#123;...&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中JSON中的access_token字段就是令牌</p>
+<p><strong>第二种方式，允许直接向前端颁发令牌。这种方式没有授权码这个中间步骤，所以称为（授权码）”隐藏式”（implicit）。</strong></p>
+<p>该方式适用于没有后端服务的纯前端web服务</p>
+<p>首先A网址需要提供一个连接，要求用户跳转到B网站，授权用户数据给A使用</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;token&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
+
+<p>在上面的URL中：</p>
+<p>response_type参数为token,表示要求直接返回令牌。</p>
+<p>然后：用户跳转到B完整，登录后同意给A网站授权。此时，B网站就会跳回redirect_uri指定的网址，并且把令牌作为URL参数传给A网站</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback#token&#x3D;ACCESS_TOKEN</span><br></pre></td></tr></table></figure>
+
+<p>A网站的前端拿到令牌，即token参数。</p>
+<p>注：令牌的位置是 URL 锚点（fragment），而不是查询字符串（querystring），这是因为 OAuth 2.0 允许跳转网址是 HTTP 协议，因此存在”中间人攻击”的风险，而浏览器跳转时，锚点不会发到服务器，就减少了泄漏令牌的风险。</p>
+<p>不过这种方式还是很不安全，只能用于安全要求不高的场景，并且令牌的有效期要非常短，通常是存在当前会话中，当浏览器关闭后，令牌也就随之失效。</p>
+<p>第三种方式：密码式</p>
+<p><strong>所谓密码式，即允许用户把用户名和密码直接告诉应用，该应用直接使用密码申请令牌。</strong></p>
+<p>第一步，A网站要求用户提供B网站的用户名密码。拿到之后，A就直接向B请求令牌。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;oauth.b.com&#x2F;token?</span><br><span class="line">  grant_type&#x3D;password&amp;</span><br><span class="line">  username&#x3D;USERNAME&amp;</span><br><span class="line">  password&#x3D;PASSWORD&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID</span><br></pre></td></tr></table></figure>
+
+<p>在上面的URL中，<code>grant_type</code>参数是授权方式，这里的<code>password</code>表示”密码式”，<code>username</code>和<code>password</code>是 B 的用户名和密码。</p>
+<p>第二步，B网站验证身份，直接给出令牌。注意，这时不需要跳转，而是把令牌放在 JSON 数据里面，作为 HTTP 回应，A 因此拿到令牌。</p>
+<p>注：这种方式需要用户给出自己的用户名/密码，风险很大，只适用于其他授权方式都无法采用的情况，而且必须是用户高度信任的应用。</p>
+<p>第四种方式：凭证式</p>
+<p>该方式适用于没有前端应用的命令行应用，即直接在命令行中请求令牌。</p>
+<p>首先，A应用在每轮行向B发出请求。</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;oauth.b.com&#x2F;token?</span><br><span class="line">  grant_type&#x3D;client_credentials&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  client_secret&#x3D;CLIENT_SECRET</span><br></pre></td></tr></table></figure>
+
+<p>在上面的URL中，<code>grant_type</code>参数等于<code>client_credentials</code>表示采用凭证式，<code>client_id</code>和<code>client_secret</code>用来让 B 确认 A 的身份。</p>
+<p>然后，B网站通过验证之后，就直接返回令牌。这种方式给出的令牌是针对第三方应用的，而不是针对用户的，即该方式可以实现对多个用户同时授权，也就是说存在多个用户共享令牌的情况。</p>
+]]></content>
+      <categories>
+        <category>身份认证</category>
+      </categories>
+      <tags>
+        <tag>OAuth2.0</tag>
       </tags>
   </entry>
   <entry>
@@ -1537,87 +1618,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>集群</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>OAuth2.0</title>
-    <url>/2021/10/30/OAuth2.0%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<p>一、OAuth</p>
-<blockquote>
-<p>OAuth 引入了一个授权层，用来分离两种不同的角色：客户端和资源所有者。……资源所有者同意以后，资源服务器可以向客户端颁发令牌。客户端通过令牌，去请求数据。</p>
-</blockquote>
-<p>也就是说OAuth的核心作用就是向第三方应用颁发令牌</p>
-<p>二、OAuh2.0获得令牌的4种方式</p>
-<ul>
-<li>授权码（authorization-code）</li>
-<li>隐藏式（implicit）</li>
-<li>密码式（password）</li>
-<li>客户端凭证（client credentials）</li>
-</ul>
-<p>注：不管哪一种授权方式，第三方应用申请令牌之前，都必须先到系统备案，说明自己的身份，然后会拿到两个身份识别码：客户端 ID（client ID）和客户端密钥（client secret）。这是为了防止令牌被滥用，没有备案过的第三方应用，是不会拿到令牌的。</p>
-<p><strong>授权码（authorization code）方式，指的是第三方应用先申请一个授权码，然后再用该码获取令牌</strong></p>
-<p>该方式最常用，安全性最高，多使用在前后端分离的web应用，所有与资源服务器的通信都是在后端完成的，可以避免令牌泄漏</p>
-<p><strong>具体的流程</strong>：</p>
-<p>1.客户端A提供链接，由用户点击跳转到资源服务器端B，完成授权。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6psyuv6gj30zo0f6js7.jpg"></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;code&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
-
-<p>在上面的实例URL中:</p>
-<p><code>response_type</code>参数表示要求返回授权码（<code>code</code>），</p>
-<p><code>client_id</code>参数让 B 知道是谁在请求，</p>
-<p><code>redirect_uri</code>参数是 B 接受或拒绝请求后的跳转网址，</p>
-<p><code>scope</code>参数表示要求的授权范围（这里是只读）</p>
-<p>2.在用户跳转之后，资源服务器B会要求用户进行登录，然后询问用户是否给予客户端A授权。当用户同意后，B回跳转到<code>redirect_uri</code>参数指定的网址。跳转时会回传一个授权码</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6pt43g27j310a0cywfd.jpg"></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback?code&#x3D;AUTHORIZATION_CODE</span><br></pre></td></tr></table></figure>
-
-<p>上述的链接中的code参数就是授权码。</p>
-<p>3.当客户端服务A拿到授权码后，就可以向资源网站B请求令牌了。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptcep83j30ys0cymy5.jpg"></p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;token?</span><br><span class="line"> client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line"> client_secret&#x3D;CLIENT_SECRET&amp;</span><br><span class="line"> grant_type&#x3D;authorization_code&amp;</span><br><span class="line"> code&#x3D;AUTHORIZATION_CODE&amp;</span><br><span class="line"> redirect_uri&#x3D;CALLBACK_URL</span><br></pre></td></tr></table></figure>
-
-<p>上面 URL 中:</p>
-<p><code>client_id</code>参数和<code>client_secret</code>参数用来让 B 确认 A 的身份（<code>client_secret</code>参数是保密的，因此只能在后端发请求），<code>grant_type</code>参数的值是<code>AUTHORIZATION_CODE</code>，表示采用的授权方式是授权码，<code>code</code>参数是上一步拿到的授权码，<code>redirect_uri</code>参数是令牌颁发后的回调网址。</p>
-<p>4.资源网站B收到请求后就会颁发令牌。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptkivhoj310i0cat9s.jpg"></p>
-<p>具体是向<code>redirect_uri</code>指定的网址，发送一段JSON:</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;    </span><br><span class="line">  &quot;access_token&quot;:&quot;ACCESS_TOKEN&quot;,</span><br><span class="line">  &quot;token_type&quot;:&quot;bearer&quot;,</span><br><span class="line">  &quot;expires_in&quot;:2592000,</span><br><span class="line">  &quot;refresh_token&quot;:&quot;REFRESH_TOKEN&quot;,</span><br><span class="line">  &quot;scope&quot;:&quot;read&quot;,</span><br><span class="line">  &quot;uid&quot;:100101,</span><br><span class="line">  &quot;info&quot;:&#123;...&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>其中JSON中的access_token字段就是令牌</p>
-<p><strong>第二种方式，允许直接向前端颁发令牌。这种方式没有授权码这个中间步骤，所以称为（授权码）”隐藏式”（implicit）。</strong></p>
-<p>该方式适用于没有后端服务的纯前端web服务</p>
-<p>首先A网址需要提供一个连接，要求用户跳转到B网站，授权用户数据给A使用</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;token&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
-
-<p>在上面的URL中：</p>
-<p>response_type参数为token,表示要求直接返回令牌。</p>
-<p>然后：用户跳转到B完整，登录后同意给A网站授权。此时，B网站就会跳回redirect_uri指定的网址，并且把令牌作为URL参数传给A网站</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback#token&#x3D;ACCESS_TOKEN</span><br></pre></td></tr></table></figure>
-
-<p>A网站的前端拿到令牌，即token参数。</p>
-<p>注：令牌的位置是 URL 锚点（fragment），而不是查询字符串（querystring），这是因为 OAuth 2.0 允许跳转网址是 HTTP 协议，因此存在”中间人攻击”的风险，而浏览器跳转时，锚点不会发到服务器，就减少了泄漏令牌的风险。</p>
-<p>不过这种方式还是很不安全，只能用于安全要求不高的场景，并且令牌的有效期要非常短，通常是存在当前会话中，当浏览器关闭后，令牌也就随之失效。</p>
-<p>第三种方式：密码式</p>
-<p><strong>所谓密码式，即允许用户把用户名和密码直接告诉应用，该应用直接使用密码申请令牌。</strong></p>
-<p>第一步，A网站要求用户提供B网站的用户名密码。拿到之后，A就直接向B请求令牌。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;oauth.b.com&#x2F;token?</span><br><span class="line">  grant_type&#x3D;password&amp;</span><br><span class="line">  username&#x3D;USERNAME&amp;</span><br><span class="line">  password&#x3D;PASSWORD&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID</span><br></pre></td></tr></table></figure>
-
-<p>在上面的URL中，<code>grant_type</code>参数是授权方式，这里的<code>password</code>表示”密码式”，<code>username</code>和<code>password</code>是 B 的用户名和密码。</p>
-<p>第二步，B网站验证身份，直接给出令牌。注意，这时不需要跳转，而是把令牌放在 JSON 数据里面，作为 HTTP 回应，A 因此拿到令牌。</p>
-<p>注：这种方式需要用户给出自己的用户名/密码，风险很大，只适用于其他授权方式都无法采用的情况，而且必须是用户高度信任的应用。</p>
-<p>第四种方式：凭证式</p>
-<p>该方式适用于没有前端应用的命令行应用，即直接在命令行中请求令牌。</p>
-<p>首先，A应用在每轮行向B发出请求。</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;oauth.b.com&#x2F;token?</span><br><span class="line">  grant_type&#x3D;client_credentials&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  client_secret&#x3D;CLIENT_SECRET</span><br></pre></td></tr></table></figure>
-
-<p>在上面的URL中，<code>grant_type</code>参数等于<code>client_credentials</code>表示采用凭证式，<code>client_id</code>和<code>client_secret</code>用来让 B 确认 A 的身份。</p>
-<p>然后，B网站通过验证之后，就直接返回令牌。这种方式给出的令牌是针对第三方应用的，而不是针对用户的，即该方式可以实现对多个用户同时授权，也就是说存在多个用户共享令牌的情况。</p>
-]]></content>
-      <categories>
-        <category>身份认证</category>
-      </categories>
-      <tags>
-        <tag>OAuth2.0</tag>
       </tags>
   </entry>
   <entry>
@@ -2186,81 +2186,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Spring 中的重要概念</title>
-    <url>/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<h1 id="Spring-中的重要概念"><a href="#Spring-中的重要概念" class="headerlink" title="Spring 中的重要概念"></a>Spring 中的重要概念</h1><h2 id="Bean"><a href="#Bean" class="headerlink" title="Bean"></a>Bean</h2><h3 id="Bean与-Java对象的区别"><a href="#Bean与-Java对象的区别" class="headerlink" title="Bean与 Java对象的区别"></a>Bean与 Java对象的区别</h3><p>在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。</p>
-<h3 id="Bean的创建的方式"><a href="#Bean的创建的方式" class="headerlink" title="Bean的创建的方式"></a>Bean的创建的方式</h3><ul>
-<li>xml</li>
-<li>@Bean</li>
-<li>@Component</li>
-<li>BeanDefinition</li>
-</ul>
-<p>如何通过 BeanDefinition 创建 Bean?</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 定义了一个BeanDefinition</span></span><br><span class="line">AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</span><br><span class="line"><span class="comment">// 当前Bean对象的类型</span></span><br><span class="line">beanDefinition.setBeanClass(Person.class);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将BeanDefinition注册到BeanFactory中</span></span><br><span class="line">DefaultListableBeanFactory beanFactory = <span class="keyword">new</span> DefaultListableBeanFactory();</span><br><span class="line">beanFactory.registerBeanDefinition(<span class="string">&quot;person&quot;</span>, beanDefinition);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取Bean</span></span><br><span class="line">System.out.println(beanFactory.getBean(<span class="string">&quot;person&quot;</span>));</span><br></pre></td></tr></table></figure>
-
-
-
-<h3 id="Bean-的生命周期"><a href="#Bean-的生命周期" class="headerlink" title="Bean 的生命周期"></a>Bean 的生命周期</h3><p>bean对象从创建实例化初始化到最终销毁的过程</p>
-<h3 id="作用域"><a href="#作用域" class="headerlink" title="作用域"></a>作用域</h3><p>单例、原型、request、session</p>
-<h4 id="单例Bean-默认是单例"><a href="#单例Bean-默认是单例" class="headerlink" title="单例Bean-默认是单例"></a>单例Bean-默认是单例</h4><h5 id="单例池"><a href="#单例池" class="headerlink" title="单例池"></a>单例池</h5><p>存放 Spring 启动时创建的非懒加载、非抽象的单例 bean的集合，在单例模式下，调用 getBean(“beanName”)方法都会尝试从单例池中获取对应的 bean 对象。</p>
-<h4 id="原型Bean"><a href="#原型Bean" class="headerlink" title="原型Bean"></a>原型Bean</h4><p>Spring 调用 getBean(“beanName”)时，每次返回一个全新的 bean 对象</p>
-<h4 id="懒加载"><a href="#懒加载" class="headerlink" title="懒加载"></a>懒加载</h4><p>@Lazy,懒加载的 bean 不是在 Spring 启动的时候创建出来的，而是在第一次调用 getBean 创建的</p>
-<h2 id="BeanDefinition"><a href="#BeanDefinition" class="headerlink" title="BeanDefinition"></a>BeanDefinition</h2><h3 id="BeanDefiniton-的定义"><a href="#BeanDefiniton-的定义" class="headerlink" title="BeanDefiniton 的定义"></a>BeanDefiniton 的定义</h3><p>BeanDefinition 是Spring 中 bean 对象的定义，存放的是 bean 对象的属性信息，Spring 也是根据 BeanDefinition 的 bean 对象的定义创建 bean对象的</p>
-<h3 id="BeanDefinition-的获取"><a href="#BeanDefinition-的获取" class="headerlink" title="BeanDefinition 的获取"></a>BeanDefinition 的获取</h3><p>BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</p>
-<h3 id="BeanDefinition-的作用"><a href="#BeanDefinition-的作用" class="headerlink" title="BeanDefinition 的作用"></a>BeanDefinition 的作用</h3><p>管理和存储 Spring 中 bean 对象的定义，是一个 map 类型的容器，Spring 在启动时会根据 BeanDefinition 中的信息去创建对应的 bean对象。</p>
-<h3 id="XmlBeanDefinitonReader"><a href="#XmlBeanDefinitonReader" class="headerlink" title="XmlBeanDefinitonReader"></a>XmlBeanDefinitonReader</h3><p>用于读取 xml 资源文件中关于 bean 对象的定义，提供 bean对象的注册/移除功能</p>
-<h3 id="AnnotatedBeanDefinitionReader"><a href="#AnnotatedBeanDefinitionReader" class="headerlink" title="AnnotatedBeanDefinitionReader"></a>AnnotatedBeanDefinitionReader</h3><p>可以直接把某个类转换为BeanDefinition，并且会解析该类上的注解</p>
-<p>注：它能解析的注解是：@Conditional，@Scope、@Lazy、@Primary、@DependsOn、@Role、@Description</p>
-<h3 id="ClassPathBeanDefinitonScanner"><a href="#ClassPathBeanDefinitonScanner" class="headerlink" title="ClassPathBeanDefinitonScanner"></a>ClassPathBeanDefinitonScanner</h3><p>路径扫描器，扫描指定路径下的类，并将扫描到的具体注解的类加入到 BeanDefinition 容器中，如果没有@Component（@Service、@Controller 等@Component 的子类型注解）则不会加入 BeanDefinition 中.</p>
-<p>这个并不是BeanDefinitionReader，但是它的作用和BeanDefinitionReader类似，它可以进行扫描，可以实现对包路径的扫描，并对扫描到的类进行解析如果存在@Component注解，则会把这个类解析为一个BeanDefinition。</p>
-<h3 id="MetadataReader-元数据读取器"><a href="#MetadataReader-元数据读取器" class="headerlink" title="MetadataReader 元数据读取器"></a>MetadataReader 元数据读取器</h3><p>所谓元数据，是指：类名、类的注解、类的内部类、实现的方法、父类、被注解的方法，注解的类型等</p>
-<p>元数据读取器就是将元数据信息存入 BeanDefinition中</p>
-<h2 id="BeanFactory"><a href="#BeanFactory" class="headerlink" title="BeanFactory"></a>BeanFactory</h2><p>BeanFactory 是一个接口，用于实现创建bean 对象的工厂。</p>
-<h4 id="DefaultListableBeanFactory-BeanFactory-的核心实现类"><a href="#DefaultListableBeanFactory-BeanFactory-的核心实现类" class="headerlink" title="DefaultListableBeanFactory-BeanFactory 的核心实现类"></a>DefaultListableBeanFactory-BeanFactory 的核心实现类</h4><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfd6gqbfjj329m0u0gpu.jpg"></p>
-<h2 id="ApplicationContext–功能更加强大的-BeanFactory"><a href="#ApplicationContext–功能更加强大的-BeanFactory" class="headerlink" title="ApplicationContext–功能更加强大的 BeanFactory"></a>ApplicationContext–功能更加强大的 BeanFactory</h2><p><strong>AnnotationConfigApplicationContext</strong></p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AnnotationConfigRegistry</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Register one or more component classes to be processed.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Calls to &#123;<span class="doctag">@code</span> register&#125; are idempotent; adding the same</span></span><br><span class="line"><span class="comment">	 * component class more than once has no additional effect.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> componentClasses one or more component classes,</span></span><br><span class="line"><span class="comment">	 * e.g. &#123;<span class="doctag">@link</span> Configuration <span class="doctag">@Configuration</span>&#125; classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt;... componentClasses)</span></span>;<span class="comment">//  AnnotatedBeanDefinitionReader</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Perform a scan within the specified base packages.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> basePackages the packages to scan for component classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">scan</span><span class="params">(String... basePackages)</span></span>;  <span class="comment">// ClassPathBeanDefinitionScanner</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<ul>
-<li>void register(Class&lt;?&gt;… componentClasses);实现对AnnotatedBeanDefinitionReader的支持</li>
-<li>void scan(String… basePackages)实现对ClassPathBeanDefinitionScanner的支持</li>
-</ul>
-<p>注：无法直接注册单例 bean</p>
-<p>ApplicationContext具有的功能：</p>
-<ul>
-<li>获取系统环境信息</li>
-<li>获取 Bean 信息</li>
-<li>获取父子工厂 bean</li>
-<li>支持国际化 MessageSource</li>
-<li>事件发布功能</li>
-<li>获取资源文件 getResource</li>
-</ul>
-<h2 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h2><p>Bean的后置处理器，是 Spring 提供给程序员可以在 bean 的生命周期中对创建 bean 的过程进行干预，是属于BeanFactory中一个属性，通过对 BeanPostProcessor内部方的重写，可以在创建 bean的过程中实现跳过部分默认方法或功能。</p>
-<h2 id="BeanFactoryPostProcessor"><a href="#BeanFactoryPostProcessor" class="headerlink" title="BeanFactoryPostProcessor"></a>BeanFactoryPostProcessor</h2><p>Bean工厂的后置处理器，是属于ApplicationContext中的一个属性，是ApplicationContext在实例化一个BeanFactory后，可以利用BeanFactoryPostProcessor继续处理BeanFactory。</p>
-<p>通过BeanFactoryPostProcessor间接的设置BeanFactory，比如上文中的CustomEditorConfigurer就是一个BeanFactoryPostProcessor，我们可以通过它向BeanFactory中添加自定义的PropertyEditor。</p>
-<h2 id="FactoryBean"><a href="#FactoryBean" class="headerlink" title="FactoryBean"></a>FactoryBean</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>特殊的 bean,是个接口,有两个普通的方法和一个默认方法</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FactoryBean</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">	String OBJECT_TYPE_ATTRIBUTE = <span class="string">&quot;factoryBeanObjectType&quot;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function">T <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	Class&lt;?&gt; getObjectType();</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">isSingleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="具体的使用流程"><a href="#具体的使用流程" class="headerlink" title="具体的使用流程"></a>具体的使用流程</h3><p>调用 FactoryBean 的 getBean 方法会返回 getObject 中的对象，而不是 FactoryBean 这个类型的 Bean，且该对象（Bean）是在第一次 getBean 中生成并放入 FactoryBean 的缓存<code>FactoryBeanObjectCache</code>中。FactoryBean 中的 getObject()<code>相当于产生一个懒加载的 bean</code>。</p>
-<p>首先 applicationContext.getBean()从单例池中获取bean，判断这个 bean 是否是实现了 FactoryBean,如果是则通过 getObject 方法返回 bean,否则直接返回单例池中的 bean。</p>
-<p>如果需要获取 FactoryBean 这个类的 bean 需要在 beanName加上前缀“&amp;”若干个（Spring 内部会通过 do-while 循环处理掉前缀），源码中会对 beanName 进行判断，是否是获取类类型的 bean 还是 getObject 方法返回的 bean。</p>
-<p>注：使用缓存是为了保证 bean对象是单例的。</p>
-<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p>整合第三方框架、如 mybatis</p>
-<h3 id="与BeanFactory的区别"><a href="#与BeanFactory的区别" class="headerlink" title="与BeanFactory的区别"></a>与BeanFactory的区别</h3><p>BeanFactory 是个创建 Bean 的工厂，可以产生 FactoryBean。产生的 bean 的类型是各种各样的</p>
-<p>FactoryBean 小工厂，产生的 bean 是同一个类型</p>
-<h3 id="与-bean-的区别"><a href="#与-bean-的区别" class="headerlink" title="与@bean 的区别"></a>与@bean 的区别</h3><p>@bean 功能单一，FactoryBean 可以实现其他接口，扩展更多的功能。</p>
-<h3 id="SmartFactoryBean"><a href="#SmartFactoryBean" class="headerlink" title="SmartFactoryBean"></a>SmartFactoryBean</h3><p>是 FactoryBean 的一种实现类，提供了一个判断是否立即初始化的方法</p>
-<ul>
-<li>isEagerInit()：是否立即初始化，true—-就不是懒加载 bean。</li>
-</ul>
-]]></content>
-      <categories>
-        <category>Spring</category>
-      </categories>
-      <tags>
-        <tag>Spring</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Spring 如何解决循环依赖问题</title>
     <url>/2021/03/25/Spring%20%E5%A6%82%E4%BD%95%E8%A7%A3%E5%86%B3%E5%BE%AA%E7%8E%AF%E4%BE%9D%E8%B5%96%E9%97%AE%E9%A2%98/</url>
     <content><![CDATA[<h1 id="什么是循环依赖"><a href="#什么是循环依赖" class="headerlink" title="什么是循环依赖"></a>什么是循环依赖</h1><p>简单来说就是两个对象互相调用对方的属性。A 依赖了 B,B 依赖了 A。正常情况下对象的相互依赖并不是一个问题。但是在 Spring 中，由于Spring对象并不是简单的 new 处理的对象，而是有自己的生命周期的，而这里说的循环依赖问题也就是在 Spring bean 对象的生命周期中出现的问题。</p>
@@ -2343,6 +2268,81 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>循环依赖</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Spring 中的重要概念</title>
+    <url>/2021/02/07/Spring-%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h1 id="Spring-中的重要概念"><a href="#Spring-中的重要概念" class="headerlink" title="Spring 中的重要概念"></a>Spring 中的重要概念</h1><h2 id="Bean"><a href="#Bean" class="headerlink" title="Bean"></a>Bean</h2><h3 id="Bean与-Java对象的区别"><a href="#Bean与-Java对象的区别" class="headerlink" title="Bean与 Java对象的区别"></a>Bean与 Java对象的区别</h3><p>在 Spring 中所有的 Bean 都是 Java 对象，但是 Java 对象不一定Bean。</p>
+<h3 id="Bean的创建的方式"><a href="#Bean的创建的方式" class="headerlink" title="Bean的创建的方式"></a>Bean的创建的方式</h3><ul>
+<li>xml</li>
+<li>@Bean</li>
+<li>@Component</li>
+<li>BeanDefinition</li>
+</ul>
+<p>如何通过 BeanDefinition 创建 Bean?</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">// 定义了一个BeanDefinition</span></span><br><span class="line">AbstractBeanDefinition beanDefinition = BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</span><br><span class="line"><span class="comment">// 当前Bean对象的类型</span></span><br><span class="line">beanDefinition.setBeanClass(Person.class);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 将BeanDefinition注册到BeanFactory中</span></span><br><span class="line">DefaultListableBeanFactory beanFactory = <span class="keyword">new</span> DefaultListableBeanFactory();</span><br><span class="line">beanFactory.registerBeanDefinition(<span class="string">&quot;person&quot;</span>, beanDefinition);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 获取Bean</span></span><br><span class="line">System.out.println(beanFactory.getBean(<span class="string">&quot;person&quot;</span>));</span><br></pre></td></tr></table></figure>
+
+
+
+<h3 id="Bean-的生命周期"><a href="#Bean-的生命周期" class="headerlink" title="Bean 的生命周期"></a>Bean 的生命周期</h3><p>bean对象从创建实例化初始化到最终销毁的过程</p>
+<h3 id="作用域"><a href="#作用域" class="headerlink" title="作用域"></a>作用域</h3><p>单例、原型、request、session</p>
+<h4 id="单例Bean-默认是单例"><a href="#单例Bean-默认是单例" class="headerlink" title="单例Bean-默认是单例"></a>单例Bean-默认是单例</h4><h5 id="单例池"><a href="#单例池" class="headerlink" title="单例池"></a>单例池</h5><p>存放 Spring 启动时创建的非懒加载、非抽象的单例 bean的集合，在单例模式下，调用 getBean(“beanName”)方法都会尝试从单例池中获取对应的 bean 对象。</p>
+<h4 id="原型Bean"><a href="#原型Bean" class="headerlink" title="原型Bean"></a>原型Bean</h4><p>Spring 调用 getBean(“beanName”)时，每次返回一个全新的 bean 对象</p>
+<h4 id="懒加载"><a href="#懒加载" class="headerlink" title="懒加载"></a>懒加载</h4><p>@Lazy,懒加载的 bean 不是在 Spring 启动的时候创建出来的，而是在第一次调用 getBean 创建的</p>
+<h2 id="BeanDefinition"><a href="#BeanDefinition" class="headerlink" title="BeanDefinition"></a>BeanDefinition</h2><h3 id="BeanDefiniton-的定义"><a href="#BeanDefiniton-的定义" class="headerlink" title="BeanDefiniton 的定义"></a>BeanDefiniton 的定义</h3><p>BeanDefinition 是Spring 中 bean 对象的定义，存放的是 bean 对象的属性信息，Spring 也是根据 BeanDefinition 的 bean 对象的定义创建 bean对象的</p>
+<h3 id="BeanDefinition-的获取"><a href="#BeanDefinition-的获取" class="headerlink" title="BeanDefinition 的获取"></a>BeanDefinition 的获取</h3><p>BeanDefinitionBuilder.genericBeanDefinition().getBeanDefinition();</p>
+<h3 id="BeanDefinition-的作用"><a href="#BeanDefinition-的作用" class="headerlink" title="BeanDefinition 的作用"></a>BeanDefinition 的作用</h3><p>管理和存储 Spring 中 bean 对象的定义，是一个 map 类型的容器，Spring 在启动时会根据 BeanDefinition 中的信息去创建对应的 bean对象。</p>
+<h3 id="XmlBeanDefinitonReader"><a href="#XmlBeanDefinitonReader" class="headerlink" title="XmlBeanDefinitonReader"></a>XmlBeanDefinitonReader</h3><p>用于读取 xml 资源文件中关于 bean 对象的定义，提供 bean对象的注册/移除功能</p>
+<h3 id="AnnotatedBeanDefinitionReader"><a href="#AnnotatedBeanDefinitionReader" class="headerlink" title="AnnotatedBeanDefinitionReader"></a>AnnotatedBeanDefinitionReader</h3><p>可以直接把某个类转换为BeanDefinition，并且会解析该类上的注解</p>
+<p>注：它能解析的注解是：@Conditional，@Scope、@Lazy、@Primary、@DependsOn、@Role、@Description</p>
+<h3 id="ClassPathBeanDefinitonScanner"><a href="#ClassPathBeanDefinitonScanner" class="headerlink" title="ClassPathBeanDefinitonScanner"></a>ClassPathBeanDefinitonScanner</h3><p>路径扫描器，扫描指定路径下的类，并将扫描到的具体注解的类加入到 BeanDefinition 容器中，如果没有@Component（@Service、@Controller 等@Component 的子类型注解）则不会加入 BeanDefinition 中.</p>
+<p>这个并不是BeanDefinitionReader，但是它的作用和BeanDefinitionReader类似，它可以进行扫描，可以实现对包路径的扫描，并对扫描到的类进行解析如果存在@Component注解，则会把这个类解析为一个BeanDefinition。</p>
+<h3 id="MetadataReader-元数据读取器"><a href="#MetadataReader-元数据读取器" class="headerlink" title="MetadataReader 元数据读取器"></a>MetadataReader 元数据读取器</h3><p>所谓元数据，是指：类名、类的注解、类的内部类、实现的方法、父类、被注解的方法，注解的类型等</p>
+<p>元数据读取器就是将元数据信息存入 BeanDefinition中</p>
+<h2 id="BeanFactory"><a href="#BeanFactory" class="headerlink" title="BeanFactory"></a>BeanFactory</h2><p>BeanFactory 是一个接口，用于实现创建bean 对象的工厂。</p>
+<h4 id="DefaultListableBeanFactory-BeanFactory-的核心实现类"><a href="#DefaultListableBeanFactory-BeanFactory-的核心实现类" class="headerlink" title="DefaultListableBeanFactory-BeanFactory 的核心实现类"></a>DefaultListableBeanFactory-BeanFactory 的核心实现类</h4><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gnfd6gqbfjj329m0u0gpu.jpg"></p>
+<h2 id="ApplicationContext–功能更加强大的-BeanFactory"><a href="#ApplicationContext–功能更加强大的-BeanFactory" class="headerlink" title="ApplicationContext–功能更加强大的 BeanFactory"></a>ApplicationContext–功能更加强大的 BeanFactory</h2><p><strong>AnnotationConfigApplicationContext</strong></p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">AnnotationConfigRegistry</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Register one or more component classes to be processed.</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;Calls to &#123;<span class="doctag">@code</span> register&#125; are idempotent; adding the same</span></span><br><span class="line"><span class="comment">	 * component class more than once has no additional effect.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> componentClasses one or more component classes,</span></span><br><span class="line"><span class="comment">	 * e.g. &#123;<span class="doctag">@link</span> Configuration <span class="doctag">@Configuration</span>&#125; classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">register</span><span class="params">(Class&lt;?&gt;... componentClasses)</span></span>;<span class="comment">//  AnnotatedBeanDefinitionReader</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Perform a scan within the specified base packages.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> basePackages the packages to scan for component classes</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">void</span> <span class="title">scan</span><span class="params">(String... basePackages)</span></span>;  <span class="comment">// ClassPathBeanDefinitionScanner</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>void register(Class&lt;?&gt;… componentClasses);实现对AnnotatedBeanDefinitionReader的支持</li>
+<li>void scan(String… basePackages)实现对ClassPathBeanDefinitionScanner的支持</li>
+</ul>
+<p>注：无法直接注册单例 bean</p>
+<p>ApplicationContext具有的功能：</p>
+<ul>
+<li>获取系统环境信息</li>
+<li>获取 Bean 信息</li>
+<li>获取父子工厂 bean</li>
+<li>支持国际化 MessageSource</li>
+<li>事件发布功能</li>
+<li>获取资源文件 getResource</li>
+</ul>
+<h2 id="BeanPostProcessor"><a href="#BeanPostProcessor" class="headerlink" title="BeanPostProcessor"></a>BeanPostProcessor</h2><p>Bean的后置处理器，是 Spring 提供给程序员可以在 bean 的生命周期中对创建 bean 的过程进行干预，是属于BeanFactory中一个属性，通过对 BeanPostProcessor内部方的重写，可以在创建 bean的过程中实现跳过部分默认方法或功能。</p>
+<h2 id="BeanFactoryPostProcessor"><a href="#BeanFactoryPostProcessor" class="headerlink" title="BeanFactoryPostProcessor"></a>BeanFactoryPostProcessor</h2><p>Bean工厂的后置处理器，是属于ApplicationContext中的一个属性，是ApplicationContext在实例化一个BeanFactory后，可以利用BeanFactoryPostProcessor继续处理BeanFactory。</p>
+<p>通过BeanFactoryPostProcessor间接的设置BeanFactory，比如上文中的CustomEditorConfigurer就是一个BeanFactoryPostProcessor，我们可以通过它向BeanFactory中添加自定义的PropertyEditor。</p>
+<h2 id="FactoryBean"><a href="#FactoryBean" class="headerlink" title="FactoryBean"></a>FactoryBean</h2><h3 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h3><p>特殊的 bean,是个接口,有两个普通的方法和一个默认方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">FactoryBean</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">	String OBJECT_TYPE_ATTRIBUTE = <span class="string">&quot;factoryBeanObjectType&quot;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function">T <span class="title">getObject</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	Class&lt;?&gt; getObjectType();</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">default</span> <span class="keyword">boolean</span> <span class="title">isSingleton</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="具体的使用流程"><a href="#具体的使用流程" class="headerlink" title="具体的使用流程"></a>具体的使用流程</h3><p>调用 FactoryBean 的 getBean 方法会返回 getObject 中的对象，而不是 FactoryBean 这个类型的 Bean，且该对象（Bean）是在第一次 getBean 中生成并放入 FactoryBean 的缓存<code>FactoryBeanObjectCache</code>中。FactoryBean 中的 getObject()<code>相当于产生一个懒加载的 bean</code>。</p>
+<p>首先 applicationContext.getBean()从单例池中获取bean，判断这个 bean 是否是实现了 FactoryBean,如果是则通过 getObject 方法返回 bean,否则直接返回单例池中的 bean。</p>
+<p>如果需要获取 FactoryBean 这个类的 bean 需要在 beanName加上前缀“&amp;”若干个（Spring 内部会通过 do-while 循环处理掉前缀），源码中会对 beanName 进行判断，是否是获取类类型的 bean 还是 getObject 方法返回的 bean。</p>
+<p>注：使用缓存是为了保证 bean对象是单例的。</p>
+<h3 id="应用场景"><a href="#应用场景" class="headerlink" title="应用场景"></a>应用场景</h3><p>整合第三方框架、如 mybatis</p>
+<h3 id="与BeanFactory的区别"><a href="#与BeanFactory的区别" class="headerlink" title="与BeanFactory的区别"></a>与BeanFactory的区别</h3><p>BeanFactory 是个创建 Bean 的工厂，可以产生 FactoryBean。产生的 bean 的类型是各种各样的</p>
+<p>FactoryBean 小工厂，产生的 bean 是同一个类型</p>
+<h3 id="与-bean-的区别"><a href="#与-bean-的区别" class="headerlink" title="与@bean 的区别"></a>与@bean 的区别</h3><p>@bean 功能单一，FactoryBean 可以实现其他接口，扩展更多的功能。</p>
+<h3 id="SmartFactoryBean"><a href="#SmartFactoryBean" class="headerlink" title="SmartFactoryBean"></a>SmartFactoryBean</h3><p>是 FactoryBean 的一种实现类，提供了一个判断是否立即初始化的方法</p>
+<ul>
+<li>isEagerInit()：是否立即初始化，true—-就不是懒加载 bean。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
       </tags>
   </entry>
   <entry>
@@ -3086,13 +3086,54 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
+    <title>JVM-运行时数据区与内存溢出异常</title>
+    <url>/2021/05/22/%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8/</url>
+    <content><![CDATA[<h1 id="JVM-内存模型"><a href="#JVM-内存模型" class="headerlink" title="JVM 内存模型"></a>JVM 内存模型</h1><h2 id="区域划分"><a href="#区域划分" class="headerlink" title="区域划分"></a>区域划分</h2><p>JVM 在执行 Java 程序的过程中会把 JVM 中的内存划分为若干不同的数据区域，这些区域由以下几个运行时数据区组成：</p>
+<img src="https://tva1.sinaimg.cn/large/008i3skNgy1gqrgdmsizyj30ok0eedhz.jpg" style="zoom:70%;" />
+
+<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>程序计数器在整个 JVM 中只占一块较小的内存区域，是<code>当前线程</code>执行的字节码的行号指示器，其作用是在字节码文件执行的时候通过<code>改变计数器的值</code>选取要执行的字节码指令，例如分支、循环、跳转、异常处理等指令都是由依赖程序计数器完成的。</p>
+<p>JVM的多线程是通过线程的轮流切换、分配处理器执行时间的方式实现的，在多核处理器环境中，每个线程都拥有自己的程序计数器，不同线程的计数器之间相互不影响，独立存储，即<strong>程序计数器是线程私有的</strong>。</p>
+<blockquote>
+<p>如果线程正在执行的是一个 Java 方法，则这个计数器记录的是正在执行的虚拟机字节码指令的地址；如果线程正在执行的是naive方法，则该线程的程序计数器值应为空。</p>
+</blockquote>
+<h3 id="Java-虚拟机栈"><a href="#Java-虚拟机栈" class="headerlink" title="Java 虚拟机栈"></a>Java 虚拟机栈</h3><p>Java 虚拟机栈也被称为 Java栈，也是线程私有的。其作用是用来描述 Java 方法执行的线程内存模型：每个方法在执行的时候，虚拟机都会同步创建一个<code>栈帧</code>用于存放局部变量表、操作数栈、动态连接、方法出口（返回地址）等信息。</p>
+<p><strong>方法从调用到执行完毕的过程其实就是栈帧在Java虚拟机栈中入栈到出栈的过程。</strong></p>
+<p><strong>栈帧（Stack Frame）</strong>是用于支持虚拟机进行方法调用和方法执行的数据结构。它是虚拟机运行时数据区中的java虚拟机栈的栈元素，其中：</p>
+<ol>
+<li>局部变量表</li>
+<li>操作数栈</li>
+<li>动态连接</li>
+<li>方法出口</li>
+</ol>
+<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>本地方法栈与 Java 虚拟机栈作用类似，Java 栈是用来执行 Java 方法的，本地方法栈是服务与本地（Native）方法的，在 HotSpot虚拟机中之间将 Java 栈和本地方法栈合二为一。本地方法栈在栈深度溢出或栈扩展失败时抛出 StackOverflowError 和 OutOfMemoryError异常。</p>
+<h3 id="Java-堆"><a href="#Java-堆" class="headerlink" title="Java 堆"></a>Java 堆</h3><p>Java堆是 JVM内存中最大的一块，由虚拟机在启动时创建。是被所有线程共享的的一块区域，存放的是对象的实例，几乎所有的对象实例和数组都是在堆中完成分配的。</p>
+<p>Java 堆又被称为 GC 堆，是 垃圾收集器管理的内存区域，现在的垃圾收集器大部分都是基于分代收集理论设计的，所以 Java 堆中存在不同的分代空间（新生代、老年代、永久代、Eden区、Survivor 区等）这样对 Java 堆的细分目的都是为了更好的进行内存的回收已经更快的内存分配。</p>
+<blockquote>
+<p>并不是所有的对象都是在 Java 堆上创建的</p>
+</blockquote>
+<p>Java 堆的大小可以是固定的也可以是扩展的（通过参数-Xmx 和-Xms 设定），如果在 Java 堆中没有内存完成实例的分配，并且堆也无法扩展时，Java 虚拟机就会抛出 OOM 异常。</p>
+<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p>方法区是 JVM 用于存储已经被虚拟机加载的类型信息、常量、静态变量、即时编译后的代码缓存等数据。方法区与 Java 堆一样是所有线程共享的内存区域。</p>
+<h3 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h3><p>运行时常量池是方法区的一部分，所以也是所有线程共享的内存区域。Class 文件中除了有类的版本、字段、方法、接口等描述信息外、还有就是常量池表，是用于存放编译期生成的各种字面量与符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。</p>
+<blockquote>
+<p>运行时常量池相比于Class 文件常量池的另一个重要特点就是具备动态性，Java 语言并不要求常量一定只有在编译器才能产生，也就是说，并非预置入 Class 文件中常量池的内容才能进入方法区运行时常量池，运行期间也可以将新的常量放入池中，用的比较多的就是 String类的 intern()方法</p>
+</blockquote>
+<p>运行时常量池和方法区一样，当方法区/常量池无法再申请到内存时会抛出 OOM 异常。</p>
+]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>雪花id重复问题与解决方案</title>
     <url>/2023/07/27/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/</url>
     <content><![CDATA[<h1 id="雪花id重复问题与解决方案"><a href="#雪花id重复问题与解决方案" class="headerlink" title="雪花id重复问题与解决方案"></a>雪花id重复问题与解决方案</h1><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>CSM项目中用线程池异步插入日志数据，产线环境会偶发（出现的概率也不算小）日志表主键id重复的异常</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D-%E6%97%A5%E5%BF%97%E7%8E%B0%E5%9C%BA" alt="image-20230727110910080"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D-%E6%97%A5%E5%BF%97%E7%8E%B0%E5%9C%BA" alt="image-20230727110910080"></p>
 <h2 id="二、排查过程"><a href="#二、排查过程" class="headerlink" title="二、排查过程"></a>二、排查过程</h2><p>一开始怀疑是mybatis-plus的主键生成策略的问题，但是项目中采用的生成策略是雪花算法生成的id</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E6%8E%92%E6%9F%A501" alt="image-20230727111003701"></p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%9B%AA%E8%8A%B1id%E6%8E%92%E6%9F%A502" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E6%8E%92%E6%9F%A501" alt="image-20230727111003701"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E6%8E%92%E6%9F%A502" alt="img"></p>
 <p>首先简单介绍一下雪花算法(SnowFlake算法)的设计思路：</p>
 <p><strong>雪花算法</strong>是Twitter设计的根据时间戳、机器标识码和序列号生成的唯一长整型数。</p>
 <p>使用一个 64 bit 的 long 型的数字作为全局唯一 id。这 64 个 bit 中，其中 1 个 bit 是不用的，然后用其中的 41 bit 作为毫秒数，用 10 bit 作为标识位，12 bit 作为序列号。</p>
@@ -3116,7 +3157,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>依赖与系统时间的一致性，如果系统时间被回调，或者改变，可能会造成 ID 冲突或者重复。</p>
 <p>递增序列号，表示节点毫秒内生成重复，通过序列号表示唯一，12bit 每毫秒可产生 4096 个 ID</p>
 <p>而mybatis-plus雪花算法的具体实现为：</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%9B%AA%E8%8A%B1id%E7%AE%97%E6%B3%95%E6%BA%90%E7%A0%81" alt="image-20230727110704935"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E7%AE%97%E6%B3%95%E6%BA%90%E7%A0%81" alt="image-20230727110704935"></p>
 <p>源码的逻辑大体可以分为三个部分：</p>
 <p>1.对项目重启可能出现的系统时钟回退的情况处理</p>
 <p>2.处理并发情况下时间戳一样的场景</p>
@@ -3126,21 +3167,21 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>●   服务通过集群的方式部署，其中部分机器标识位一致</p>
 <p>●   生成 ID 的时机：同一毫秒下的序列号一致</p>
 <p>关于并发问题，我查了听云，出现问题的时间段系统的QPS大概是200+</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E8%AF%B7%E6%B1%82%E6%83%85%E5%86%B5" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E8%AF%B7%E6%B1%82%E6%83%85%E5%86%B5" alt="img"></p>
 <p>关于标识位的问题，我们首先看一下标识位的定义与实现。</p>
 <p>首先项目中生成的id的工具类是使用的和mybatis-plus一样的默认id生成器，其中Sequence采用的是无参构造函数。</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%9B%AA%E8%8A%B1id-sequence" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id-sequence" alt="img"></p>
 <p>Sequence的相关逻辑如下：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Sequence</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     <span class="keyword">this</span>.datacenterId = getDatacenterId(maxDatacenterId);</span><br><span class="line">     <span class="keyword">this</span>.workerId = getMaxWorkerId(datacenterId, maxWorkerId);</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">   <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * 数据标识id部分</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">   <span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">getDatacenterId</span><span class="params">(<span class="keyword">long</span> maxDatacenterId)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">long</span> id = <span class="number">0L</span>;</span><br><span class="line">     <span class="keyword">try</span> &#123;</span><br><span class="line">       InetAddress ip = InetAddress.getLocalHost();</span><br><span class="line">       NetworkInterface network = NetworkInterface.getByInetAddress(ip);</span><br><span class="line">       <span class="keyword">if</span> (network == <span class="keyword">null</span>) &#123;</span><br><span class="line">         id = <span class="number">1L</span>;</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         <span class="keyword">byte</span>[] mac = network.getHardwareAddress();</span><br><span class="line">         <span class="keyword">if</span> (<span class="keyword">null</span> != mac) &#123;</span><br><span class="line">           id = ((<span class="number">0x000000FF</span> &amp; (<span class="keyword">long</span>) mac[mac.length - <span class="number">1</span>]) | (<span class="number">0x0000FF00</span> &amp; (((<span class="keyword">long</span>) mac[mac.length - <span class="number">2</span>]) &lt;&lt; <span class="number">8</span>))) &gt;&gt; <span class="number">6</span>;</span><br><span class="line">           id = id % (maxDatacenterId + <span class="number">1</span>);</span><br><span class="line">         &#125;</span><br><span class="line">       &#125;</span><br><span class="line">     &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">       logger.warn(<span class="string">&quot; getDatacenterId: &quot;</span> + e.getMessage());</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="keyword">return</span> id;</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * 获取 maxWorkerId</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">   <span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">getMaxWorkerId</span><span class="params">(<span class="keyword">long</span> datacenterId, <span class="keyword">long</span> maxWorkerId)</span> </span>&#123;</span><br><span class="line">     StringBuilder mpid = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">     mpid.append(datacenterId);</span><br><span class="line">     String name = ManagementFactory.getRuntimeMXBean().getName();</span><br><span class="line">     <span class="keyword">if</span> (StringUtils.isNotBlank(name)) &#123;</span><br><span class="line">       <span class="comment">/*</span></span><br><span class="line"><span class="comment">       \* GET jvmPid</span></span><br><span class="line"><span class="comment">       */</span></span><br><span class="line">       mpid.append(name.split(StringPool.AT)[<span class="number">0</span>]);</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="comment">/*</span></span><br><span class="line"><span class="comment">     \* MAC + PID 的 hashcode 获取16个低位</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">     <span class="keyword">return</span> (mpid.toString().hashCode() &amp; <span class="number">0xffff</span>) % (maxWorkerId + <span class="number">1</span>);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
 
 <p>在上述代码中datacenterId的实现是与mac地址有关，workerId是与jvm进程的pid有关。</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E5%AE%9E%E4%BE%8Bip%E6%83%85%E5%86%B5" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E5%AE%9E%E4%BE%8Bip%E6%83%85%E5%86%B5" alt="img"></p>
 <p>CSM产线环境有4台实例，每个实例是部署在不同的物理节点上，他们的pid和mac地址分别为：</p>
 <p>pod name                          pid   mac地址           mac地址转换后的byte数组<br> csmapi-ucprod-684f4bb5d7-kp4bg    13    86:ae:93:40:9f:aa   {-122, -82, -109, 64, -97, -86}<br> csmapi-ucprod-684f4bb5d7-m689j    13    2e:f9:0e:76:40:de   {46, -7, 14, 118, 64, -34}<br> csmapi-ucprod-684f4bb5d7-h6cvd    13    fe:37:d1:b6:18:bd    {-2, 55, -47, -74, 24, -67}<br> csmapi-ucprod-684f4bb5d7-6p8st    13    da:30:a7:11:92:36   {-38, 48, -89, 17, -110, 54}</p>
 <p>根据上面结果可以看出mac地址在转成byte的数组之后，参与计算的后两位元素并不是完全相同，由此可知datacenterId是不一样的，按道理应该不会产生一样的标识位，再根据雪花算法的数据组成机构推，也不应该生成相同的id。</p>
 <p>既然算法没问题，那么我们回到问题本身，看一下开始出现这个问题的时间点上：</p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E9%97%AE%E9%A2%98%E7%8E%B0%E5%9C%BA2" alt="img"></p>
-<p><img src="https://raw.githubusercontent.com/he-You/img/master/%E5%90%AF%E5%8A%A8%E6%B6%88%E6%81%AF" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%97%AE%E9%A2%98%E7%8E%B0%E5%9C%BA2" alt="img"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E5%90%AF%E5%8A%A8%E6%B6%88%E6%81%AF" alt="img"></p>
 <h2 id="三、推论"><a href="#三、推论" class="headerlink" title="三、推论"></a>三、推论</h2><p>根据上述排查过程，我们可以得出两个推论：</p>
 <p>1.当前产线运行的4个pod，mac地址后两位不都是一样的，所以按照雪花算法的设计，到下次服务重启之间，应该都不会出现id重复的问题。</p>
 <p>2.在上个版本产线运行的pod中存在mac地址后两位一样的pod，这就导致datacenterId是一样的，所以在一定并发量的情况下，就可能会出现一样的雪花id</p>
@@ -3205,47 +3246,6 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>日常问题</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>JVM-运行时数据区与内存溢出异常</title>
-    <url>/2021/05/22/%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E5%BC%82%E5%B8%B8/</url>
-    <content><![CDATA[<h1 id="JVM-内存模型"><a href="#JVM-内存模型" class="headerlink" title="JVM 内存模型"></a>JVM 内存模型</h1><h2 id="区域划分"><a href="#区域划分" class="headerlink" title="区域划分"></a>区域划分</h2><p>JVM 在执行 Java 程序的过程中会把 JVM 中的内存划分为若干不同的数据区域，这些区域由以下几个运行时数据区组成：</p>
-<img src="https://tva1.sinaimg.cn/large/008i3skNgy1gqrgdmsizyj30ok0eedhz.jpg" style="zoom:70%;" />
-
-<h3 id="程序计数器"><a href="#程序计数器" class="headerlink" title="程序计数器"></a>程序计数器</h3><p>程序计数器在整个 JVM 中只占一块较小的内存区域，是<code>当前线程</code>执行的字节码的行号指示器，其作用是在字节码文件执行的时候通过<code>改变计数器的值</code>选取要执行的字节码指令，例如分支、循环、跳转、异常处理等指令都是由依赖程序计数器完成的。</p>
-<p>JVM的多线程是通过线程的轮流切换、分配处理器执行时间的方式实现的，在多核处理器环境中，每个线程都拥有自己的程序计数器，不同线程的计数器之间相互不影响，独立存储，即<strong>程序计数器是线程私有的</strong>。</p>
-<blockquote>
-<p>如果线程正在执行的是一个 Java 方法，则这个计数器记录的是正在执行的虚拟机字节码指令的地址；如果线程正在执行的是naive方法，则该线程的程序计数器值应为空。</p>
-</blockquote>
-<h3 id="Java-虚拟机栈"><a href="#Java-虚拟机栈" class="headerlink" title="Java 虚拟机栈"></a>Java 虚拟机栈</h3><p>Java 虚拟机栈也被称为 Java栈，也是线程私有的。其作用是用来描述 Java 方法执行的线程内存模型：每个方法在执行的时候，虚拟机都会同步创建一个<code>栈帧</code>用于存放局部变量表、操作数栈、动态连接、方法出口（返回地址）等信息。</p>
-<p><strong>方法从调用到执行完毕的过程其实就是栈帧在Java虚拟机栈中入栈到出栈的过程。</strong></p>
-<p><strong>栈帧（Stack Frame）</strong>是用于支持虚拟机进行方法调用和方法执行的数据结构。它是虚拟机运行时数据区中的java虚拟机栈的栈元素，其中：</p>
-<ol>
-<li>局部变量表</li>
-<li>操作数栈</li>
-<li>动态连接</li>
-<li>方法出口</li>
-</ol>
-<h3 id="本地方法栈"><a href="#本地方法栈" class="headerlink" title="本地方法栈"></a>本地方法栈</h3><p>本地方法栈与 Java 虚拟机栈作用类似，Java 栈是用来执行 Java 方法的，本地方法栈是服务与本地（Native）方法的，在 HotSpot虚拟机中之间将 Java 栈和本地方法栈合二为一。本地方法栈在栈深度溢出或栈扩展失败时抛出 StackOverflowError 和 OutOfMemoryError异常。</p>
-<h3 id="Java-堆"><a href="#Java-堆" class="headerlink" title="Java 堆"></a>Java 堆</h3><p>Java堆是 JVM内存中最大的一块，由虚拟机在启动时创建。是被所有线程共享的的一块区域，存放的是对象的实例，几乎所有的对象实例和数组都是在堆中完成分配的。</p>
-<p>Java 堆又被称为 GC 堆，是 垃圾收集器管理的内存区域，现在的垃圾收集器大部分都是基于分代收集理论设计的，所以 Java 堆中存在不同的分代空间（新生代、老年代、永久代、Eden区、Survivor 区等）这样对 Java 堆的细分目的都是为了更好的进行内存的回收已经更快的内存分配。</p>
-<blockquote>
-<p>并不是所有的对象都是在 Java 堆上创建的</p>
-</blockquote>
-<p>Java 堆的大小可以是固定的也可以是扩展的（通过参数-Xmx 和-Xms 设定），如果在 Java 堆中没有内存完成实例的分配，并且堆也无法扩展时，Java 虚拟机就会抛出 OOM 异常。</p>
-<h3 id="方法区"><a href="#方法区" class="headerlink" title="方法区"></a>方法区</h3><p>方法区是 JVM 用于存储已经被虚拟机加载的类型信息、常量、静态变量、即时编译后的代码缓存等数据。方法区与 Java 堆一样是所有线程共享的内存区域。</p>
-<h3 id="运行时常量池"><a href="#运行时常量池" class="headerlink" title="运行时常量池"></a>运行时常量池</h3><p>运行时常量池是方法区的一部分，所以也是所有线程共享的内存区域。Class 文件中除了有类的版本、字段、方法、接口等描述信息外、还有就是常量池表，是用于存放编译期生成的各种字面量与符号引用，这部分内容将在类加载后存放到方法区的运行时常量池中。</p>
-<blockquote>
-<p>运行时常量池相比于Class 文件常量池的另一个重要特点就是具备动态性，Java 语言并不要求常量一定只有在编译器才能产生，也就是说，并非预置入 Class 文件中常量池的内容才能进入方法区运行时常量池，运行期间也可以将新的常量放入池中，用的比较多的就是 String类的 intern()方法</p>
-</blockquote>
-<p>运行时常量池和方法区一样，当方法区/常量池无法再申请到内存时会抛出 OOM 异常。</p>
-]]></content>
-      <categories>
-        <category>Java</category>
-      </categories>
-      <tags>
-        <tag>JVM</tag>
       </tags>
   </entry>
   <entry>
