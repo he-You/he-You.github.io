@@ -1,0 +1,305 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>雪花id重复问题与解决方案 | he-You</title><meta name="keywords" content="日常问题"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="雪花id重复问题与解决方案一、背景CSM项目中用线程池异步插入日志数据，产线环境会偶发（出现的概率也不算小）日志表主键id重复的异常  二、排查过程一开始怀疑是mybatis-plus的主键生成策略的问题，但是项目中采用的生成策略是雪花算法生成的id   首先简单介绍一下雪花算法(SnowFlake算法)的设计思路： 雪花算法是Twitter设计的根据时间戳、机器标识码和序列号生成的唯一长整型数。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="雪花id重复问题与解决方案">
+<meta property="og:url" content="https://he-you.github.io/2023/07/27/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="雪花id重复问题与解决方案一、背景CSM项目中用线程池异步插入日志数据，产线环境会偶发（出现的概率也不算小）日志表主键id重复的异常  二、排查过程一开始怀疑是mybatis-plus的主键生成策略的问题，但是项目中采用的生成策略是雪花算法生成的id   首先简单介绍一下雪花算法(SnowFlake算法)的设计思路： 雪花算法是Twitter设计的根据时间戳、机器标识码和序列号生成的唯一长整型数。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://he-you.github.io/img/article3.jpg">
+<meta property="article:published_time" content="2023-07-27T03:08:40.393Z">
+<meta property="article:modified_time" content="2023-07-27T03:10:28.641Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="日常问题">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://he-you.github.io/img/article3.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2023/07/27/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-07-27 11:10:28'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">50</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">38</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">12</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/article3.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">雪花id重复问题与解决方案</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2023-07-27T03:08:40.393Z" title="发表于 2023-07-27 11:08:40">2023-07-27</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2023-07-27T03:10:28.641Z" title="更新于 2023-07-27 11:10:28">2023-07-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E8%B8%A9%E5%9D%91%E8%AE%B0%E5%BD%95/">踩坑记录</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="雪花id重复问题与解决方案"><a href="#雪花id重复问题与解决方案" class="headerlink" title="雪花id重复问题与解决方案"></a>雪花id重复问题与解决方案</h1><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>CSM项目中用线程池异步插入日志数据，产线环境会偶发（出现的概率也不算小）日志表主键id重复的异常</p>
+<p><img src="https://article.biliimg.com/bfs/article/f29f34413b199c98120660e04bd839b1d65bbfbd.png" alt="image-20230727110910080"></p>
+<h2 id="二、排查过程"><a href="#二、排查过程" class="headerlink" title="二、排查过程"></a>二、排查过程</h2><p>一开始怀疑是mybatis-plus的主键生成策略的问题，但是项目中采用的生成策略是雪花算法生成的id</p>
+<p><img src="https://article.biliimg.com/bfs/article/fc736ee4e75449dd9fe51132508cd5336974b0a5.png" alt="image-20230727111003701"></p>
+<p><img src="https://article.biliimg.com/bfs/article/14aff611a424c607d4cab9ca3ed466496f4117d0.jpg" alt="img"></p>
+<p>首先简单介绍一下雪花算法(SnowFlake算法)的设计思路：</p>
+<p><strong>雪花算法</strong>是Twitter设计的根据时间戳、机器标识码和序列号生成的唯一长整型数。</p>
+<p>使用一个 64 bit 的 long 型的数字作为全局唯一 id。这 64 个 bit 中，其中 1 个 bit 是不用的，然后用其中的 41 bit 作为毫秒数，用 10 bit 作为标识位，12 bit 作为序列号。</p>
+<p>0 - 0000000000 0000000000 0000000000 0000000000 0 - 0000000000 - 000000000000</p>
+<p>符号位           时间戳                             标识位        序列号</p>
+<p>包含四个组成部分：</p>
+<p>●   不使用：1bit，最高位是符号位，0 表示正，1 表示负，固定为 0</p>
+<p>●   时间戳：41bit，毫秒级的时间戳（41 位的长度可以使用 69 年）</p>
+<p>●   标识位：5bit 数据中心（datacenterId） ID，5bit 工作机器(workerId) ID，两个标识位组合起来最多可以支持部署 1024 个节点</p>
+<p>●   序列号：12bit </p>
+<p><strong>SnowFlake 算法的优点：</strong></p>
+<ol>
+<li><p>高性能高可用：生成时不依赖于数据库，完全在内存中生成</p>
+</li>
+<li><p>高吞吐：每秒钟能生成数百万的自增 ID</p>
+</li>
+<li><p>ID 自增：存入数据库中，索引效率高</p>
+</li>
+</ol>
+<p><strong>SnowFlake 算法的缺点：</strong></p>
+<p>依赖与系统时间的一致性，如果系统时间被回调，或者改变，可能会造成 ID 冲突或者重复。</p>
+<p>递增序列号，表示节点毫秒内生成重复，通过序列号表示唯一，12bit 每毫秒可产生 4096 个 ID</p>
+<p>而mybatis-plus雪花算法的具体实现为：</p>
+<p><img src="https://article.biliimg.com/bfs/article/c2152ff05240abb2211e559d6b460eaf550dd0af.png" alt="image-20230727110704935"></p>
+<p>源码的逻辑大体可以分为三个部分：</p>
+<p>1.对项目重启可能出现的系统时钟回退的情况处理</p>
+<p>2.处理并发情况下时间戳一样的场景</p>
+<p>3.计算生成雪花id</p>
+<p>关于雪花id重复的问题，我在网上查了，出现的场景大体以下几个条件：</p>
+<p>●   业务存在一定的并发量，没有并发量无法触发重复问题</p>
+<p>●   服务通过集群的方式部署，其中部分机器标识位一致</p>
+<p>●   生成 ID 的时机：同一毫秒下的序列号一致</p>
+<p>关于并发问题，我查了听云，出现问题的时间段系统的QPS大概是200+</p>
+<p><img src="https://article.biliimg.com/bfs/article/b6c36100d5e824f27c0de5e51f76ccd6c3fd4e0b.jpg" alt="img"></p>
+<p>关于标识位的问题，我们首先看一下标识位的定义与实现。</p>
+<p>首先项目中生成的id的工具类是使用的和mybatis-plus一样的默认id生成器，其中Sequence采用的是无参构造函数。</p>
+<p><img src="https://article.biliimg.com/bfs/article/668d00a0165f98783a79b1190456ce7af65ece5e.jpg" alt="img"></p>
+<p>Sequence的相关逻辑如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">Sequence</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     <span class="keyword">this</span>.datacenterId = getDatacenterId(maxDatacenterId);</span><br><span class="line">     <span class="keyword">this</span>.workerId = getMaxWorkerId(datacenterId, maxWorkerId);</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">   <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * 数据标识id部分</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">   <span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">getDatacenterId</span><span class="params">(<span class="keyword">long</span> maxDatacenterId)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">long</span> id = <span class="number">0L</span>;</span><br><span class="line">     <span class="keyword">try</span> &#123;</span><br><span class="line">       InetAddress ip = InetAddress.getLocalHost();</span><br><span class="line">       NetworkInterface network = NetworkInterface.getByInetAddress(ip);</span><br><span class="line">       <span class="keyword">if</span> (network == <span class="keyword">null</span>) &#123;</span><br><span class="line">         id = <span class="number">1L</span>;</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         <span class="keyword">byte</span>[] mac = network.getHardwareAddress();</span><br><span class="line">         <span class="keyword">if</span> (<span class="keyword">null</span> != mac) &#123;</span><br><span class="line">           id = ((<span class="number">0x000000FF</span> &amp; (<span class="keyword">long</span>) mac[mac.length - <span class="number">1</span>]) | (<span class="number">0x0000FF00</span> &amp; (((<span class="keyword">long</span>) mac[mac.length - <span class="number">2</span>]) &lt;&lt; <span class="number">8</span>))) &gt;&gt; <span class="number">6</span>;</span><br><span class="line">           id = id % (maxDatacenterId + <span class="number">1</span>);</span><br><span class="line">         &#125;</span><br><span class="line">       &#125;</span><br><span class="line">     &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">       logger.warn(<span class="string">&quot; getDatacenterId: &quot;</span> + e.getMessage());</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="keyword">return</span> id;</span><br><span class="line">   &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="comment">/**</span></span><br><span class="line"><span class="comment">   * 获取 maxWorkerId</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">   <span class="function"><span class="keyword">protected</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">getMaxWorkerId</span><span class="params">(<span class="keyword">long</span> datacenterId, <span class="keyword">long</span> maxWorkerId)</span> </span>&#123;</span><br><span class="line">     StringBuilder mpid = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">     mpid.append(datacenterId);</span><br><span class="line">     String name = ManagementFactory.getRuntimeMXBean().getName();</span><br><span class="line">     <span class="keyword">if</span> (StringUtils.isNotBlank(name)) &#123;</span><br><span class="line">       <span class="comment">/*</span></span><br><span class="line"><span class="comment">       \* GET jvmPid</span></span><br><span class="line"><span class="comment">       */</span></span><br><span class="line">       mpid.append(name.split(StringPool.AT)[<span class="number">0</span>]);</span><br><span class="line">     &#125;</span><br><span class="line">     <span class="comment">/*</span></span><br><span class="line"><span class="comment">     \* MAC + PID 的 hashcode 获取16个低位</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">     <span class="keyword">return</span> (mpid.toString().hashCode() &amp; <span class="number">0xffff</span>) % (maxWorkerId + <span class="number">1</span>);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上述代码中datacenterId的实现是与mac地址有关，workerId是与jvm进程的pid有关。</p>
+<p><img src="https://article.biliimg.com/bfs/article/1049d8d2be700512e0d87ebbb8bc85102b96bd14.jpg" alt="img"></p>
+<p>CSM产线环境有4台实例，每个实例是部署在不同的物理节点上，他们的pid和mac地址分别为：</p>
+<p>pod name                          pid   mac地址           mac地址转换后的byte数组<br> csmapi-ucprod-684f4bb5d7-kp4bg    13    86:ae:93:40:9f:aa   {-122, -82, -109, 64, -97, -86}<br> csmapi-ucprod-684f4bb5d7-m689j    13    2e:f9:0e:76:40:de   {46, -7, 14, 118, 64, -34}<br> csmapi-ucprod-684f4bb5d7-h6cvd    13    fe:37:d1:b6:18:bd    {-2, 55, -47, -74, 24, -67}<br> csmapi-ucprod-684f4bb5d7-6p8st    13    da:30:a7:11:92:36   {-38, 48, -89, 17, -110, 54}</p>
+<p>根据上面结果可以看出mac地址在转成byte的数组之后，参与计算的后两位元素并不是完全相同，由此可知datacenterId是不一样的，按道理应该不会产生一样的标识位，再根据雪花算法的数据组成机构推，也不应该生成相同的id。</p>
+<p>既然算法没问题，那么我们回到问题本身，看一下开始出现这个问题的时间点上：</p>
+<p><img src="https://article.biliimg.com/bfs/article/8ccfd01f7fb3e75c25397d48f5ea3d1f9343e94e.jpg" alt="img"></p>
+<p><img src="https://article.biliimg.com/bfs/article/42dc78efde1c55b2b0facda50f2fa6fb7f7d3721.jpg" alt="img"></p>
+<p><img src="https://article.biliimg.com/bfs/article/e42d741b8b84656c38a1745232032d890fa7b608.jpg" alt="img"></p>
+<p><img src="https://article.biliimg.com/bfs/article/2cb78c0c9faf31f85806985c2ca4361756f2cfb4.jpg" alt="img"></p>
+<p><img src="https://article.biliimg.com/bfs/article/1e7c0d5d67e43a5a2c7b8534c96bbaa5b331fa86.jpg" alt="img"></p>
+<h2 id="三、推论"><a href="#三、推论" class="headerlink" title="三、推论"></a>三、推论</h2><p>根据上述排查过程，我们可以得出两个推论：</p>
+<p>1.当前产线运行的4个pod，mac地址后两位不都是一样的，所以按照雪花算法的设计，到下次服务重启之间，应该都不会出现id重复的问题。</p>
+<p>2.在上个版本产线运行的pod中存在mac地址后两位一样的pod，这就导致datacenterId是一样的，所以在一定并发量的情况下，就可能会出现一样的雪花id</p>
+<h2 id="四、优化方案"><a href="#四、优化方案" class="headerlink" title="四、优化方案"></a>四、优化方案</h2><p>通过上述对问题的排查与验证之后，方案也呼之欲出了，即使用Sequence的有参构造方法替代无参构造。</p>
+<h2 id="方案概述"><a href="#方案概述" class="headerlink" title="方案概述"></a>方案概述</h2><p>这边提供一下借助Nacos元数据实现的方案：</p>
+<ol>
+<li><p>通过在nacos元数据中新增服务注册时间</p>
+</li>
+<li><p>服务启动之后拉取实例列表，并通过元数据中的注册时间进行排序</p>
+</li>
+<li><p>计算每个实例在实例列表中的位置，将计算出的workerId写入实例的元数据中</p>
+</li>
+</ol>
+<h2 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h2><ol>
+<li><p>服务启动时，将服务注册时间写入nacos元数据中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Slf4j</span></span><br><span class="line"> <span class="meta">@Configuration</span></span><br><span class="line"> <span class="meta">@ConditionalOnNacosDiscoveryEnabled</span></span><br><span class="line"> <span class="meta">@AutoConfigureBefore(&#123;SimpleDiscoveryClientAutoConfiguration.class, CommonsClientAutoConfiguration.class&#125;)</span></span><br><span class="line"> <span class="meta">@ConditionalOnProperty(name = &quot;info.snowflake.generate.enabled&quot;, havingValue = &quot;true&quot;)</span></span><br><span class="line"> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NacosDiscoveryClientConfiguration</span> </span>&#123;</span><br><span class="line">   <span class="meta">@Bean</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> NacosDiscoveryProperties <span class="title">nacosProperties</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     NacosDiscoveryProperties nacosDiscoveryProperties = <span class="keyword">new</span> NacosDiscoveryProperties();</span><br><span class="line">     Map&lt;String, String&gt; metadata = nacosDiscoveryProperties.getMetadata();</span><br><span class="line">     metadata.put(<span class="string">&quot;register.time&quot;</span>, String.valueOf(System.nanoTime()));</span><br><span class="line">     <span class="keyword">return</span> nacosDiscoveryProperties;</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>监听服务可用(可对外提供服务)事件</p>
+</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> \* 监听服务可用事件</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> \* <span class="doctag">@author</span> heyou</span></span><br><span class="line"><span class="comment"> \* <span class="doctag">@date</span> 2022-07-25 17:24</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="meta">@Component</span></span><br><span class="line"> <span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">InitWorkerIdListener</span> <span class="keyword">implements</span> <span class="title">ApplicationListener</span>&lt;<span class="title">ApplicationReadyEvent</span>&gt; </span>&#123;</span><br><span class="line">   <span class="meta">@Resource</span></span><br><span class="line">   <span class="keyword">private</span> WorkerIdComponent workerIdComponent;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onApplicationEvent</span><span class="params">(ApplicationReadyEvent readyEvent)</span> </span>&#123;</span><br><span class="line">     Long workerId = workerIdComponent.initWorkerId();</span><br><span class="line">     <span class="comment">// 获取Bean</span></span><br><span class="line">     DefaultSqlSessionFactory mybatisSqlSessionFactoryBean = SpringUtil</span><br><span class="line">         .getBean(<span class="string">&quot;mybatisSqlSessionFactoryBean&quot;</span>, DefaultSqlSessionFactory.class);</span><br><span class="line">     <span class="keyword">if</span> (Objects.nonNull(mybatisSqlSessionFactoryBean)) &#123;</span><br><span class="line">       MybatisConfiguration configuration = (MybatisConfiguration) mybatisSqlSessionFactoryBean.getConfiguration();</span><br><span class="line">       <span class="keyword">if</span> (Objects.nonNull(configuration)) &#123;</span><br><span class="line">         GlobalConfig globalConfig = configuration.getGlobalConfig();</span><br><span class="line">         globalConfig.setWorkerId(workerId);</span><br><span class="line">       &#125;</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>当监听到可用事件时，说明整个服务已经完全启动成功，并可以对外提供服务了。此时服务也已注册到Nacos中，因此可以拉取到Naocs已注册的服务列表去进行排序和计算workerId</p>
+<ol start="3">
+<li>计算workerId</li>
+</ol>
+<p>考虑到存在系统时钟回退的情况，初始的workerId设置为10，1~10用来存储时钟回退的实例workerId。其中<strong>计算workerId中核心逻辑是如何找到当前实例在Nacos服务列表的具体位置</strong>。我们可以借助之前的排序，获取当前实例在排序的index,并将index作为当前实例的workerId</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Long <span class="title">workerId</span><span class="params">(List&lt;Instance&gt; instances, Instance currentInstance)</span> </span>&#123;</span><br><span class="line">     List&lt;Instance&gt; sortedInstances = sortInstance(instances);</span><br><span class="line">     <span class="comment">// 当前实例位置</span></span><br><span class="line">     <span class="keyword">int</span> currentIndex = sortedInstances.indexOf(currentInstance);</span><br><span class="line">     <span class="comment">// 存在workerId的集合</span></span><br><span class="line">     List&lt;Instance&gt; existWorkerIdInstances = instances.stream()</span><br><span class="line">         .filter(instance -&gt; Objects.nonNull(instance.getMetadata().get(WORKER_ID)))</span><br><span class="line">         .collect(Collectors.toList());</span><br><span class="line">     <span class="keyword">if</span> (CollectionUtils.isNotEmpty(existWorkerIdInstances)) &#123;</span><br><span class="line">       <span class="comment">// 获取最大workerId实例作为基准实例</span></span><br><span class="line">       <span class="keyword">int</span> maxWorkerIdIndex = existWorkerIdInstances.size() - <span class="number">1</span>;</span><br><span class="line">       Instance maxWorkerIdInstance = sortedInstances.get(maxWorkerIdIndex);</span><br><span class="line">       <span class="comment">// 偏移量</span></span><br><span class="line">       <span class="keyword">int</span> offset = currentIndex - maxWorkerIdIndex;</span><br><span class="line">       Long workerIdFormMetadata = getWorkerIdFormMetadata(maxWorkerIdInstance);</span><br><span class="line"> </span><br><span class="line">       <span class="keyword">if</span> (offset &lt; <span class="number">0</span>) &#123;</span><br><span class="line">         <span class="keyword">if</span> (workerIdFormMetadata + offset &lt; START_WORKERID || existWorkerIdInstances.stream()</span><br><span class="line">             .anyMatch(d -&gt; getWorkerIdFormMetadata(d).equals(workerIdFormMetadata + offset))) &#123;</span><br><span class="line">           <span class="comment">// 说明时间回退了</span></span><br><span class="line">           <span class="keyword">return</span> caclBackWorkId(offset, existWorkerIdInstances);</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">return</span> workerIdFormMetadata + offset;</span><br><span class="line">       &#125; <span class="keyword">else</span> <span class="keyword">if</span> (workerIdFormMetadata &lt;= START_WORKERID) &#123;</span><br><span class="line">         <span class="comment">// 极端情况 目前存在的几个都是时间回退的</span></span><br><span class="line">         <span class="keyword">return</span> START_WORKERID + <span class="number">1L</span>;</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">         <span class="keyword">return</span> caclWorkId(offset, maxWorkerIdInstance, existWorkerIdInstances);</span><br><span class="line">       &#125;</span><br><span class="line">     &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">       <span class="comment">// 说明不存在任何workid</span></span><br><span class="line">       <span class="keyword">return</span> (<span class="keyword">long</span>)(currentIndex + START_WORKERID);</span><br><span class="line">     &#125;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2023/07/27/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/">https://he-you.github.io/2023/07/27/雪花id重复问题与解决方案/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E6%97%A5%E5%B8%B8%E9%97%AE%E9%A2%98/">日常问题</a></div><div class="post_share"><div class="social-share" data-image="/img/article3.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/10/30/OAuth2.0%E5%AD%A6%E4%B9%A0/"><img class="next-cover" src="https://tva1.sinaimg.cn/large/008i3skNgy1gw381iudikj30j00apjsk.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">OAuth2.0</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88"><span class="toc-number">1.</span> <span class="toc-text">雪花id重复问题与解决方案</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E8%83%8C%E6%99%AF"><span class="toc-number">1.1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="toc-number">1.2.</span> <span class="toc-text">二、排查过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E6%8E%A8%E8%AE%BA"><span class="toc-number">1.3.</span> <span class="toc-text">三、推论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E4%BC%98%E5%8C%96%E6%96%B9%E6%A1%88"><span class="toc-number">1.4.</span> <span class="toc-text">四、优化方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%96%B9%E6%A1%88%E6%A6%82%E8%BF%B0"><span class="toc-number">1.5.</span> <span class="toc-text">方案概述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="toc-number">1.6.</span> <span class="toc-text">实现细节</span></a></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(/img/article3.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
