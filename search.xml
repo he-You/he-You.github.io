@@ -1455,7 +1455,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>该方式最常用，安全性最高，多使用在前后端分离的web应用，所有与资源服务器的通信都是在后端完成的，可以避免令牌泄漏</p>
 <p><strong>具体的流程</strong>：</p>
 <p>1.客户端A提供链接，由用户点击跳转到资源服务器端B，完成授权。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6psyuv6gj30zo0f6js7.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230809232308055.png" alt="image-20230809232308055"></p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;authorize?</span><br><span class="line">  response_type&#x3D;code&amp;</span><br><span class="line">  client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line">  redirect_uri&#x3D;CALLBACK_URL&amp;</span><br><span class="line">  scope&#x3D;read</span><br></pre></td></tr></table></figure>
 
 <p>在上面的实例URL中:</p>
@@ -1464,18 +1464,18 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p><code>redirect_uri</code>参数是 B 接受或拒绝请求后的跳转网址，</p>
 <p><code>scope</code>参数表示要求的授权范围（这里是只读）</p>
 <p>2.在用户跳转之后，资源服务器B会要求用户进行登录，然后询问用户是否给予客户端A授权。当用户同意后，B回跳转到<code>redirect_uri</code>参数指定的网址。跳转时会回传一个授权码</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6pt43g27j310a0cywfd.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230809232335656.png" alt="image-20230809232335656"></p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;a.com&#x2F;callback?code&#x3D;AUTHORIZATION_CODE</span><br></pre></td></tr></table></figure>
 
 <p>上述的链接中的code参数就是授权码。</p>
 <p>3.当客户端服务A拿到授权码后，就可以向资源网站B请求令牌了。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptcep83j30ys0cymy5.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230809232422583.png" alt="image-20230809232422583"></p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">https:&#x2F;&#x2F;b.com&#x2F;oauth&#x2F;token?</span><br><span class="line"> client_id&#x3D;CLIENT_ID&amp;</span><br><span class="line"> client_secret&#x3D;CLIENT_SECRET&amp;</span><br><span class="line"> grant_type&#x3D;authorization_code&amp;</span><br><span class="line"> code&#x3D;AUTHORIZATION_CODE&amp;</span><br><span class="line"> redirect_uri&#x3D;CALLBACK_URL</span><br></pre></td></tr></table></figure>
 
 <p>上面 URL 中:</p>
 <p><code>client_id</code>参数和<code>client_secret</code>参数用来让 B 确认 A 的身份（<code>client_secret</code>参数是保密的，因此只能在后端发请求），<code>grant_type</code>参数的值是<code>AUTHORIZATION_CODE</code>，表示采用的授权方式是授权码，<code>code</code>参数是上一步拿到的授权码，<code>redirect_uri</code>参数是令牌颁发后的回调网址。</p>
 <p>4.资源网站B收到请求后就会颁发令牌。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008i3skNgy1gw6ptkivhoj310i0cat9s.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230809232622895.png" alt="image-20230809232622895"></p>
 <p>具体是向<code>redirect_uri</code>指定的网址，发送一段JSON:</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">&#123;    </span><br><span class="line">  &quot;access_token&quot;:&quot;ACCESS_TOKEN&quot;,</span><br><span class="line">  &quot;token_type&quot;:&quot;bearer&quot;,</span><br><span class="line">  &quot;expires_in&quot;:2592000,</span><br><span class="line">  &quot;refresh_token&quot;:&quot;REFRESH_TOKEN&quot;,</span><br><span class="line">  &quot;scope&quot;:&quot;read&quot;,</span><br><span class="line">  &quot;uid&quot;:100101,</span><br><span class="line">  &quot;info&quot;:&#123;...&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
