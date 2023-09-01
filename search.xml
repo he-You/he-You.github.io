@@ -209,6 +209,58 @@
       </tags>
   </entry>
   <entry>
+    <title>Elasticsearch 学习（一）概念名称介绍</title>
+    <url>/2021/03/01/Elasticsearch%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h1 id="Elasticsearch中的重要概念"><a href="#Elasticsearch中的重要概念" class="headerlink" title="Elasticsearch中的重要概念"></a>Elasticsearch中的重要概念</h1><p>在介绍 Elasticsearch 的概念之前，先和传统关系型数据库进行对比</p>
+<table>
+<thead>
+<tr>
+<th align="center">关系型数据库</th>
+<th>DataBase</th>
+<th>Table</th>
+<th>Row</th>
+<th>Column</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">Elasticsearch</td>
+<td>Index（索引库）</td>
+<td>Type（类型）</td>
+<td>Document（文档）</td>
+<td>Field(字段)</td>
+</tr>
+</tbody></table>
+<h2 id="索引-index"><a href="#索引-index" class="headerlink" title="索引 index"></a>索引 index</h2><p>根据上述与传统关系型数据的比对，可以知道在 Elasticsearch 中 index 相当于就是一个数据库，或者说是文档的集合。一个索引是由名字（必须全部是小写字母）进行标识的，而这个标识也是后面进行增删改查的关键。</p>
+<h2 id="映射-mapping"><a href="#映射-mapping" class="headerlink" title="映射 mapping"></a>映射 mapping</h2><p>mapping是ES对处理数据的方式和规则方面做一些限制，如某个字段的数据类型、默认 值、分词器、是否被索引等等，这些都是映射里面可以设置的，可以理解为查询条件，是 key:value形式的 json 数据。</p>
+<h2 id="字段-Field"><a href="#字段-Field" class="headerlink" title="字段 Field"></a>字段 Field</h2><p>根据上述与关系型数据库的比对可知，ES 的字段相当于传统关系型数据库的列。</p>
+<h2 id="字段类型-Type"><a href="#字段类型-Type" class="headerlink" title="字段类型 Type"></a>字段类型 Type</h2><p>每一个字段都应该有一个对应的类型，例如:Text、Keyword、Byte等。</p>
+<h2 id="文档-Document"><a href="#文档-Document" class="headerlink" title="文档 Document"></a>文档 Document</h2><p>在 ES中，文档相当于关系型数据的一行数据，是基础信息单元，以 JSON 格式来表示。</p>
+<h2 id="节点-Node"><a href="#节点-Node" class="headerlink" title="节点 Node"></a>节点 Node</h2><p>每个 ES 的实例即为一个节点，每个节点可以通过配置集群名称加入同一个集群，并共同提供服务。</p>
+<p>以下是一个 Node 节点的配置。</p>
+<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 设置集群名称，集群内所有节点的名称必须一致</span></span><br><span class="line"><span class="attr">cluster.name:</span> <span class="string">my-application</span></span><br><span class="line"><span class="comment"># 设置节点名称，集群内节点名称必须唯一</span></span><br><span class="line"><span class="attr">node.name:</span> <span class="string">node-1</span></span><br><span class="line"><span class="comment"># 表示该节点会不会作为主节点，true表示会；false表示不会</span></span><br><span class="line"><span class="attr">node.master:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 当前节点是否用于存储数据，是：true、否：false</span></span><br><span class="line"><span class="attr">node.data:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 索引数据存放的位置</span></span><br><span class="line"><span class="comment"># 日志文件存放的位置</span></span><br><span class="line"><span class="comment">#path.logs: /path/to/logs</span></span><br><span class="line"><span class="comment"># 需要锁住物理内存，是：true、否：false</span></span><br><span class="line"><span class="comment">#bootstrap.memory_lock: true</span></span><br><span class="line"><span class="comment"># 系统调用过滤器检查，是：true、否：false</span></span><br><span class="line"><span class="attr">bootstrap.system_call_filter:</span> <span class="literal">false</span></span><br><span class="line"><span class="comment"># 监听地址，用于访问该es</span></span><br><span class="line"><span class="attr">network.host:</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span></span><br><span class="line"><span class="comment"># es对外提供的http端口，默认 9200</span></span><br><span class="line"><span class="attr">http.port:</span> <span class="number">9200</span></span><br><span class="line"><span class="comment"># TCP的默认监听端口，默认 9300</span></span><br><span class="line"><span class="attr">transport.tcp.port:</span> <span class="number">9300</span></span><br><span class="line"><span class="comment"># 是否支持跨域，是：true，在使用head插件时需要此配置</span></span><br><span class="line"><span class="attr">http.cors.enabled:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># “*” 表示支持所有域名</span></span><br><span class="line"><span class="attr">http.cors.allow-origin:</span> <span class="string">&quot;*&quot;</span></span><br><span class="line"><span class="comment"># 设置这个参数来保证集群中的节点可以知道其它N个有master资格的节点。默认为1，对于大的集群来说，可以设置大一点的值（2-4）</span></span><br><span class="line"><span class="attr">discovery.zen.minimum_master_nodes:</span> <span class="number">2</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，写入候选主节点的设备地址，在开启服务后可以被选为主节点</span></span><br><span class="line"><span class="attr">discovery.seed_hosts:</span> [<span class="string">&quot;127.0.0.1:9300&quot;</span>, <span class="string">&quot;127.0.0.1:9301&quot;</span>, <span class="string">&quot;127.0.0.1:9302&quot;</span>]</span><br><span class="line"><span class="comment"># 判断结点是否脱离时间配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">60s</span></span><br><span class="line"><span class="comment"># 判断结点是否脱离次数配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retries:</span> <span class="number">5</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，初始化一个新的集群时需要此配置来选举master</span></span><br><span class="line"><span class="attr">cluster.initial_master_nodes:</span> [<span class="string">&quot;node-1&quot;</span>, <span class="string">&quot;node-2&quot;</span>, <span class="string">&quot;node-3&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+
+
+<h2 id="集群-cluster"><a href="#集群-cluster" class="headerlink" title="集群 cluster"></a>集群 cluster</h2><p>多个节点组成的集合，同时提供索引和搜索功能。在一个集群里，可以拥有任意多个节点。而且，如果当前网络中没有运行任何 Elasticsearch节点，这时启动一个节点，会<strong>默认创建并加入一个叫 做“elasticsearch”的集群</strong>。不过在真实环境中集群中的实例个数一般为奇数个，方便进行 master选举.</p>
+<h2 id="分片-shards-和副本-replicas"><a href="#分片-shards-和副本-replicas" class="headerlink" title="分片(shards)和副本(replicas)"></a>分片(shards)和副本(replicas)</h2><h3 id="分片"><a href="#分片" class="headerlink" title="分片"></a>分片</h3><p>ES 将索引划分成多份，每一份叫做分片。这样可以解决单一节点存储大量数据导致检索数据响应慢的情况。</p>
+<p>每个分片本身也是一个功能完善相对独立的索引，可以放置到集群的任意一个节点上。</p>
+<p>分片的存在是对内容进行了<strong>水平扩容</strong>，也提高了并行操作的效率，进而提高了吞吐量。</p>
+<h3 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h3><p>见名知意，ES 提供了一种故障转移机制：即创建分片的一份或多份拷贝，这些拷贝称之为副本。</p>
+<p>副本存在的意义：</p>
+<ul>
+<li>当分片或街道失败时，副本会代替失效的分片或节点继续提供服务，提高了集群的容错能力，提供了高可用性。但值得注意的是：<code>副本不能与原分片处于同一个节点</code></li>
+<li>扩展搜索能力，搜索可以在所有的副本上并行运行每个索引可以被分成多个分片。一个索引有0个或者多个副本。一旦设置了副本，每个索引就有了主分片和副本分片，分片和副本的数量可以在索引创建的时候指定在索引创建之后，可以<strong>在任何时候动态地改变副本的数量，但是不能改变分片的数量</strong></li>
+</ul>
+<h2 id="倒排索引"><a href="#倒排索引" class="headerlink" title="倒排索引"></a>倒排索引</h2><p>传统关系型数据库一般采用<code>正排索引</code>进行数据检索，所谓正排索引就是通过根据索引找内容可以理解为通过 key去找到对应的完整的 value。而<code>倒排索引</code>实际上就是通过内容去搜索索引，可以理解为通过 value 找到对应的 key。</p>
+]]></content>
+      <categories>
+        <category>ElasticSearch</category>
+      </categories>
+      <tags>
+        <tag>Elasticsearch</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Guava RateLimiter 限流及源码解析</title>
     <url>/2020/08/12/Guava%20RateLimiter%20%E9%99%90%E6%B5%81%E5%8F%8A%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</url>
     <content><![CDATA[<h4 id="一、RateLimiter-实现原理"><a href="#一、RateLimiter-实现原理" class="headerlink" title="一、RateLimiter 实现原理"></a>一、RateLimiter 实现原理</h4><p>Guava 有两种限流模式：</p>
@@ -278,58 +330,6 @@
       </categories>
       <tags>
         <tag>高并发</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Elasticsearch 学习（一）概念名称介绍</title>
-    <url>/2021/03/01/Elasticsearch%E4%B8%AD%E7%9A%84%E9%87%8D%E8%A6%81%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<h1 id="Elasticsearch中的重要概念"><a href="#Elasticsearch中的重要概念" class="headerlink" title="Elasticsearch中的重要概念"></a>Elasticsearch中的重要概念</h1><p>在介绍 Elasticsearch 的概念之前，先和传统关系型数据库进行对比</p>
-<table>
-<thead>
-<tr>
-<th align="center">关系型数据库</th>
-<th>DataBase</th>
-<th>Table</th>
-<th>Row</th>
-<th>Column</th>
-</tr>
-</thead>
-<tbody><tr>
-<td align="center">Elasticsearch</td>
-<td>Index（索引库）</td>
-<td>Type（类型）</td>
-<td>Document（文档）</td>
-<td>Field(字段)</td>
-</tr>
-</tbody></table>
-<h2 id="索引-index"><a href="#索引-index" class="headerlink" title="索引 index"></a>索引 index</h2><p>根据上述与传统关系型数据的比对，可以知道在 Elasticsearch 中 index 相当于就是一个数据库，或者说是文档的集合。一个索引是由名字（必须全部是小写字母）进行标识的，而这个标识也是后面进行增删改查的关键。</p>
-<h2 id="映射-mapping"><a href="#映射-mapping" class="headerlink" title="映射 mapping"></a>映射 mapping</h2><p>mapping是ES对处理数据的方式和规则方面做一些限制，如某个字段的数据类型、默认 值、分词器、是否被索引等等，这些都是映射里面可以设置的，可以理解为查询条件，是 key:value形式的 json 数据。</p>
-<h2 id="字段-Field"><a href="#字段-Field" class="headerlink" title="字段 Field"></a>字段 Field</h2><p>根据上述与关系型数据库的比对可知，ES 的字段相当于传统关系型数据库的列。</p>
-<h2 id="字段类型-Type"><a href="#字段类型-Type" class="headerlink" title="字段类型 Type"></a>字段类型 Type</h2><p>每一个字段都应该有一个对应的类型，例如:Text、Keyword、Byte等。</p>
-<h2 id="文档-Document"><a href="#文档-Document" class="headerlink" title="文档 Document"></a>文档 Document</h2><p>在 ES中，文档相当于关系型数据的一行数据，是基础信息单元，以 JSON 格式来表示。</p>
-<h2 id="节点-Node"><a href="#节点-Node" class="headerlink" title="节点 Node"></a>节点 Node</h2><p>每个 ES 的实例即为一个节点，每个节点可以通过配置集群名称加入同一个集群，并共同提供服务。</p>
-<p>以下是一个 Node 节点的配置。</p>
-<figure class="highlight yml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 设置集群名称，集群内所有节点的名称必须一致</span></span><br><span class="line"><span class="attr">cluster.name:</span> <span class="string">my-application</span></span><br><span class="line"><span class="comment"># 设置节点名称，集群内节点名称必须唯一</span></span><br><span class="line"><span class="attr">node.name:</span> <span class="string">node-1</span></span><br><span class="line"><span class="comment"># 表示该节点会不会作为主节点，true表示会；false表示不会</span></span><br><span class="line"><span class="attr">node.master:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 当前节点是否用于存储数据，是：true、否：false</span></span><br><span class="line"><span class="attr">node.data:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># 索引数据存放的位置</span></span><br><span class="line"><span class="comment"># 日志文件存放的位置</span></span><br><span class="line"><span class="comment">#path.logs: /path/to/logs</span></span><br><span class="line"><span class="comment"># 需要锁住物理内存，是：true、否：false</span></span><br><span class="line"><span class="comment">#bootstrap.memory_lock: true</span></span><br><span class="line"><span class="comment"># 系统调用过滤器检查，是：true、否：false</span></span><br><span class="line"><span class="attr">bootstrap.system_call_filter:</span> <span class="literal">false</span></span><br><span class="line"><span class="comment"># 监听地址，用于访问该es</span></span><br><span class="line"><span class="attr">network.host:</span> <span class="number">0.0</span><span class="number">.0</span><span class="number">.0</span></span><br><span class="line"><span class="comment"># es对外提供的http端口，默认 9200</span></span><br><span class="line"><span class="attr">http.port:</span> <span class="number">9200</span></span><br><span class="line"><span class="comment"># TCP的默认监听端口，默认 9300</span></span><br><span class="line"><span class="attr">transport.tcp.port:</span> <span class="number">9300</span></span><br><span class="line"><span class="comment"># 是否支持跨域，是：true，在使用head插件时需要此配置</span></span><br><span class="line"><span class="attr">http.cors.enabled:</span> <span class="literal">true</span></span><br><span class="line"><span class="comment"># “*” 表示支持所有域名</span></span><br><span class="line"><span class="attr">http.cors.allow-origin:</span> <span class="string">&quot;*&quot;</span></span><br><span class="line"><span class="comment"># 设置这个参数来保证集群中的节点可以知道其它N个有master资格的节点。默认为1，对于大的集群来说，可以设置大一点的值（2-4）</span></span><br><span class="line"><span class="attr">discovery.zen.minimum_master_nodes:</span> <span class="number">2</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，写入候选主节点的设备地址，在开启服务后可以被选为主节点</span></span><br><span class="line"><span class="attr">discovery.seed_hosts:</span> [<span class="string">&quot;127.0.0.1:9300&quot;</span>, <span class="string">&quot;127.0.0.1:9301&quot;</span>, <span class="string">&quot;127.0.0.1:9302&quot;</span>]</span><br><span class="line"><span class="comment"># 判断结点是否脱离时间配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_timeout:</span> <span class="string">60s</span></span><br><span class="line"><span class="comment"># 判断结点是否脱离次数配置</span></span><br><span class="line"><span class="attr">discovery.zen.fd.ping_retries:</span> <span class="number">5</span></span><br><span class="line"><span class="comment"># es7.x 之后新增的配置，初始化一个新的集群时需要此配置来选举master</span></span><br><span class="line"><span class="attr">cluster.initial_master_nodes:</span> [<span class="string">&quot;node-1&quot;</span>, <span class="string">&quot;node-2&quot;</span>, <span class="string">&quot;node-3&quot;</span>]</span><br></pre></td></tr></table></figure>
-
-
-
-<h2 id="集群-cluster"><a href="#集群-cluster" class="headerlink" title="集群 cluster"></a>集群 cluster</h2><p>多个节点组成的集合，同时提供索引和搜索功能。在一个集群里，可以拥有任意多个节点。而且，如果当前网络中没有运行任何 Elasticsearch节点，这时启动一个节点，会<strong>默认创建并加入一个叫 做“elasticsearch”的集群</strong>。不过在真实环境中集群中的实例个数一般为奇数个，方便进行 master选举.</p>
-<h2 id="分片-shards-和副本-replicas"><a href="#分片-shards-和副本-replicas" class="headerlink" title="分片(shards)和副本(replicas)"></a>分片(shards)和副本(replicas)</h2><h3 id="分片"><a href="#分片" class="headerlink" title="分片"></a>分片</h3><p>ES 将索引划分成多份，每一份叫做分片。这样可以解决单一节点存储大量数据导致检索数据响应慢的情况。</p>
-<p>每个分片本身也是一个功能完善相对独立的索引，可以放置到集群的任意一个节点上。</p>
-<p>分片的存在是对内容进行了<strong>水平扩容</strong>，也提高了并行操作的效率，进而提高了吞吐量。</p>
-<h3 id="副本"><a href="#副本" class="headerlink" title="副本"></a>副本</h3><p>见名知意，ES 提供了一种故障转移机制：即创建分片的一份或多份拷贝，这些拷贝称之为副本。</p>
-<p>副本存在的意义：</p>
-<ul>
-<li>当分片或街道失败时，副本会代替失效的分片或节点继续提供服务，提高了集群的容错能力，提供了高可用性。但值得注意的是：<code>副本不能与原分片处于同一个节点</code></li>
-<li>扩展搜索能力，搜索可以在所有的副本上并行运行每个索引可以被分成多个分片。一个索引有0个或者多个副本。一旦设置了副本，每个索引就有了主分片和副本分片，分片和副本的数量可以在索引创建的时候指定在索引创建之后，可以<strong>在任何时候动态地改变副本的数量，但是不能改变分片的数量</strong></li>
-</ul>
-<h2 id="倒排索引"><a href="#倒排索引" class="headerlink" title="倒排索引"></a>倒排索引</h2><p>传统关系型数据库一般采用<code>正排索引</code>进行数据检索，所谓正排索引就是通过根据索引找内容可以理解为通过 key去找到对应的完整的 value。而<code>倒排索引</code>实际上就是通过内容去搜索索引，可以理解为通过 value 找到对应的 key。</p>
-]]></content>
-      <categories>
-        <category>ElasticSearch</category>
-      </categories>
-      <tags>
-        <tag>Elasticsearch</tag>
       </tags>
   </entry>
   <entry>
@@ -489,7 +489,7 @@
 </ul>
 <h4 id="volatile-特性的实现原理"><a href="#volatile-特性的实现原理" class="headerlink" title="volatile 特性的实现原理"></a>volatile 特性的实现原理</h4><h5 id="如何保证可见性"><a href="#如何保证可见性" class="headerlink" title="如何保证可见性"></a>如何保证可见性</h5><p>当 volatile 修饰的共享变量进行写操作时，代码转成汇编指令时会多出一行Lock 前缀的指令，lock前缀指令实际相当于一个内存屏障，该指令在多核 CPU中会有以下两个操作：</p>
 <ul>
-<li>将当前出来领取缓存行的数据写回到系统内存</li>
+<li>将当前处理器缓存行的数据写回到系统内存</li>
 <li>回写内存的操作会使其他 CPU 内缓存了该内存地址的数据无效</li>
 </ul>
 <p>另外，Lock 指令在重排序时不能使后面的指令重排序到内存屏障之前的位置 。</p>
@@ -610,9 +610,9 @@
 <p>综上：对象头由实例数据和对齐填充数据构成。其中：对齐填充数据（根据实际情况，当对象头和实例数据在JVM中占的内存空间为8的倍数时，不需要进行填充）</p>
 <p>注：（64位）JVM只能识别以8的倍数的对象，所以会根据实际情况对Java对象进行数据的填充，确保该对象的大小为8的倍数。（下文涉及对象头概念若无说明均为 64 位虚拟机环境）</p>
 <h2 id="Mark-Word的存储结构"><a href="#Mark-Word的存储结构" class="headerlink" title="Mark Word的存储结构"></a>Mark Word的存储结构</h2><p>32 位虚拟机</p>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gns3njjvxoj31840igju8.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1gns3njjvxoj31840igju8.jpg" alt="img"></p>
 <p>64 位虚拟机    </p>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1go1cltqkrcj317g0daq74.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1go1cltqkrcj317g0daq74.jpg" alt="img"></p>
 <p>对象头一共96bit=12byte,其中mark word占64bit 而klass pointer占32个bit;hotspot默认开启指针压缩（为了节省空间）开启指针压缩的参数：<code>-XX:+UseCompressedOops</code> ，所以klass pointer占32个bit,如果没开启指针压缩的虚拟机 klass pointer占64个bit。</p>
 <p>注：在 64 位虚拟机中，以下信息会被压缩：</p>
 <p>1.对象的全局静态变量(即类属性)</p>
@@ -646,7 +646,7 @@
 <p>大多数情况锁不仅不存在多线程竞争，而且总是一个线程多次获得，为了让线程获得锁的代价更低而引入了偏向锁。</p>
 <p>1.2 <strong>偏向锁的加锁过程</strong></p>
 <p>当线程访问同步块并获得锁时，会在<strong>对象头</strong>和<strong>栈帧</strong>中的锁记录里面存储<strong>锁偏向的线程 ID</strong>,以后该线程在进入和退出同步块时不需要进行 CAS操作来加锁和解锁，只需要简单的测试一下对象头中的 Mark Word里是否存储着指向当前线程的偏向锁。如果成功则表示已经获得锁，如果失败了，则需要再测试对象头中 Mark Word 中偏向锁的标识是否设置成 1，如果没有则需要进行 CAS 操作竞争锁，如果设置了，则尝试使用 CAS将对象头的偏向锁指向当前线程。</p>
-<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm0ijhfg49j315m0u0mzq.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230901232843621.png" alt="image-20230901232843621"></p>
 <p>1.3 <strong>偏向锁的撤销</strong></p>
 <p>偏向锁的撤销是一种等<strong>待竞争出现才释放锁</strong>的机制，需要等待一个<strong>全局安全点</strong>（这个时期没有正在执行的字节码）。</p>
 <p>首先会暂停拥有偏向锁的线程，检查该线程是否还处于活动状态，如果不是则将对象头设置为无锁状态；如果持有偏向锁的线程还在活动当中，持有偏向锁的栈会被执行，遍历偏向对象的锁记录，栈中的锁记录和对象头的 Mark Word 要么重新偏向于其他线程，要么恢复到无锁或者标记对象不适合作为偏向锁，最后唤醒暂停的线程。</p>
@@ -697,7 +697,7 @@
 <td>追求吞吐量，同步块执行速度快</td>
 </tr>
 </tbody></table>
-<h2 id="内置锁（Synchronized）的加锁升级过程"><a href="#内置锁（Synchronized）的加锁升级过程" class="headerlink" title="内置锁（Synchronized）的加锁升级过程"></a>内置锁（Synchronized）的加锁升级过程</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gntb43b1myj31ka0u049f.jpg"></p>
+<h2 id="内置锁（Synchronized）的加锁升级过程"><a href="#内置锁（Synchronized）的加锁升级过程" class="headerlink" title="内置锁（Synchronized）的加锁升级过程"></a>内置锁（Synchronized）的加锁升级过程</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1gntb43b1myj31ka0u049f-20230901233659463.jpg"></p>
 ]]></content>
       <categories>
         <category>Java并发编程</category>
@@ -2465,6 +2465,37 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
+    <title>MySQL 更新语句的执行</title>
+    <url>/2023/08/08/%E4%B8%80%E6%9D%A1SQL%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B/</url>
+    <content><![CDATA[<h1 id="一条SQL更新语句的执行过程"><a href="#一条SQL更新语句的执行过程" class="headerlink" title="一条SQL更新语句的执行过程"></a>一条SQL更新语句的执行过程</h1><h3 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h3><p>当有一条记录需要更新的时候，InnoDB 引擎就会先把记录写到 redo log 里面，并更新内存，这个时候更新就算完成了。同时，InnoDB 引擎会在适当的时候，将这个操作记录更新到磁盘里面，而这个更新往往是在系统比较空闲的时候做。</p>
+<p>在InnoDB中 redo log大小是固定的，可以循环写入数据，说白了就是一个环形队列，如下图：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230808231414204.png" alt="image-20230808231414204"></p>
+<p>write pos 是当前记录的位置，一边写一边后移。checkpoint 是当前要擦除的位置，也是往后推移并且循环的，擦除记录前要把记录更新到数据文件。</p>
+<p>write pos 和 checkpoint 之间的还空着的部分，可以用来记录新的操作。如果 write pos 追上 checkpoint，表示“环形队列”满了，这时候不能再执行新的更新，得停下来先擦掉一些记录，把 checkpoint 推进一下。</p>
+<p>有了 redo log，InnoDB 就可以保证即使数据库发生异常重启，之前提交的记录都不会丢失，这个能力称为 <code>crash-safe</code>。</p>
+<h3 id="bin-log"><a href="#bin-log" class="headerlink" title="bin log"></a>bin log</h3><p>Mysql整体其实就两大块：服务层和引擎层，上面说道的redo log是InnoDB特有的日志，而Server层也有自己的日志，即bin log（归档日志）</p>
+<p>这两种日志的不同点有：</p>
+<ol>
+<li>redo log 是 InnoDB 引擎特有的；binlog 是 MySQL 的 Server 层实现的，所有引擎都可以使用。</li>
+<li>redo log 是物理日志，记录的是“在某个数据页上做了什么修改”；binlog 是逻辑日志，记录的是这个语句的原始逻辑，比如“给 ID=1 这一行的 c 字段加 1 ”。</li>
+<li>redo log 是循环写的，空间固定会用完；binlog 是可以追加写入的。“追加写”是指 binlog 文件写到一定大小后会切换到下一个，并不会覆盖以前的日志。</li>
+</ol>
+<p>下面是update语句执行的大体流程图</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230808233447682.png" alt="image-20230808233447682"></p>
+<p>在上面的流程图中，有个比较重要的点就是：<strong>两段式提交</strong></p>
+<h3 id="两段式提交"><a href="#两段式提交" class="headerlink" title="两段式提交"></a>两段式提交</h3><p>两段式提交出发点就是为了让redolog和binlog直接的逻辑保持一致。binlog 会记录所有的逻辑操作，并且是采用“追加写”的形式。如果要回复过去一段时间的数据，那么备份一定会保存过去一段时间的所有 binlog，同时系统会定期做整库备份。这里的“定期”取决于系统的重要性，具体的业务场景选择不同的备份策略。通常的做法是找到最新一次全量备份的数据，然后根据binlog对历史操作进行重放。</p>
+<p>由于redolog和binlog有着本质的区别，二者有着各自的独立逻辑。如果不进行两段式提交，那么要么先写完redo log再写binog，要么写完binlog再写redolog。</p>
+<ol>
+<li><strong>先写 redo log 后写 binlog。</strong>假设在 redo log 写完，binlog 还没有写完的时候，MySQL 进程异常重启。由于前面说过的，redo log 写完之后，系统即使崩溃，仍然能够把数据恢复回来，所以恢复后这一行 c 的值是 1。但是由于 binlog 没写完就 crash 了，这时候 binlog 里面就没有记录这个语句。因此，之后备份日志的时候，存起来的 binlog 里面就没有这条语句。然后发现，如果需要用这个 binlog 来恢复临时库的话，由于这个语句的 binlog 丢失，这个临时库就会少了这一次更新，恢复出来的这一行 c 的值就是 0，与原库的值不同。</li>
+<li><strong>先写 binlog 后写 redo log。</strong>如果在 binlog 写完之后 crash，由于 redo log 还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值是 0。但是 binlog 里面已经记录了“把 c 从 0 改成 1”这个日志。所以，在之后用 binlog 来恢复的时候就多了一个事务出来，恢复出来的这一行 c 的值就是 1，与原库的值不同。</li>
+</ol>
+<p>综上所述：如果先后写入两个log，都有可能会出现数据不一致的情况，这里的不一致是指实际的数据和预期的数据不一致。而采用两段式提交，由于redolog和binlog具有一定的关联，在恢复数据时，redolog用于恢复主机故障时的未更新的物理数据，binlog用于备份操作。每个阶段的log操作都是记录在磁盘的，在恢复数据时，<strong>redolog 状态为commit则说明binlog也成功，直接恢复数据；如果redolog是prepare，则需要查询对应的binlog事务是否成功，决定是回滚还是执行。</strong></p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+  </entry>
+  <entry>
     <title>MySQL 查询语句的执行</title>
     <url>/2023/08/07/%E4%B8%80%E6%9D%A1SQL%E6%9F%A5%E8%AF%A2%E8%AF%AD%E5%8F%A5%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B/</url>
     <content><![CDATA[<h1 id="一条SQL查询语句的执行过程"><a href="#一条SQL查询语句的执行过程" class="headerlink" title="一条SQL查询语句的执行过程"></a>一条SQL查询语句的执行过程</h1><h2 id="MySQL逻辑架构图"><a href="#MySQL逻辑架构图" class="headerlink" title="MySQL逻辑架构图"></a>MySQL逻辑架构图</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/MySQL%E7%9A%84%E5%9F%BA%E7%A1%80%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="image-20230807224200391"></p>
@@ -3836,36 +3867,5 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       <tags>
         <tag>源码</tag>
       </tags>
-  </entry>
-  <entry>
-    <title>MySQL 更新语句的执行</title>
-    <url>/2023/08/08/%E4%B8%80%E6%9D%A1SQL%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E7%9A%84%E6%89%A7%E8%A1%8C%E8%BF%87%E7%A8%8B/</url>
-    <content><![CDATA[<h1 id="一条SQL更新语句的执行过程"><a href="#一条SQL更新语句的执行过程" class="headerlink" title="一条SQL更新语句的执行过程"></a>一条SQL更新语句的执行过程</h1><h3 id="redo-log"><a href="#redo-log" class="headerlink" title="redo log"></a>redo log</h3><p>当有一条记录需要更新的时候，InnoDB 引擎就会先把记录写到 redo log 里面，并更新内存，这个时候更新就算完成了。同时，InnoDB 引擎会在适当的时候，将这个操作记录更新到磁盘里面，而这个更新往往是在系统比较空闲的时候做。</p>
-<p>在InnoDB中 redo log大小是固定的，可以循环写入数据，说白了就是一个环形队列，如下图：</p>
-<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230808231414204.png" alt="image-20230808231414204"></p>
-<p>write pos 是当前记录的位置，一边写一边后移。checkpoint 是当前要擦除的位置，也是往后推移并且循环的，擦除记录前要把记录更新到数据文件。</p>
-<p>write pos 和 checkpoint 之间的还空着的部分，可以用来记录新的操作。如果 write pos 追上 checkpoint，表示“环形队列”满了，这时候不能再执行新的更新，得停下来先擦掉一些记录，把 checkpoint 推进一下。</p>
-<p>有了 redo log，InnoDB 就可以保证即使数据库发生异常重启，之前提交的记录都不会丢失，这个能力称为 <code>crash-safe</code>。</p>
-<h3 id="bin-log"><a href="#bin-log" class="headerlink" title="bin log"></a>bin log</h3><p>Mysql整体其实就两大块：服务层和引擎层，上面说道的redo log是InnoDB特有的日志，而Server层也有自己的日志，即bin log（归档日志）</p>
-<p>这两种日志的不同点有：</p>
-<ol>
-<li>redo log 是 InnoDB 引擎特有的；binlog 是 MySQL 的 Server 层实现的，所有引擎都可以使用。</li>
-<li>redo log 是物理日志，记录的是“在某个数据页上做了什么修改”；binlog 是逻辑日志，记录的是这个语句的原始逻辑，比如“给 ID=1 这一行的 c 字段加 1 ”。</li>
-<li>redo log 是循环写的，空间固定会用完；binlog 是可以追加写入的。“追加写”是指 binlog 文件写到一定大小后会切换到下一个，并不会覆盖以前的日志。</li>
-</ol>
-<p>下面是update语句执行的大体流程图</p>
-<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230808233447682.png" alt="image-20230808233447682"></p>
-<p>在上面的流程图中，有个比较重要的点就是：<strong>两段式提交</strong></p>
-<h3 id="两段式提交"><a href="#两段式提交" class="headerlink" title="两段式提交"></a>两段式提交</h3><p>两段式提交出发点就是为了让redolog和binlog直接的逻辑保持一致。binlog 会记录所有的逻辑操作，并且是采用“追加写”的形式。如果要回复过去一段时间的数据，那么备份一定会保存过去一段时间的所有 binlog，同时系统会定期做整库备份。这里的“定期”取决于系统的重要性，具体的业务场景选择不同的备份策略。通常的做法是找到最新一次全量备份的数据，然后根据binlog对历史操作进行重放。</p>
-<p>由于redolog和binlog有着本质的区别，二者有着各自的独立逻辑。如果不进行两段式提交，那么要么先写完redo log再写binog，要么写完binlog再写redolog。</p>
-<ol>
-<li><strong>先写 redo log 后写 binlog。</strong>假设在 redo log 写完，binlog 还没有写完的时候，MySQL 进程异常重启。由于前面说过的，redo log 写完之后，系统即使崩溃，仍然能够把数据恢复回来，所以恢复后这一行 c 的值是 1。但是由于 binlog 没写完就 crash 了，这时候 binlog 里面就没有记录这个语句。因此，之后备份日志的时候，存起来的 binlog 里面就没有这条语句。然后发现，如果需要用这个 binlog 来恢复临时库的话，由于这个语句的 binlog 丢失，这个临时库就会少了这一次更新，恢复出来的这一行 c 的值就是 0，与原库的值不同。</li>
-<li><strong>先写 binlog 后写 redo log。</strong>如果在 binlog 写完之后 crash，由于 redo log 还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值是 0。但是 binlog 里面已经记录了“把 c 从 0 改成 1”这个日志。所以，在之后用 binlog 来恢复的时候就多了一个事务出来，恢复出来的这一行 c 的值就是 1，与原库的值不同。</li>
-</ol>
-<p>综上所述：如果先后写入两个log，都有可能会出现数据不一致的情况，这里的不一致是指实际的数据和预期的数据不一致。而采用两段式提交，由于redolog和binlog具有一定的关联，在恢复数据时，redolog用于恢复主机故障时的未更新的物理数据，binlog用于备份操作。每个阶段的log操作都是记录在磁盘的，在恢复数据时，<strong>redolog 状态为commit则说明binlog也成功，直接恢复数据；如果redolog是prepare，则需要查询对应的binlog事务是否成功，决定是回滚还是执行。</strong></p>
-]]></content>
-      <categories>
-        <category>MySQL</category>
-      </categories>
   </entry>
 </search>
