@@ -622,15 +622,18 @@
 <h2 id="如何查看对象布局"><a href="#如何查看对象布局" class="headerlink" title="如何查看对象布局"></a>如何查看对象布局</h2><ol>
 <li><p>引入依赖</p>
 <figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>org.openjdk.jol<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>jol-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">version</span>&gt;</span>0.9<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line"> <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br></pre></td></tr></table></figure>
-</li>
-<li><p>查看</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> JavaObject objectHead = <span class="keyword">new</span> JavaObject();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(ClassLayout.parseInstance(objectHead).toPrintable());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-</li>
-<li><p>输出结果</p>
-<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">object.JavaObject object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                               VALUE</span><br><span class="line">      0     4        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)</span><br><span class="line">      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4        (object header)                           05 c0 00 f8 (00000101 11000000 00000000 11111000) (-134168571)</span><br><span class="line">     12     4        (loss due to the next object alignment)</span><br><span class="line">Instance size: 16 bytes</span><br><span class="line">Space losses: 0 bytes internal + 4 bytes external &#x3D; 4 bytes total</span><br></pre></td></tr></table></figure>
+
+
 
 </li>
 </ol>
+<pre><code>查看</code></pre>
+   <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JavaObject</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> JavaObject objectHead = <span class="keyword">new</span> JavaObject();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        System.out.println(ClassLayout.parseInstance(objectHead).toPrintable());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>   输出结果</p>
+   <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">object.JavaObject object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                               VALUE</span><br><span class="line">      0     4        (object header)                           01 00 00 00 (00000001 00000000 00000000 00000000) (1)</span><br><span class="line">      4     4        (object header)                           00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4        (object header)                           05 c0 00 f8 (00000101 11000000 00000000 11111000) (-134168571)</span><br><span class="line">     12     4        (loss due to the next object alignment)</span><br><span class="line">Instance size: 16 bytes</span><br><span class="line">Space losses: 0 bytes internal + 4 bytes external &#x3D; 4 bytes total</span><br></pre></td></tr></table></figure>
+
+
 <p>注：WIN/Linux/MacOS 都是采用小端模式，所以上述打印的对象布局，实际上要颠倒来看，比如00000001 00000000 00000000 00000000—–&gt; 00000000 00000000 00000000 00000001,对照上述 Mark Word的存储结构表来看，当前对象为无锁状态。 </p>
 <h1 id="锁升级与对比"><a href="#锁升级与对比" class="headerlink" title="锁升级与对比"></a>锁升级与对比</h1><h2 id="锁的类型"><a href="#锁的类型" class="headerlink" title="锁的类型"></a>锁的类型</h2><p>为了减少获得锁和释放锁时带来的性能消耗，JavaSE1.6引入了 4 种锁的状态，级别由低到高分别是：</p>
 <ul>
@@ -697,7 +700,7 @@
 <td>追求吞吐量，同步块执行速度快</td>
 </tr>
 </tbody></table>
-<h2 id="内置锁（Synchronized）的加锁升级过程"><a href="#内置锁（Synchronized）的加锁升级过程" class="headerlink" title="内置锁（Synchronized）的加锁升级过程"></a>内置锁（Synchronized）的加锁升级过程</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1gntb43b1myj31ka0u049f-20230901233659463.jpg"></p>
+<h2 id="内置锁（Synchronized）的加锁升级过程"><a href="#内置锁（Synchronized）的加锁升级过程" class="headerlink" title="内置锁（Synchronized）的加锁升级过程"></a>内置锁（Synchronized）的加锁升级过程</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230902142635395.png" alt="image-20230902142635395"></p>
 ]]></content>
       <categories>
         <category>Java并发编程</category>
@@ -858,11 +861,11 @@
     <title>Java 并发编程（五）Java内存模型</title>
     <url>/2020/12/27/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%9B%9B%EF%BC%89Java%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B/</url>
     <content><![CDATA[<h2 id="现代计算机的内存模型"><a href="#现代计算机的内存模型" class="headerlink" title="现代计算机的内存模型"></a><strong>现代计算机的内存模型</strong></h2><p>在现代计算机中，CPU 指令的运行速度远超内存的存取速度，因此不得不在 CPU 和内存之间加入高速缓存来作为内存与处理器的缓冲。</p>
-<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2ept801gj316u0tqdj4.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230902103417666.png" alt="image-20230902103417666"></p>
 <h2 id="JMM"><a href="#JMM" class="headerlink" title="JMM"></a><strong>JMM</strong></h2><p><strong>JMM(JavaMemoryModel)即 Java 内存模型</strong>，定义了线程和主内存之间的抽象关系：线程之间的共享变量存储在主内存中，每个线程都有一个私有的本地内存（LocalMemory）,<strong>本地内存存储了该线程读/写共享变量的副本</strong>。</p>
 <p>这里所说的变量指的是实例变量和类变量，不包含局部变量，因为<strong>局部变量是线程私有</strong>的，因此不存在竞争问题。线程对变量的所有的操作(读，取)都必须在工作内存中完成，而不能直接读写主内存中的变量。</p>
 <p>不同线程之间也不能直接访问对方工作内存中的变量，线程间变量的值的传递需要通过主内存中转来完成。</p>
-<h2 id="本地内存和主内存的关系："><a href="#本地内存和主内存的关系：" class="headerlink" title="本地内存和主内存的关系："></a><strong>本地内存和主内存的关系：</strong></h2><p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2k1tyuy5j31dq0timzz.jpg"></p>
+<h2 id="本地内存和主内存的关系："><a href="#本地内存和主内存的关系：" class="headerlink" title="本地内存和主内存的关系："></a><strong>本地内存和主内存的关系：</strong></h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230902104240606.png" alt="image-20230902104240606"></p>
 <h2 id="MESI（缓存一致性协议）"><a href="#MESI（缓存一致性协议）" class="headerlink" title="MESI（缓存一致性协议）"></a><strong>MESI（缓存一致性协议）</strong></h2><p>MESI 是指4中状态的首字母。每个Cache line有4个状态，可用2个bit表示</p>
 <table>
 <thead>
@@ -894,7 +897,7 @@
 </tr>
 </tbody></table>
 <p>当CPU写数据时，如果发现操作的变量是共享变量，即在其他CPU中也存在该变量的副本，会发出信号通知其他CPU将该变量的缓存行置为无效状态，因此当其他CPU需要读取这个变量时，发现自己缓存中缓存该变量的缓存行是无效的，那么它就会从内存重新读取。                      </p>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gnmd8hi8bpj31480u045q.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1gnmd8hi8bpj31480u045q.jpg" alt="img"></p>
 <p>注：缓存一致性协议只能保证<code>一行缓存行</code>内存一致性，当数据需要存储到更多的 cacheLine时，MESI 就不能保证，这是缓存一致性协议不再适用，需要升级总线锁去保证变量的内存可见性和一致性。</p>
 <h2 id="缓存行伪共享"><a href="#缓存行伪共享" class="headerlink" title="缓存行伪共享"></a>缓存行伪共享</h2><h3 id="什么是伪共享"><a href="#什么是伪共享" class="headerlink" title="什么是伪共享?"></a>什么是伪共享?</h3><p>CPU缓存系统中是以缓存行(cache line)为单位存储的。目前主流的CPU Cache 的Cache Line 大小都是64Bytes。在多线程情况下，如果需要修改“共享同一个缓存行的变量”，就会无意中影响彼此的性能，这就是伪共享(False Sharing)。<br> 举个例子: 现在有2个long 型变量 a 、b，如果有t1在访问a，t2在访问b，而a与b刚好在同一个 cache line中，此时t1先修改a，将导致b被刷新。</p>
 <h3 id="怎么解决伪共享"><a href="#怎么解决伪共享" class="headerlink" title="怎么解决伪共享?"></a>怎么解决伪共享?</h3><p><strong>补齐缓存行</strong>。Java8中新增了一个注解:@sun.misc.Contended。加上这个注解的类会自动补齐缓存行，需要注意的是此注解默认是无效的，需要在jvm启动时设置 <code>-XX:- RestrictContended </code>才会生效。</p>
@@ -923,7 +926,7 @@
 <li>内存系统的重排序：由于处理器使用缓存和读/写缓冲区，这使得加载和存储操作看上去可能是乱序执行。</li>
 </ol>
 <p>Java 源码到最终实际执行的指令序列，会经过下列 3 种重排序。</p>
-<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gm2rvjeaowj319s0e4dh7.jpg" alt="从源码到最终执行的指令序列的示意图"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/0081Kckwgy1gm2rvjeaowj319s0e4dh7.jpg" alt="从源码到最终执行的指令序列的示意图"></p>
 <p>JMM 属于语言级别的内存模型。对于编译器重排序规则，JMM 会禁止特定类型的编译器重排序。而对于处理器重排序，JMM 会要求 Java 编译器在生成指令序列时，插入特定类型的内存屏障指令，从而禁止特定类型的处理器重排序</p>
 <h2 id="内存屏障"><a href="#内存屏障" class="headerlink" title="内存屏障"></a>内存屏障</h2><p>内存屏障，也称内存栅栏，内存栅障，屏障指令等， <strong>是一类同步屏障指令</strong>，是CPU或编译器在对内存随机访问的操作中的一个同步点，使得此点之前的所有读写操作都执行后才可以开始执行此点之后的操作</p>
 <p>JMM 把内存屏障指令分为 4 类</p>
