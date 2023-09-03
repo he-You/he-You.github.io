@@ -713,6 +713,14 @@
     <title>Java 并发编程（六）线程入门</title>
     <url>/2021/01/04/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%BA%94%EF%BC%89%E7%BA%BF%E7%A8%8B%E5%85%A5%E9%97%A8/</url>
     <content><![CDATA[<h2 id="线程简介"><a href="#线程简介" class="headerlink" title="线程简介"></a>线程简介</h2><h3 id="什么是进程"><a href="#什么是进程" class="headerlink" title="什么是进程"></a>什么是进程</h3><p>进程（Process）是计算机系统资源分配和调度的基本单位，是操作系统结构的基础。进程是程序执行的基本执行实体；是线程的容器；</p>
+<h3 id="进程间的通信方式"><a href="#进程间的通信方式" class="headerlink" title="进程间的通信方式"></a>进程间的通信方式</h3><ul>
+<li>管道</li>
+<li>信号</li>
+<li>消息队列</li>
+<li>共享内存</li>
+<li>信号量</li>
+<li>套接字socket  </li>
+</ul>
 <h3 id="什么是线程"><a href="#什么是线程" class="headerlink" title="什么是线程"></a>什么是线程</h3><p>现代操作系统调度的最小单元，也被称为轻量级进程。每个线程都有自己的计数器，堆栈和局部变量等属性，并且可以访问共享的内存变量。</p>
 <h2 id="线程的生命周期"><a href="#线程的生命周期" class="headerlink" title="线程的生命周期"></a>线程的生命周期</h2><h3 id="线程的优先级"><a href="#线程的优先级" class="headerlink" title="线程的优先级"></a>线程的优先级</h3><p>线程的优先级是决定线程需要分配多少处理器资源的线程属性。在 Java 中通过整型变量 priority 来设置优先级:setPriority(int level)，默认是 5；优先级区间：1~10；</p>
 <h3 id="线程的状态"><a href="#线程的状态" class="headerlink" title="线程的状态"></a>线程的状态</h3><p>Java 线程在运行的生命周期中有 6 种不同的状态，在给定的一个时刻，线程只能处于一个状态。</p>
@@ -748,7 +756,7 @@
 <td>终止状态，表示当前线程已经执行完毕</td>
 </tr>
 </tbody></table>
-<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gmc1tsyh10j316l0u0apn.jpg" alt="线程状态的变迁"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/0081Kckwgy1gmc1tsyh10j316l0u0apn-20230903120603689.jpg"></p>
 <h3 id="线程的启动与终止"><a href="#线程的启动与终止" class="headerlink" title="线程的启动与终止"></a>线程的启动与终止</h3><h4 id="线程的启动"><a href="#线程的启动" class="headerlink" title="线程的启动"></a>线程的启动</h4><p>当线程被创建完成后，需要调用 start()方法启动线程。<strong>注意，不能通过调用 run()启动线程</strong>，虽然可以执行 run()方法内部的代码逻辑，但是实际上是主线程在执行，而不是创建的线程。</p>
 <h4 id="线程的中断"><a href="#线程的中断" class="headerlink" title="线程的中断"></a>线程的中断</h4><p> 中断可以理解为线程的一个标识位属性，表示运行中的线程是否被其他线程进行了中断操作。线程可以通过 isInterrupted()判断自身是否被中断，也可以通过 Thread.interrupted()对当前线程的中断标志进行复位。如果当前线程处于终结状态或被中断过，在调用 isInterrupted()方法时会返回 false;</p>
 <h4 id="终止线程"><a href="#终止线程" class="headerlink" title="终止线程"></a>终止线程</h4><p>线程的中断是终止线程的一种方式，但是还有终止线程的方式：cancel()。</p>
