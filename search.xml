@@ -4053,7 +4053,44 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>后来发现产线数据库中的表除了主键索引还存在org_name的唯一索引。</p>
 ]]></content>
       <categories>
+        <category>踩坑记录</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL 查询语句的执行</title>
+    <url>/2023/09/04/Github+PicGo+Typora%20%E6%90%AD%E5%BB%BA%E5%85%8D%E8%B4%B9%E5%9B%BE%E5%BA%8A/</url>
+    <content><![CDATA[<h1 id="Github-PicGo-Typora-搭建免费图床"><a href="#Github-PicGo-Typora-搭建免费图床" class="headerlink" title="Github+PicGo+Typora 搭建免费图床"></a>Github+PicGo+Typora 搭建免费图床</h1><h2 id="建立图床仓库"><a href="#建立图床仓库" class="headerlink" title="建立图床仓库"></a>建立图床仓库</h2><ul>
+<li><p>新建一个名为image的公共仓库,注意仓库名不能与博客站点的图片目录名相同</p>
+</li>
+<li><p>进入Settings -&gt; Pages，设置为main分支</p>
+</li>
+</ul>
+<p>注意不勾选“Enforce HTTPS”，否则只能通过https访问，有些时候会用到http协议。</p>
+<h2 id="生成Github-Token"><a href="#生成Github-Token" class="headerlink" title="生成Github Token"></a>生成Github Token</h2><p>点击用户头像 –&gt; 选择 Settings。<br>点击 Developer settings。<br>点击 Personal access tokens 并点击 Generate new token 新建一个 Token。<br>填写 Token 描述，勾选 repo，然后点击 Generate token 生成一个 Token。<br>生成之后会显示Token的密钥，复制保存好。注意这个 Token 只会显示一次，自己先保存下来</p>
+<h2 id="下载PicGo"><a href="#下载PicGo" class="headerlink" title="下载PicGo"></a>下载PicGo</h2><p>下载地址： <a href="https://github.com/Molunerfinn/PicGo/releases">https://github.com/Molunerfinn/PicGo/releases</a> 根据系统选择合适的版本即可</p>
+<p>picgo自带的“GitHub图床”删除图片操作不能同步到github，使用picgo-plugin-github-plus插件可以在picgo相册中删除图片时自动把github上的图片也删除了。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904111515652.png" alt="image-20230904111515652"></p>
+<p>在插件设置中搜索picgo-plugin-github-plus，然后安装即可。</p>
+<p>安装好插件后，在图床设置 -&gt; githubPlus中进行githubPlus设置</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904111909576.png" alt="image-20230904111909576"></p>
+<p>repo就是“github用户名/仓库名”。</p>
+<p>选择“设为默认图床”，然后确定。</p>
+<p>版本2.2.0之后，PicGo 内部会默认开启一个小型的服务器，用于配合其他应用来调用 PicGo 进行上传。</p>
+<p>打开 PicGo 详细页面，进入 PicGo 设置–设置Server</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904111944990.png" alt="image-20230904111944990"></p>
+<h2 id="设置Typora"><a href="#设置Typora" class="headerlink" title="设置Typora"></a>设置Typora</h2><p>版本要求：Typora 0.9.84 及以上。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904112042253.png" alt="image-20230904112042253"></p>
+<p>设置完后，点“验证图片上传选项”。<br>验证成功会显示如下结果</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904112135249.png" alt="image-20230904112135249"></p>
+]]></content>
+      <categories>
         <category>MySQL</category>
       </categories>
+      <tags>
+        <tag>MySQL</tag>
+      </tags>
   </entry>
 </search>
