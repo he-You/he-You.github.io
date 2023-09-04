@@ -792,7 +792,7 @@
     <url>/2021/01/08/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E5%85%AD%EF%BC%89%E7%BA%BF%E7%A8%8B%E7%9A%84%E5%88%9B%E5%BB%BA/</url>
     <content><![CDATA[<h1 id="通过继承Thread类创建线程"><a href="#通过继承Thread类创建线程" class="headerlink" title="通过继承Thread类创建线程"></a>通过继承Thread类创建线程</h1><h2 id="继承-Thread创建线程"><a href="#继承-Thread创建线程" class="headerlink" title="继承 Thread创建线程"></a>继承 Thread创建线程</h2><p>（1）定义Thread类的子类，并重写该类的run方法，该run方法的方法体为创建新线程要完成的任务。</p>
 <p>（2）创建Thread子类的实例，即创建了线程对象。</p>
-<p>（3）调用线程对象的<strong>start()方法来启动该线程</strong>。</p>
+<p>（3）调用线程对象的<strong>start()方法来启动该线程</strong>。(注：一个线程的start方法只能被调用一次，多次调用会有异常)</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CreatedThreadByExtendsThread</span> <span class="keyword">extends</span> <span class="title">Thread</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(getName() + <span class="string">&quot; is running&quot;</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">new</span> CreatedThreadByExtendsThread().start();</span><br><span class="line">        <span class="keyword">new</span> CreatedThreadByExtendsThread().start();</span><br><span class="line">        <span class="keyword">new</span> CreatedThreadByExtendsThread().start();</span><br><span class="line">        <span class="keyword">new</span> CreatedThreadByExtendsThread().start();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>GetName()方法返回调用该方法的线程的名字。</p>
@@ -3878,5 +3878,182 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       <tags>
         <tag>源码</tag>
       </tags>
+  </entry>
+  <entry>
+    <title>MySQL ON DUPLICATE KEY UPDATE的坑</title>
+    <url>/2023/09/04/ON%20DUPLICATE%20KEY%20UPDATE%E7%9A%84%E5%9D%91/</url>
+    <content><![CDATA[<h1 id="ON-DUPLICATE-KEY-UPDATE的坑"><a href="#ON-DUPLICATE-KEY-UPDATE的坑" class="headerlink" title="ON DUPLICATE KEY UPDATE的坑"></a>ON DUPLICATE KEY UPDATE的坑</h1><h2 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h2><p>在接手的项目中发现一个问题，应该更新的数据并没有更新。后来发现代码中使用了使用了mysql的on duplicate key update语法实现了对数据的save or update。当时通过代码逻辑和这个保存更新的语句来看，逻辑上并没有明显的问题，但是日志确实报的这行语句有问题。</p>
+<h2 id="问题定位"><a href="#问题定位" class="headerlink" title="问题定位"></a>问题定位</h2><figure class="highlight xml"><table><tr><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">update</span> <span class="attr">id</span>=<span class="string">&quot;updateByIds&quot;</span>&gt;</span></span><br><span class="line">    update tb_user</span><br><span class="line">    <span class="tag">&lt;<span class="name">trim</span> <span class="attr">prefix</span>=<span class="string">&quot;set&quot;</span> <span class="attr">suffixOverrides</span>=<span class="string">&quot;,&quot;</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">trim</span> <span class="attr">prefix</span>=<span class="string">&quot;name = case&quot;</span> <span class="attr">suffix</span>=<span class="string">&quot;end,&quot;</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">foreach</span> <span class="attr">collection</span>=<span class="string">&quot;list&quot;</span> <span class="attr">item</span>=<span class="string">&quot;i&quot;</span> <span class="attr">index</span>=<span class="string">&quot;index&quot;</span>&gt;</span></span><br><span class="line">                when id= #&#123;i.id,jdbcType=VARCHAR&#125; then #&#123;i.name,jdbcType=VARCHAR&#125;</span><br><span class="line">            <span class="tag">&lt;/<span class="name">foreach</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">trim</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">trim</span> <span class="attr">prefix</span>=<span class="string">&quot;weight = case&quot;</span> <span class="attr">suffix</span>=<span class="string">&quot;end,&quot;</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">foreach</span> <span class="attr">collection</span>=<span class="string">&quot;list&quot;</span> <span class="attr">item</span>=<span class="string">&quot;i&quot;</span> <span class="attr">index</span>=<span class="string">&quot;index&quot;</span>&gt;</span></span><br><span class="line">                when id= #&#123;i.id,jdbcType=VARCHAR&#125; then #&#123;i.weight,jdbcType=DECIMAL&#125;</span><br><span class="line">            <span class="tag">&lt;/<span class="name">foreach</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">trim</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">trim</span> <span class="attr">prefix</span>=<span class="string">&quot;high = case&quot;</span> <span class="attr">suffix</span>=<span class="string">&quot;end,&quot;</span>&gt;</span></span><br><span class="line">            <span class="tag">&lt;<span class="name">foreach</span> <span class="attr">collection</span>=<span class="string">&quot;list&quot;</span> <span class="attr">item</span>=<span class="string">&quot;i&quot;</span> <span class="attr">index</span>=<span class="string">&quot;index&quot;</span>&gt;</span></span><br><span class="line">                when id= #&#123;i.id,jdbcType=VARCHAR&#125; then #&#123;i.high,jdbcType=DECIMAL&#125;</span><br><span class="line">            <span class="tag">&lt;/<span class="name">foreach</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;/<span class="name">trim</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">trim</span>&gt;</span></span><br><span class="line">    where id in</span><br><span class="line">    <span class="tag">&lt;<span class="name">foreach</span> <span class="attr">collection</span>=<span class="string">&quot;list&quot;</span> <span class="attr">item</span>=<span class="string">&quot;item&quot;</span> <span class="attr">open</span>=<span class="string">&quot;(&quot;</span> <span class="attr">close</span>=<span class="string">&quot;)&quot;</span> <span class="attr">separator</span>=<span class="string">&quot;,&quot;</span>&gt;</span></span><br><span class="line">        #&#123;item.id,jdbcType=VARCHAR&#125;</span><br><span class="line">    <span class="tag">&lt;/<span class="name">foreach</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">update</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>上面的代码是模拟公司代码</p>
+<h2 id="问题验证"><a href="#问题验证" class="headerlink" title="问题验证"></a>问题验证</h2><p>为了确定on duplicate key update是否存在问题，我查阅了MySQL的官方文档：<a href="https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html">https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html</a></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230904104848284.png" alt="image-20230904104848284"></p>
+<p>为了验证这个问题，在本地测试环境创建了一个表进行测试</p>
+<p>执行1次的结果:</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>3</td>
+</tr>
+</tbody></table>
+<p>执行2次的结果:</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>4</td>
+</tr>
+</tbody></table>
+<p>执行3次的结果:</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>5</td>
+</tr>
+</tbody></table>
+<p>执行4次的结果:</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>6</td>
+</tr>
+</tbody></table>
+<p>执行5次的结果:</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>7</td>
+</tr>
+</tbody></table>
+<p>通过观察可知，上面的 sql 在主键已经存在时相当于如下 sql。</p>
+<blockquote>
+<p>UPDATE t1 SET c=c+1 WHERE a=1;</p>
+</blockquote>
+<p>再试下新增的 sql。</p>
+<blockquote>
+<p>INSERT INTO t1 (b,c) VALUES (20,30)<br>ON DUPLICATE KEY UPDATE c=c+1;</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>7</td>
+</tr>
+<tr>
+<td>2</td>
+<td>20</td>
+<td>30</td>
+</tr>
+</tbody></table>
+<p>新增记录成功，id 也自增正常。</p>
+<p>在官方资料中有这样的一句话：</p>
+<p>If column b is also unique, the INSERT is equivalent to this UPDATE statement instead:</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">UPDATE t1 SET c&#x3D;c+1 WHERE a&#x3D;1 OR b&#x3D;2 LIMIT 1;</span><br></pre></td></tr></table></figure>
+
+<p>If a=1 OR b=2 matches several rows, only one row is updated. In general, you should try to avoid using an ON DUPLICATE KEY UPDATE clause on tables with multiple unique indexes.</p>
+<p>接下来实验一下，给 t1 加的 b 也加上唯一索引:</p>
+<blockquote>
+<p>ALTER TABLE <code>t1</code> ADD UNIQUE INDEX <code>uniq_b</code> (<code>b</code> ASC);</p>
+</blockquote>
+<p>然后执行如下 sql:</p>
+<blockquote>
+<p>INSERT INTO t1 (a,b,c) VALUES (3,20,30)<br>ON DUPLICATE KEY UPDATE c=c+1;</p>
+</blockquote>
+<p>其 t1 表结果如下：</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+<th>c</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>2</td>
+<td>7</td>
+</tr>
+<tr>
+<td>2</td>
+<td>20</td>
+<td>31</td>
+</tr>
+</tbody></table>
+<p>从上面的结果可以看出，其只执行了 update 的操作，从而告诉了我们在使用 on duplicate key update 语句时，应当避免多个唯一索引的场景</p>
+<p>当a是一个唯一索引(unique index)时,并且t1表中已经存在a为1的记录时，如下两个sql的效果是一样的。</p>
+<blockquote>
+<p>INSERT INTO t1 (a,b,c) VALUES (1,2,3)<br>ON DUPLICATE KEY UPDATE c=c+1;</p>
+</blockquote>
+<blockquote>
+<p>UPDATE t1 SET c=c+1 WHERE a=1;</p>
+</blockquote>
+<blockquote>
+<p>ALTER TABLE <code>t1</code> DROP INDEX <code>uniq_b</code> ;</p>
+</blockquote>
+<blockquote>
+<p>ALTER TABLE <code>ntocc_test</code>.<code>t1</code><br>ADD UNIQUE INDEX <code>uniq_b</code> (<code>b</code> ASC);<br>;</p>
+</blockquote>
+<p>但在innoBD存储类型的表中，当a是一个自增主键时，其效果官方文档中的解释是这样的：</p>
+<blockquote>
+<p>The effects are not quite identical: For an InnoDB table where a is an auto-increment column, the INSERT statement increases the auto-increment value but the UPDATE does not.</p>
+</blockquote>
+<p>也就是如果只有一个主键，则会执行新增操作</p>
+<p>但当b也是一个唯一索引时，就会执行更新操作<br>上面的语句就会变成这样的：</p>
+<blockquote>
+<p>UPDATE t1 SET c=c+1 WHERE a=1 OR b=2 LIMIT 1;</p>
+</blockquote>
+<p>If a=1 OR b=2 matches several rows, only one row is updated. In general, you should try to avoid using an ON DUPLICATE KEY UPDATE clause on tables with multiple unique indexes.</p>
+<p>因此应当避免多唯一索引用on deplicate key update语法</p>
+<p>后来发现产线数据库中的表除了主键索引还存在org_name的唯一索引。</p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
   </entry>
 </search>
