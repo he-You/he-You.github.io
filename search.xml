@@ -4213,4 +4213,51 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>事件监听</tag>
       </tags>
   </entry>
+  <entry>
+    <title>SQL mode 简单介绍与使用</title>
+    <url>/2023/09/05/SQL%20mode%20%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D%E4%B8%8E%E4%BD%BF%E7%94%A8/</url>
+    <content><![CDATA[<h1 id="SQL-mode-简单介绍与使用"><a href="#SQL-mode-简单介绍与使用" class="headerlink" title="SQL mode 简单介绍与使用"></a>SQL mode 简单介绍与使用</h1><h2 id="什么是SQL-mode"><a href="#什么是SQL-mode" class="headerlink" title="什么是SQL mode"></a>什么是SQL mode</h2><p>一句话概述：SQL mode 定义MySQL应该支持什么样的SQL语法以及它应该执行什么样的数据验证检查。</p>
+<p><strong>MySQL服务器端可以以不同的SQL mode 运行</strong>，并且可以根据sql_mode系统变量的值为不同的客户端应用不同的模式。DBA可以设置全局SQL mode ，每个客户端应用程序可以根据自己的需求设置会话SQL模式。</p>
+<h2 id="设置和查看SQL-mode"><a href="#设置和查看SQL-mode" class="headerlink" title="设置和查看SQL mode"></a>设置和查看SQL mode</h2><p>MySQL8 默认的SQL mode包括：</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_only_full_group_by">ONLY_FULL_GROUP_BY</a>：拒绝select列表、HAVING条件或ORDER BY列表引用既不在GROUP BY子句中命名也在功能上依赖于(由GROUP BY唯一确定)列的非聚合列的查询。</p>
+<p>对于 group by 的这种聚合操作，如果在select 中的列，没有在group by 中出现，那么这个SQL是不合法的，因为列不在group by的从句中，所以对于设置了这个mode的数据库，在使用group by 的时候，就要用MAX()，SUM()，ANT_VALUE()的这种聚合函数，才能完成GROUP BY 的聚合操作。</p>
+<p> <a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_strict_trans_tables">STRICT_TRANS_TABLES</a>为事务性存储引擎启用严格SQL模式，并在可能时为非事务性存储引擎启用严格SQL模式。在该模式下,如果一个值不能插入到一个事务表中,则中断当前的操作,对非事务表不做限制。</p>
+<p>比如我们的某个字段设置不能为NULL，而我们插入的数据这个字段为NULL，那么就不能通过，就会报错：</p>
+<p>1364 - Field ‘xxxx’ doesn’t have a default value</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_zero_in_date">NO_ZERO_IN_DATE</a>NO_ZERO_IN_DATE模式会影响服务器是否允许年部分不为零但月或日部分为0的日期。(该模式影响日期，如“2010-00-01”或“2010-01-00”，但不影响“0000-00-00”。要控制服务器是否允许’0000-00-00’，请使用NO_ZERO_DATE模式。)</p>
+<p>NO_ZERO_IN_DATE的效果还取决于是否启用严格SQL模式，如果没有启用严格SQL模式STRICT_TRANS_TABLES，那么启用了NO_ZERO_IN_DATE也没用。</p>
+<p>如下SQL的日期月和日为0，启用了严格模式和NO_ZERO_IN_DATE，那么就会报错</p>
+<p>INSERT INTO <code>csm</code>.<code>user</code> (<code>name</code>, <code>age</code> ,<code>create_date</code>)<br> VALUES (‘xxxx’, ‘26’, ‘2022-00-00’);</p>
+<p> 1292 - Incorrect datetime value: ‘2022-00-00’ for column ‘create_date’ at row 1</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_zero_date">NO_ZERO_DATE</a>设置该值,mysql数据库不允许插入零日期,插入零日期会抛出错误而不是警告。</p>
+<p>上面的NO_ZERO_IN_DATE可以插入’0000-00-00’，如果使用了严格模式和NO_ZERO_DATE，那么就不可以插入’0000-00-00’。</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_error_for_division_by_zero">ERROR_FOR_DIVISION_BY_ZERO</a>在INSERT或UPDATE过程中,如果数据被零除,则产生错误而非警告。如 果未给出该模式,那么数据被零除时MySQL返回NULL 。对于SELECT，如果被除数为0，那么就会返回NULL，MOD(N,M)也一样。</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_engine_substitution">NO_ENGINE_SUBSTITUTION</a>如果指定了此mode，我们在创建表或者修改表的时候，如果去指定了不存在或者不支持的存储引擎，那么就会报错，无法创建和修改，如果没有配置此mode，那么就会将我们指定的存储引擎（不支持或者不存在）的存储引擎替换为默认的存储引擎。</p>
+<p>当然MySQL 提供了其他的mode ，完整的mode介绍请看<a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sql-mode-full">官方文档</a></p>
+<p><strong>如何查看当前MySQL设置的SQL mode</strong></p>
+<p>– 查看全局sql_mode设置<br> SELECT @@GLOBAL.sql_mode;<br> – 查看当前客户端的sql_mode<br> SELECT @@SESSION.sql_mode;</p>
+<p><strong>其中：</strong></p>
+<p>●   设置GLOBAL变量需要SYSTEM_VARIABLES_ADMIN特权(或已弃用的SUPER特权)，并影响从那时起连接的所有客户端的操作。</p>
+<p>●   设置SESSION变量只影响当前客户端。每个客户机可以在任何时候更改其会话sql_mode值。</p>
+<p><strong>如何设置SQL mode</strong></p>
+<p>设置SQL mode有如下几种方式：</p>
+<p>●   可以在启动MySQL服务端时，在命令行中使用<a href="https://dev.mysql.com/doc/refman/8.0/en/server-options.html#option_mysqld_sql-mode">–sql-mode=”modes”</a> 或者在配置文件中使用SQL -mode=”modes”，在my.conf/my.ini中。</p>
+<p>●   要显式清除SQL模式，需要在命令行上使用——sql-mode=””将其设置为空字符串，或在选项文件中使用sql-mode=””。</p>
+<p>●   也可以在运行时修改mode：</p>
+<p>– 设置全局SQL-mode<br> SET GLOBAL sql_mode = ‘modes’;<br> – 设置当前客户端的SQL-mode<br> SET SESSION sql_mode = ‘modes’;</p>
+<p>在SpringBoot中配置：可以在配置jdbc url后面追加：&amp;sessionVariables=sql_mode=’STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION’ 定义客户端连接所使用的SQL mode</p>
+<p>如下为CSM中配置的数据库连接url配置：</p>
+<p>csm.mysql.url=jdbc:mysql://10.120.0.39:3306/csm?useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;rewriteBatchedStatements=true&amp;noDatetimeStringSync=true&amp;serverTimezone=Asia/Shanghai&amp;allowMultiQueries=true&amp;sessionVariables=sql_mode=’STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION’</p>
+<p>参考文档：</p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/faqs-sql-modes.html">https://dev.mysql.com/doc/refman/8.0/en/faqs-sql-modes.html</a></p>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_only_full_group_by">https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html</a></p>
+<p><a href="https://developer.aliyun.com/article/710525">https://developer.aliyun.com/article/710525</a></p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
+      </tags>
+  </entry>
 </search>

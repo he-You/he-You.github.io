@@ -1,0 +1,227 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SQL mode 简单介绍与使用 | he-You</title><meta name="keywords" content="MySQL"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="SQL mode 简单介绍与使用什么是SQL mode一句话概述：SQL mode 定义MySQL应该支持什么样的SQL语法以及它应该执行什么样的数据验证检查。 MySQL服务器端可以以不同的SQL mode 运行，并且可以根据sql_mode系统变量的值为不同的客户端应用不同的模式。DBA可以设置全局SQL mode ，每个客户端应用程序可以根据自己的需求设置会话SQL模式。 设置和查看SQL">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SQL mode 简单介绍与使用">
+<meta property="og:url" content="https://he-you.github.io/2023/09/05/SQL%20mode%20%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D%E4%B8%8E%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="SQL mode 简单介绍与使用什么是SQL mode一句话概述：SQL mode 定义MySQL应该支持什么样的SQL语法以及它应该执行什么样的数据验证检查。 MySQL服务器端可以以不同的SQL mode 运行，并且可以根据sql_mode系统变量的值为不同的客户端应用不同的模式。DBA可以设置全局SQL mode ，每个客户端应用程序可以根据自己的需求设置会话SQL模式。 设置和查看SQL">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/he-You/image/master/kj7Gp4LIvtw.jpg">
+<meta property="article:published_time" content="2023-09-05T10:10:25.434Z">
+<meta property="article:modified_time" content="2023-09-05T10:10:25.435Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="MySQL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/he-You/image/master/kj7Gp4LIvtw.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2023/09/05/SQL%20mode%20%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D%E4%B8%8E%E4%BD%BF%E7%94%A8/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-09-05 18:10:25'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">加载中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">57</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">41</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">14</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/kj7Gp4LIvtw.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">SQL mode 简单介绍与使用</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon fas fa-history"></i><span class="post-meta-label">更新于</span><time datetime="2023-09-05T10:10:25.435Z" title="undefined 2023-09-05 18:10:25">2023-09-05</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/MySQL/">MySQL</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="SQL-mode-简单介绍与使用"><a href="#SQL-mode-简单介绍与使用" class="headerlink" title="SQL mode 简单介绍与使用"></a>SQL mode 简单介绍与使用</h1><h2 id="什么是SQL-mode"><a href="#什么是SQL-mode" class="headerlink" title="什么是SQL mode"></a>什么是SQL mode</h2><p>一句话概述：SQL mode 定义MySQL应该支持什么样的SQL语法以及它应该执行什么样的数据验证检查。</p>
+<p><strong>MySQL服务器端可以以不同的SQL mode 运行</strong>，并且可以根据sql_mode系统变量的值为不同的客户端应用不同的模式。DBA可以设置全局SQL mode ，每个客户端应用程序可以根据自己的需求设置会话SQL模式。</p>
+<h2 id="设置和查看SQL-mode"><a href="#设置和查看SQL-mode" class="headerlink" title="设置和查看SQL mode"></a>设置和查看SQL mode</h2><p>MySQL8 默认的SQL mode包括：</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_only_full_group_by">ONLY_FULL_GROUP_BY</a>：拒绝select列表、HAVING条件或ORDER BY列表引用既不在GROUP BY子句中命名也在功能上依赖于(由GROUP BY唯一确定)列的非聚合列的查询。</p>
+<p>对于 group by 的这种聚合操作，如果在select 中的列，没有在group by 中出现，那么这个SQL是不合法的，因为列不在group by的从句中，所以对于设置了这个mode的数据库，在使用group by 的时候，就要用MAX()，SUM()，ANT_VALUE()的这种聚合函数，才能完成GROUP BY 的聚合操作。</p>
+<p> <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_strict_trans_tables">STRICT_TRANS_TABLES</a>为事务性存储引擎启用严格SQL模式，并在可能时为非事务性存储引擎启用严格SQL模式。在该模式下,如果一个值不能插入到一个事务表中,则中断当前的操作,对非事务表不做限制。</p>
+<p>比如我们的某个字段设置不能为NULL，而我们插入的数据这个字段为NULL，那么就不能通过，就会报错：</p>
+<p>1364 - Field ‘xxxx’ doesn’t have a default value</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_zero_in_date">NO_ZERO_IN_DATE</a>NO_ZERO_IN_DATE模式会影响服务器是否允许年部分不为零但月或日部分为0的日期。(该模式影响日期，如“2010-00-01”或“2010-01-00”，但不影响“0000-00-00”。要控制服务器是否允许’0000-00-00’，请使用NO_ZERO_DATE模式。)</p>
+<p>NO_ZERO_IN_DATE的效果还取决于是否启用严格SQL模式，如果没有启用严格SQL模式STRICT_TRANS_TABLES，那么启用了NO_ZERO_IN_DATE也没用。</p>
+<p>如下SQL的日期月和日为0，启用了严格模式和NO_ZERO_IN_DATE，那么就会报错</p>
+<p>INSERT INTO <code>csm</code>.<code>user</code> (<code>name</code>, <code>age</code> ,<code>create_date</code>)<br> VALUES (‘xxxx’, ‘26’, ‘2022-00-00’);</p>
+<p> 1292 - Incorrect datetime value: ‘2022-00-00’ for column ‘create_date’ at row 1</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_zero_date">NO_ZERO_DATE</a>设置该值,mysql数据库不允许插入零日期,插入零日期会抛出错误而不是警告。</p>
+<p>上面的NO_ZERO_IN_DATE可以插入’0000-00-00’，如果使用了严格模式和NO_ZERO_DATE，那么就不可以插入’0000-00-00’。</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_error_for_division_by_zero">ERROR_FOR_DIVISION_BY_ZERO</a>在INSERT或UPDATE过程中,如果数据被零除,则产生错误而非警告。如 果未给出该模式,那么数据被零除时MySQL返回NULL 。对于SELECT，如果被除数为0，那么就会返回NULL，MOD(N,M)也一样。</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_no_engine_substitution">NO_ENGINE_SUBSTITUTION</a>如果指定了此mode，我们在创建表或者修改表的时候，如果去指定了不存在或者不支持的存储引擎，那么就会报错，无法创建和修改，如果没有配置此mode，那么就会将我们指定的存储引擎（不支持或者不存在）的存储引擎替换为默认的存储引擎。</p>
+<p>当然MySQL 提供了其他的mode ，完整的mode介绍请看<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sql-mode-full">官方文档</a></p>
+<p><strong>如何查看当前MySQL设置的SQL mode</strong></p>
+<p>– 查看全局sql_mode设置<br> SELECT @@GLOBAL.sql_mode;<br> – 查看当前客户端的sql_mode<br> SELECT @@SESSION.sql_mode;</p>
+<p><strong>其中：</strong></p>
+<p>●   设置GLOBAL变量需要SYSTEM_VARIABLES_ADMIN特权(或已弃用的SUPER特权)，并影响从那时起连接的所有客户端的操作。</p>
+<p>●   设置SESSION变量只影响当前客户端。每个客户机可以在任何时候更改其会话sql_mode值。</p>
+<p><strong>如何设置SQL mode</strong></p>
+<p>设置SQL mode有如下几种方式：</p>
+<p>●   可以在启动MySQL服务端时，在命令行中使用<a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/server-options.html#option_mysqld_sql-mode">–sql-mode=”modes”</a> 或者在配置文件中使用SQL -mode=”modes”，在my.conf/my.ini中。</p>
+<p>●   要显式清除SQL模式，需要在命令行上使用——sql-mode=””将其设置为空字符串，或在选项文件中使用sql-mode=””。</p>
+<p>●   也可以在运行时修改mode：</p>
+<p>– 设置全局SQL-mode<br> SET GLOBAL sql_mode = ‘modes’;<br> – 设置当前客户端的SQL-mode<br> SET SESSION sql_mode = ‘modes’;</p>
+<p>在SpringBoot中配置：可以在配置jdbc url后面追加：&amp;sessionVariables=sql_mode=’STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION’ 定义客户端连接所使用的SQL mode</p>
+<p>如下为CSM中配置的数据库连接url配置：</p>
+<p>csm.mysql.url=jdbc:mysql://10.120.0.39:3306/csm?useUnicode=true&amp;characterEncoding=UTF-8&amp;autoReconnect=true&amp;rewriteBatchedStatements=true&amp;noDatetimeStringSync=true&amp;serverTimezone=Asia/Shanghai&amp;allowMultiQueries=true&amp;sessionVariables=sql_mode=’STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION’</p>
+<p>参考文档：</p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/faqs-sql-modes.html">https://dev.mysql.com/doc/refman/8.0/en/faqs-sql-modes.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html#sqlmode_only_full_group_by">https://dev.mysql.com/doc/refman/8.0/en/sql-mode.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://developer.aliyun.com/article/710525">https://developer.aliyun.com/article/710525</a></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2023/09/05/SQL%20mode%20%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D%E4%B8%8E%E4%BD%BF%E7%94%A8/">https://he-you.github.io/2023/09/05/SQL mode 简单介绍与使用/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/MySQL/">MySQL</a></div><div class="post_share"><div class="social-share" data-image="https://raw.githubusercontent.com/he-You/image/master/kj7Gp4LIvtw.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2023/09/05/%E7%9B%91%E5%90%ACSpringboot%E5%90%AF%E5%8A%A8%E4%BA%8B%E4%BB%B6%E5%AE%8C%E6%88%90%E6%B6%88%E6%81%AF%E9%80%9A%E7%9F%A5/"><img class="next-cover" src="https://raw.githubusercontent.com/he-You/image/master/DHEItlrjOQk.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">监听Springboot启动事件完成消息通知</div></div></a></div></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span> 相关推荐</span></div><div class="relatedPosts-list"><div><a href="/2023/09/04/MySQL索引为什么使用B+树而不是跳表/" title="MySQL索引为什么使用B+树而不是跳表"><img class="cover" src="https://raw.githubusercontent.com/he-You/image/master/YodH2WzN6YU.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-09-04</div><div class="title">MySQL索引为什么使用B+树而不是跳表</div></div></a></div><div><a href="/2023/09/04/ON DUPLICATE KEY UPDATE的坑/" title="MySQL ON DUPLICATE KEY UPDATE的坑"><img class="cover" src="https://raw.githubusercontent.com/he-You/image/master/RL8lIAf0nQ8.jpg" alt="cover"><div class="content is-center"><div class="date"><i class="far fa-calendar-alt fa-fw"></i> 2023-09-04</div><div class="title">MySQL ON DUPLICATE KEY UPDATE的坑</div></div></a></div></div></div></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#SQL-mode-%E7%AE%80%E5%8D%95%E4%BB%8B%E7%BB%8D%E4%B8%8E%E4%BD%BF%E7%94%A8"><span class="toc-number">1.</span> <span class="toc-text">SQL mode 简单介绍与使用</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFSQL-mode"><span class="toc-number">1.1.</span> <span class="toc-text">什么是SQL mode</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%AE%BE%E7%BD%AE%E5%92%8C%E6%9F%A5%E7%9C%8BSQL-mode"><span class="toc-number">1.2.</span> <span class="toc-text">设置和查看SQL mode</span></a></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/kj7Gp4LIvtw.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="false"></script><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
