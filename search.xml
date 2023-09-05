@@ -2377,6 +2377,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li>最小连接数：根据服务实例的请求积压情况将当前请求分发到压力小的服务器上。</li>
 </ul>
 <h1 id="什么是-Ribbon"><a href="#什么是-Ribbon" class="headerlink" title="什么是 Ribbon"></a>什么是 Ribbon</h1><p>Spring Cloud Ribbon是基于Netflix Ribbon 实现的一套<code>客户端的负载均衡工具</code>，Ribbon客户端组件提 供一系列的完善的配置，如超时，重试等。通过Load Balancer获取到服务提供的所有机器实例， Ribbon会自动基于某种规则(轮询，随机)去调用这些服务。Ribbon也可以实现我们自己的负载均衡算法。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230905225332998.png" alt="image-20230905225332998"></p>
 <h2 id="Ribbon-模块"><a href="#Ribbon-模块" class="headerlink" title="Ribbon 模块"></a>Ribbon 模块</h2><ul>
 <li>ribbon-loadbalancer：负载均衡模块，可以独立使用，也可以与其他模块一起使用</li>
 <li>Ribbon：内置的负载均衡算法</li>
@@ -2456,7 +2457,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </ul>
 </li>
 </ol>
-<h1 id="Ribbon-原理"><a href="#Ribbon-原理" class="headerlink" title="Ribbon 原理"></a>Ribbon 原理</h1><h2 id="调用流程"><a href="#调用流程" class="headerlink" title="调用流程"></a>调用流程</h2><p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gpmvvzd561j31bz0u0agu.jpg"></p>
+<h1 id="Ribbon-原理"><a href="#Ribbon-原理" class="headerlink" title="Ribbon 原理"></a>Ribbon 原理</h1><h2 id="调用流程"><a href="#调用流程" class="headerlink" title="调用流程"></a>调用流程</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230905232504714.png" alt="image-20230905232504714"></p>
 <h2 id="LoadBalanced-注解原理"><a href="#LoadBalanced-注解原理" class="headerlink" title="@LoadBalanced 注解原理"></a>@LoadBalanced 注解原理</h2><p>首先看一下@LoadBalanced 注解，从注解的注释可知：该注解是标记 RestTemplate 或者 WebClient 的 bean 对象，是作用于LoadBalancerClient配置。</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Annotation to mark a RestTemplate or WebClient bean to be configured to use a</span></span><br><span class="line"><span class="comment"> * LoadBalancerClient.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> Spencer Gibb</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Target(&#123; ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD &#125;)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="meta">@Documented</span></span><br><span class="line"><span class="meta">@Inherited</span></span><br><span class="line"><span class="meta">@Qualifier</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> LoadBalanced &#123;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
