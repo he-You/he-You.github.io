@@ -1206,7 +1206,9 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </li>
 <li><p>如果条件1不成立，则尝试进行入队操作，将任务放入等待队列中</p>
 </li>
-<li><p>如果队列满了，则判断当前线程数是否达到最大线程数，如果小于最大线程数，则继续创建新线程进行任务处理，如果大于最大线程数，则执行拒绝策略</p>
+<li><p>如果队列满了，则判断当前线程数是否达到最大线程数，如果小于最大线程数，则继续创建新线程进行任务处理（新的线程处理完任务之后，同样回去队列中获取任务进行处理，当阻塞队列为空时，会淘汰大于核心线程数部分的线程）</p>
+</li>
+<li><p>如果大于最大线程数，则执行拒绝策略</p>
 <p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906135252249.png" alt="image-20230906135252249"></p>
 </li>
 </ol>
@@ -1819,7 +1821,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
   <entry>
     <title>Redis高可用集群及相关问题</title>
     <url>/2021/03/16/Redis%20%E9%AB%98%E5%8F%AF%E7%94%A8%E9%9B%86%E7%BE%A4/</url>
-    <content><![CDATA[<h1 id="Redis集群方案"><a href="#Redis集群方案" class="headerlink" title="Redis集群方案"></a>Redis集群方案</h1><h2 id="主从架构"><a href="#主从架构" class="headerlink" title="主从架构"></a>主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6nfl8tmj20nk0i0wf7.jpg"></p>
+    <content><![CDATA[<h1 id="Redis集群方案"><a href="#Redis集群方案" class="headerlink" title="Redis集群方案"></a>Redis集群方案</h1><h2 id="主从架构"><a href="#主从架构" class="headerlink" title="主从架构"></a>主从架构</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906222419274.png" alt="image-20230906222419274"></p>
 <p>主从模式是最简单的实现高可用的方案，核心就是主从同步。主从同步的原理如下：</p>
 <ol>
 <li>slave发送psync命令到master</li>
@@ -1830,7 +1832,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </ol>
 <h2 id="哨兵模式"><a href="#哨兵模式" class="headerlink" title="哨兵模式"></a>哨兵模式</h2><p>基于主从方案的缺点还是很明显的，假设master宕机，那么就不能写入数据，那么slave也就失去了作用，整个架构就不可用了，除非手动切换，主要原因就是因为没有自动故障转移机制。</p>
 <p>而哨兵(sentinel)的功能比单纯的主从架构全面的多了，它具备自动故障转移、集群监控、消息通知等功能。</p>
-<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6oddaczj21ic0tsgox.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906222926178.png" alt="image-20230906222926178"></p>
 <p>哨兵可以同时监视多个主从服务器，并且在被监视的master下线时，自动将某个slave提升为master，然后由新的master继续接收命令。</p>
 <ol>
 <li>初始化sentinel，将普通的redis代码替换成sentinel专用代码</li>
@@ -1845,7 +1847,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li>将原来的master设置为新的master的从服务器，当原来master重新回复连接时，就变成了新master的从服务器</li>
 </ol>
 <h2 id="高可用集群模式"><a href="#高可用集群模式" class="headerlink" title="高可用集群模式"></a>高可用集群模式</h2><p>redis集群是redis提供的分布式数据存储方案，集群通过数据分片sharding来进行数据的共享，同时提供复制和故障转移的功能。</p>
-<p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gom6n9vqutj219o0so40h.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906223159811.png" alt="image-20230906223159811"></p>
 <h1 id="Redis-高可用集群搭建"><a href="#Redis-高可用集群搭建" class="headerlink" title="Redis 高可用集群搭建"></a>Redis 高可用集群搭建</h1><ol>
 <li>环境准备</li>
 <li>conf 文件修改</li>
@@ -1860,7 +1862,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li>A知道B收到了meet消息，返回一条ping消息，握手成功</li>
 <li>最后，节点A将会通过gossip协议把节点B的信息传播给集群中的其他节点，其他节点也将和B进行握手</li>
 </ol>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gon62iv437j31540n875t.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906223743744.png" alt="image-20230906223743744"></p>
 <p>维护集群的元数据（集群节点信息，主从关系等）有两种方式：集中式和 gossip。而 Redis Cluster 节点间采取的就是 gossip 协议进行通信。</p>
 <h3 id="gossip协议"><a href="#gossip协议" class="headerlink" title="gossip协议"></a>gossip协议</h3><p>gossip 是 redis 集群节点之间采用的一种通信协议，主要包括ping，pong，meet，fail等消息。</p>
 <ul>
@@ -1900,7 +1902,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li><p>slave广播Pong消息通知其他集群节点。</p>
 </li>
 </ol>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEgy1gonb99d60nj30q819uznc.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEgy1gonb99d60nj30q819uznc.jpg" alt="img"></p>
 <p>注：slave 节点并不是在主节点进入 fail 状态就马上发起选举，而是有一点的延迟，确保 FAIL 状态能够传播到集群中的其他节点。这个延迟时间Redis是通过公式计算出来的：</p>
 <p><code>DELAY = 500ms + random(0 ~ 500ms) + SLAVE_RANK * 1000ms</code></p>
 <p>其中SLAVE_RANK表示此slave已经从master复制数据的总量的rank。Rank越小代表已复制的数据越新。这种方 式下，持有最新数据的slave将会首先发起选举(理论上)，该节点成为新的 master 节点后数据也较为完整。</p>
@@ -2997,8 +2999,9 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
     <title>布隆过滤器</title>
     <url>/2021/01/05/%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8/</url>
     <content><![CDATA[<h3 id="布隆过滤器-Bloom-Filter"><a href="#布隆过滤器-Bloom-Filter" class="headerlink" title="布隆过滤器-Bloom Filter"></a>布隆过滤器-Bloom Filter</h3><p>布隆过滤器的原理是，当一个元素被加入集合时，通过K个Hash函数将这个元素映射成一个位数组中的K个点，<br>把它们置为1。当检查一个元素是否存在时，我们只要将元素通过K个Hash函数进行计算,<br>看看这些点是不是都是1就（大约）知道集合中有没有它了：<br>如果这些点有任何一个0，则被检元素一定不在；如果都是1，则被检元素<strong>很可能在</strong>。这就是布隆过滤器的基本思想</p>
-<p>Bloom Filter跟单哈希函数Bit-Map不同之处在于：Bloom Filter使用了k个哈希函数，<br>每个字符串跟k个bit对应。从而降低了冲突的概率。</p>
-<p><img src="https://tva1.sinaimg.cn/large/0081Kckwgy1gmd6wwgyv4j30oi0d8t9h.jpg"></p>
+<p>Bloom Filter跟单哈希函数Bit-Map不同之处在于：Bloom Filter使用了k个哈希函数，</p>
+<p>每个字符串跟k个bit对应。从而降低了冲突的概率。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/0081Kckwgy1gmd6wwgyv4j30oi0d8t9h-20230906224412370.jpg"></p>
 <p><strong>由于Hash函数存在Hash碰撞的情况,布隆过滤器无法100%保证检索的数据存在</strong>,但是能100%判断出数据不存在,这样就可以用于<strong>解决缓存穿透</strong>的情况了</p>
 <p>缺陷:<br>根据上面我们可以知道,布隆过滤器有存在误判的情况,而且由于进行了k次Hash计算,删除就变得十分复杂;即:</p>
 <ul>
@@ -3267,7 +3270,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
   <entry>
     <title>多级缓存架构与 Redis 常见问题与解决方案</title>
     <url>/2021/03/19/%E5%A4%9A%E7%BA%A7%E7%BC%93%E5%AD%98%E6%9E%B6%E6%9E%84%E4%B8%8E%20Redis%20%E5%B8%B8%E8%A7%81%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/</url>
-    <content><![CDATA[<h1 id="多级缓存架构"><a href="#多级缓存架构" class="headerlink" title="多级缓存架构"></a>多级缓存架构</h1><p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq7kxttl9j311f0u0dj6.jpg"></p>
+    <content><![CDATA[<h1 id="多级缓存架构"><a href="#多级缓存架构" class="headerlink" title="多级缓存架构"></a>多级缓存架构</h1><p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEly1goq7kxttl9j311f0u0dj6.jpg" alt="img"></p>
 <p>如上图所示：改架构由LVS负载均衡、Nginx 负载均衡、web 层、缓存层、微服务层、DB 层组成。其中：</p>
 <ul>
 <li>LVS（Linux Virtual Server）即Linux虚拟服务器，Linux内核中实现了基于IP的数据请求负载均衡调度。终端用户的Web请求会发送给LVS调度器，调度器根据自己预设的算法决定将该请求发送给后端的某台Web服务器。</li>
@@ -3281,7 +3284,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <li><p>缓存空对象：如果缓存没命中，去数据库查询，如果数据库查询结果不存在，则构造一个空的对象缓存到 Redis 中，并设置过期时间。</p>
 </li>
 <li><p>**<a href="https://he-you.github.io/2021/01/05/%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8/">布隆过滤器</a>**：布隆过滤器就是一个大型的bit数组和几个不一样的无偏 hash 函数。所谓无偏就是能够把元素的 hash 值算得比较均匀。</p>
-<p><img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq87ynfpkj31us0j0766.jpg"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEly1goq87ynfpkj31us0j0766.jpg" alt="img"></p>
 </li>
 </ol>
 <p>向布隆过滤器中添加 key 时，会使用多个 hash 函数对 key 进行 hash 算得一个整数索引值然后对位数组长度 进行<code>取模运算</code>得到一个位置，每个 hash 函数都会算得一个不同的位置。再把位数组的这几个位置都置为 1 就 完成了 add 操作。</p>
@@ -3322,8 +3325,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <h1 id="缓存清除策略"><a href="#缓存清除策略" class="headerlink" title="缓存清除策略"></a>缓存清除策略</h1><p>Redis 对于过期键提供了三种清除策略</p>
 <h2 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h2><p>惰性删除指的是当我们查询key的时候才对key进行检测，如果已经达到过期时间，则删除。显然，他有一个缺点就是如果这些过期的key没有被访问，那么他就一直无法被删除，而且一直占用内存。</p>
 <h2 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h2><p>定期删除指的是redis每隔一段时间对数据库做一次检查，删除里面的过期key。由于不可能对所有key去做轮询来删除，所以redis会每次随机取一些key去做检查和删除。</p>
-<img src="https://tva1.sinaimg.cn/large/008eGmZEly1goq6x2dzjmj30q60ry3zz.jpg" style="zoom:40%;" />
-
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/008eGmZEly1goq6x2dzjmj30q60ry3zz.jpg" alt="img"></p>
 <h2 id="主动内存淘汰策略"><a href="#主动内存淘汰策略" class="headerlink" title="主动内存淘汰策略"></a>主动内存淘汰策略</h2><p>当Redis当前使用的内存超过 maxmemory 限定时，会触发主动清理策略，Redis 主动清理策略有 8 种，可以分为以下三种场景：</p>
 <h3 id="针对过期-key-的处理"><a href="#针对过期-key-的处理" class="headerlink" title="针对过期 key 的处理"></a>针对过期 key 的处理</h3><ul>
 <li><strong>volatile-ttl</strong>:在筛选时，会针对设置了过期时间的键值对，根据过期时间的先后进行删 除，越早过期的越先被删除。</li>
@@ -3834,7 +3836,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>Java 并发编程（七）AQS（队列同步器）</title>
+    <title>Java 并发编程（八）AQS（队列同步器）</title>
     <url>/2021/01/08/Java-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B%EF%BC%88%E4%B8%83%EF%BC%89AQS%EF%BC%88%E9%98%9F%E5%88%97%E5%90%8C%E6%AD%A5%E5%99%A8%EF%BC%89/</url>
     <content><![CDATA[<h1 id="AQS理解"><a href="#AQS理解" class="headerlink" title="AQS理解"></a>AQS理解</h1><h2 id="管程——Java同步的设计思想"><a href="#管程——Java同步的设计思想" class="headerlink" title="管程——Java同步的设计思想"></a>管程——Java同步的设计思想</h2><ul>
 <li>管程:指的是管理共享变量以及对共享变量的操作过程，让他们支持并发。</li>
