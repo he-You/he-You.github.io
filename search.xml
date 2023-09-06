@@ -1135,10 +1135,9 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </tags>
   </entry>
   <entry>
-    <title>线程池学习</title>
+    <title>Java并发编程（十）线程池</title>
     <url>/2021/01/06/Java%E7%BA%BF%E7%A8%8B%E6%B1%A0%E5%AD%A6%E4%B9%A0/</url>
-    <content><![CDATA[<h3 id="核心线程池的内部实现"><a href="#核心线程池的内部实现" class="headerlink" title="核心线程池的内部实现"></a>核心线程池的内部实现</h3><p>一、ThreadPoolExecutor 类</p>
-<ol>
+    <content><![CDATA[<h2 id="核心线程池的内部实现"><a href="#核心线程池的内部实现" class="headerlink" title="核心线程池的内部实现"></a>核心线程池的内部实现</h2><h3 id="ThreadPoolExecutor-类"><a href="#ThreadPoolExecutor-类" class="headerlink" title="ThreadPoolExecutor 类"></a>ThreadPoolExecutor 类</h3><ol>
 <li><p>构造函数</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function">pubilic <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">int</span> maxmumPoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">long</span> keepAliveTime,</span></span></span><br><span class="line"><span class="function"><span class="params">                           TimeUnit unit, </span></span></span><br><span class="line"><span class="function"><span class="params">                           BolockingQueue&lt;Runnable&gt; workQueue,</span></span></span><br><span class="line"><span class="function"><span class="params">                           ThreadFactory threadFactory,</span></span></span><br><span class="line"><span class="function"><span class="params">                           RejectedExecutionHandler handler)</span></span></span><br></pre></td></tr></table></figure>
 
@@ -1186,17 +1185,100 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 </ul>
 </li>
 </ol>
-<p>   总结：</p>
+<h3 id="线程池工作过程"><a href="#线程池工作过程" class="headerlink" title="线程池工作过程"></a>线程池工作过程</h3><h4 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h4>   <figure class="highlight java"><table><tr><td class="code"><pre><span class="line">   </span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolExecutor</span><span class="params">(<span class="keyword">int</span> corePoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">int</span> maximumPoolSize,</span></span></span><br><span class="line"><span class="function"><span class="params">                           <span class="keyword">long</span> keepAliveTime,</span></span></span><br><span class="line"><span class="function"><span class="params">                           TimeUnit unit,</span></span></span><br><span class="line"><span class="function"><span class="params">                           BlockingQueue&lt;Runnable&gt; workQueue)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">this</span>(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,</span><br><span class="line">          Executors.defaultThreadFactory(), defaultHandler);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>   <strong>当使用线程池的构造函数创建线程池时，线程池中是没有线程的</strong>。而Tomcat的线程池会在创建线程池对象时，创建线程。</p>
+<h4 id="任务处理"><a href="#任务处理" class="headerlink" title="任务处理"></a>任务处理</h4><p>   <img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906142645764.png" alt="image-20230906142645764"></p>
+<p>   ThreadPoolExecutor中提供了两种执行任务的方法：</p>
+<ol>
+<li><p>void execute(Runnable command)</p>
+</li>
+<li><p>Future submit(Runnable task)</p>
+<p>实际上submit中最终还是调用的execute()方法，只不过会返回一个Future对象，用来获取任务执行结果：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> Future&lt;?&gt; submit(Runnable task) &#123;</span><br><span class="line">    <span class="keyword">if</span> (task == <span class="keyword">null</span>) <span class="keyword">throw</span> <span class="keyword">new</span> NullPointerException();</span><br><span class="line">    RunnableFuture&lt;Void&gt; ftask = newTaskFor(task, <span class="keyword">null</span>);</span><br><span class="line">    execute(ftask);</span><br><span class="line">    <span class="keyword">return</span> ftask;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>而execute方法执行的核心逻辑代码：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">if (workerCountOf(c) &lt; corePoolSize) &#123;</span><br><span class="line">    if (addWorker(command, true))</span><br><span class="line">        return;</span><br><span class="line">    c &#x3D; ctl.get();</span><br><span class="line">&#125;</span><br><span class="line">if (isRunning(c) &amp;&amp; workQueue.offer(command)) &#123;</span><br><span class="line">    int recheck &#x3D; ctl.get();</span><br><span class="line">    if (! isRunning(recheck) &amp;&amp; remove(command))</span><br><span class="line">        reject(command);</span><br><span class="line">    else if (workerCountOf(recheck) &#x3D;&#x3D; 0)</span><br><span class="line">        addWorker(null, false);</span><br><span class="line">&#125;</span><br><span class="line">else if (!addWorker(command, false))</span><br><span class="line">    reject(command);</span><br></pre></td></tr></table></figure>
+
+<p>具体的逻辑为：</p>
+</li>
+<li><p>如果当前工作线程的数量小于核心线程数，则继续创建新的线程进行任务处理</p>
+</li>
+<li><p>如果条件1不成立，则尝试进行入队操作，将任务放入等待队列中</p>
+</li>
+<li><p>如果队列满了，则判断当前线程数是否达到最大线程数，如果小于最大线程数，则继续创建新线程进行任务处理，如果大于最大线程数，则执行拒绝策略</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906135252249.png" alt="image-20230906135252249"></p>
+</li>
+</ol>
+<p>   <strong>注意：提交一个Runnable时，不管当前线程池中的线程是否空闲，只要数量小于核心线程数就会创建新线程。</strong></p>
+<p>   <strong>注意：ThreadPoolExecutor相当于是非公平的，比如队列满了之后提交的Runnable可能会比正在排队的Runnable先执行。</strong></p>
+<h4 id="拒绝策略"><a href="#拒绝策略" class="headerlink" title="拒绝策略"></a>拒绝策略</h4><p>   JDK线程池类提供了4种拒绝策略，分别是：</p>
+<ol>
+<li><p>AbortPolicy :直接抛出异常</p>
+</li>
+<li><p>CallerRunsPolicy：由提交任务的线程进行处理任务</p>
+</li>
+<li><p>DiscardOldestPolicy：丢弃掉队列头的任务</p>
+</li>
+<li><p>DiscardPolicy：不处理，丢弃掉</p>
+<p>当然可以根据实际业务场景实现RejectedExecutionHandler接口自定义拒绝策略</p>
+<h4 id="线程池的五种状态是如何流转的？"><a href="#线程池的五种状态是如何流转的？" class="headerlink" title="线程池的五种状态是如何流转的？"></a>线程池的五种状态是如何流转的？</h4><p>线程池有五种状态：</p>
+</li>
+</ol>
 <ul>
-<li>对于固定大小的线程池来说，线程数量不会动态变化，因此 corePoolSize 可以等于 maximumPoolSize</li>
-<li>newCachedThreadPool()返回的 corePoolSize 为 0，maximumPoolSize 无穷大的线程池，且空闲线程会在指定时间内（60s）被回收；</li>
+<li><p>RUNNING：<strong>会</strong>接收新任务并且<strong>会</strong>处理队列中的任务</p>
+</li>
+<li><p>SHUTDOWN：<strong>不会</strong>接收新任务并且<strong>会</strong>处理队列中的任务</p>
+</li>
+<li><p>STOP：<strong>不会</strong>接收新任务并且<strong>不会</strong>处理队列中的任务，并且会中断在处理的任务（注意：一个任务能不能被中断得看任务本身）</p>
+</li>
+<li><p>TIDYING：所有任务都终止了，线程池中也没有线程了，这样线程池的状态就会转为TIDYING，一旦达到此状态，就会调用线程池的terminated()</p>
+</li>
+<li><p>TERMINATED：terminated()执行完之后就会转变为TERMINATED</p>
+<p>这五种状态并不能任意转换，只会有以下几种转换情况：</p>
+</li>
 </ul>
+<ol>
+<li><p>RUNNING -&gt; SHUTDOWN：手动调用shutdown()触发，或者线程池对象GC时会调用finalize()从而调用shutdown()</p>
+</li>
+<li><p>(RUNNING or SHUTDOWN) -&gt; STOP：调用shutdownNow()触发，如果先调shutdown()紧着调shutdownNow()，就会发生SHUTDOWN -&gt; STOP</p>
+</li>
+<li><p>SHUTDOWN -&gt; TIDYING：队列为空并且线程池中没有线程时自动转换</p>
+</li>
+<li><p>STOP -&gt; TIDYING：线程池中没有线程时自动转换（队列中可能还有任务）</p>
+</li>
+<li><p>TIDYING -&gt; TERMINATED：terminated()执行完后就会自动转换</p>
+<h4 id="线程池关闭"><a href="#线程池关闭" class="headerlink" title="线程池关闭"></a>线程池关闭</h4><p>可以通过shutdown会哦shutdownNow方法来关闭线程池。原理是遍历线程中的工作线程，然后逐个调用interrupt方法中断线程，所以无法响应中断的任务可能永远无法终止。</p>
+<h4 id="线程池的核心线程数、最大线程数该如何设置"><a href="#线程池的核心线程数、最大线程数该如何设置" class="headerlink" title="线程池的核心线程数、最大线程数该如何设置"></a>线程池的核心线程数、最大线程数该如何设置</h4><p>我们都知道，线程池中有两个非常重要的参数：</p>
+</li>
+<li><p>corePoolSize：核心线程数，表示线程池中的常驻线程的个数</p>
+</li>
+<li><p>maximumPoolSize：最大线程数，表示线程池中能开辟的最大线程个数</p>
+<p>那这两个参数该如何设置呢？</p>
+<p>我们对线程池负责执行的任务分为三种情况：</p>
+</li>
+<li><p>CPU密集型任务，比如找出1-1000000中的素数</p>
+</li>
+<li><p>IO密集型任务，比如文件IO、网络IO</p>
+</li>
+<li><p>混合型任务</p>
+<p>CPU密集型任务的特点时，线程在执行任务时会一直利用CPU，所以对于这种情况，就尽可能避免发生线程上下文切换。</p>
+<p>比如，现在我的电脑只有一个CPU，如果有两个线程在同时执行找素数的任务，那么这个CPU就需要额外的进行线程上下文切换，从而达到线程并行的效果，此时执行这两个任务的总时间为：</p>
+<p>任务执行时间*2+线程上下文切换的时间</p>
+<p>而如果只有一个线程，这个线程来执行两个任务，那么时间为：</p>
+<p>任务执行时间*2</p>
+<p>所以对于CPU密集型任务，线程数最好就等于CPU核心数，可以通过以下API拿到你电脑的核心数：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">Runtime.getRuntime().availableProcessors()</span><br></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>   <strong>通常，如果IO型任务执行的时间越长，那么同时阻塞在IO上的线程就可能越多，我们就可以设置更多的线程，但是，线程肯定不是越多越好</strong>，我们可以通过以下这个公式来进行计算：</p>
+<p>   线程数 = CPU核心数   *（ 1 + 线程等待时间 / 线程运行总时间 ）</p>
 ]]></content>
       <categories>
         <category>Java并发编程</category>
       </categories>
       <tags>
-        <tag>线程池</tag>
+        <tag>并发编程</tag>
       </tags>
   </entry>
   <entry>
