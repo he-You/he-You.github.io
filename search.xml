@@ -3799,7 +3799,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
 <p>使用混合持久化方式的前提是开启 AOF<code>aof‐use‐rdb‐preamble yes</code></p>
 <p>如果开启了混合持久化，AOF在重写时，不再是单纯将内存数据转换为RESP命令写入AOF文件，而是将 <strong>重写这一刻之前的内存做RDB快照</strong>处理，并且将RDB快照内容和增量的AOF修改内存数据的命令存在一 起，<strong>都写入新的AOF文件</strong>，新的文件一开始不叫appendonly.aof，等到重写完新的AOF文件才会进行改名，覆盖原有的AOF文件，完成新旧两个AOF文件的替换。</p>
 <p>于是在 Redis 重启的时候，可以先加载 RDB 的内容，然后再重放增量 AOF 日志就可以完全替代之前的 AOF 全量文件重放，因此重启效率大幅得到提升。</p>
-<h1 id="主从与哨兵架构"><a href="#主从与哨兵架构" class="headerlink" title="主从与哨兵架构"></a>主从与哨兵架构</h1><h2 id="Redis-主从架构"><a href="#Redis-主从架构" class="headerlink" title="Redis 主从架构"></a>Redis 主从架构</h2><p><img src="https://tva1.sinaimg.cn/large/e6c9d24egy1gojgg1xrl6j20nk0i0wf7.jpg"></p>
+<h1 id="主从与哨兵架构"><a href="#主从与哨兵架构" class="headerlink" title="主从与哨兵架构"></a>主从与哨兵架构</h1><h2 id="Redis-主从架构"><a href="#Redis-主从架构" class="headerlink" title="Redis 主从架构"></a>Redis 主从架构</h2><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230906222419274.png" alt="image-20230906222419274"></p>
 <h3 id="搭建步骤"><a href="#搭建步骤" class="headerlink" title="搭建步骤"></a>搭建步骤</h3><figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">1、复制一份redis.conf文件</span><br><span class="line">2、将相关配置修改为如下值:</span><br><span class="line">port6380</span><br><span class="line"># 把pid进程号写入pidfile配置的文件</span><br><span class="line">pidfile &#x2F;var&#x2F;run&#x2F;redis_6380.pid </span><br><span class="line">logfile&quot;6380.log&quot;</span><br><span class="line"># 指定数据存放目录</span><br><span class="line">dir &#x2F;usr&#x2F;local&#x2F;redis‐5.0.3&#x2F;data&#x2F;6380  </span><br><span class="line"># 需要注释掉bind</span><br><span class="line">#bind127.0.0.1(bind绑定的是自己机器网卡的ip，如果有多块网卡可以配多个ip，代表允许客户端通 过机器的哪些网卡ip去访问，内网一般可以不配置bind，注释掉即可)</span><br><span class="line"></span><br><span class="line">3、配置主从复制</span><br><span class="line">#从本机6379的redis实例复制数据，Redis5.0之前使用 slaveof</span><br><span class="line">replicaof 127.0.0.1 6379</span><br><span class="line"># 配置从节点只读</span><br><span class="line">replica‐read‐only yes </span><br><span class="line"></span><br><span class="line">4、启动从节点</span><br><span class="line">redis‐serverredis.conf</span><br><span class="line"></span><br><span class="line">5、连接从节点</span><br><span class="line">redis‐cli ‐p 6380</span><br><span class="line">6、测试在6379实例上写数据，6380实例是否能及时同步新修改数据</span><br><span class="line">7、可以自己再配置一个6381的从节点</span><br></pre></td></tr></table></figure>
 
 <h2 id="主从架构原理"><a href="#主从架构原理" class="headerlink" title="主从架构原理"></a>主从架构原理</h2><p>当为master配置了一个slave，不管这个slave是否是第一次连接上Master，它都会发送一个PSYNC命令给master请求复制数据。</p>
@@ -4342,6 +4342,36 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
       </categories>
       <tags>
         <tag>源码</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL MVCC机制</title>
+    <url>/2023/09/07/MVCC%E5%A4%9A%E7%89%88%E6%9C%AC%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<h1 id="MVCC多版本并发控制机制"><a href="#MVCC多版本并发控制机制" class="headerlink" title="MVCC多版本并发控制机制"></a>MVCC多版本并发控制机制</h1><p>所谓的MVCC就是MySQL在<strong>RR、RC隔离级别</strong>下并发读取数据时的一种机制，主要是通过undo log和read view实现</p>
+<h2 id="undo-log-版本链"><a href="#undo-log-版本链" class="headerlink" title="undo log 版本链"></a>undo log 版本链</h2><p>undo日志版本链是指一行数据被多个事务依次修改过后，在每个事务修改完后，Mysql会保留修改前的数据undo回滚日 志，并且用两个隐藏字段trx_id和roll_pointer把这些undo日志串联起来形成一个历史记录版本链</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230907200315276.png" alt="image-20230907200315276"></p>
+<h1 id="一致性视图read-view"><a href="#一致性视图read-view" class="headerlink" title="一致性视图read view"></a>一致性视图read view</h1><p>在可重复读隔离级别，当事务开启，执行任何查询sqll时会生成当前事务的一致性视图read-view，**该视图在事务结束之前永 远都不会变化(如果是读已提交隔离级别在每次执行查询sql时都会重新生成read-view)**，这个视图由执行查询时所有未提交 事务id数组(数组里最小的id为min_id)和已创建的最大事务id(max_id)组成，事务里的任何sql查询结果需要从对应版 本链里的最新数据开始逐条跟read-view做比对从而得到最终的快照结果。</p>
+<p>比如在上图中，如果在trx_id=180之后的事务进行查询，那么此时的一致性视图的是：[120,220]，180，min_id=120, max_id=220。对于小于120的事务都是已提交的事务，在120~220之间的事务有可能是已提交的，也有可能是未提交的事务，对于大于220的事务，都是未提交的事务</p>
+<p><strong>版本链比对规则:</strong></p>
+<ol>
+<li>如果 row 的 trx_id 落在绿色部分( trx_id&lt;min_id )，表示这个版本是已提交的事务生成的，这个数据是可见的</li>
+<li>如果 row 的 trx_id 落在红色部分( trx_id&gt;max_id )，表示这个版本是由将来启动的事务生成的，是不可见(若 row 的 trx_id 就是当前自己的事务是可见的);</li>
+<li>如果 row 的 trx_id 落在黄色部分(min_id &lt;=trx_id&lt;= max_id)，那就包括两种情况<ul>
+<li>若 row 的 trx_id 在视图数组中，表示这个版本是由还没提交的事务生成的，不可见(若 row 的 trx_id 就是当前自己的 事务是可见的);</li>
+<li> 若 row 的 trx_id 不在视图数组中，表示这个版本是已经提交了的事务生成的，可见。</li>
+</ul>
+</li>
+</ol>
+<p><strong>关于readview和可见性算法的原理解释</strong> </p>
+<p>readview和可见性算法其实就是记录了sql查询那个时刻数据库里提交和未提交所有事务的状态。 要实现RR隔离级别，事务里每次执行查询操作readview都是使用第一次查询时生成的readview，也就是都是以第一次查询 时当时数据库里所有事务提交状态来比对数据是否可见，当然可以实现每次查询的可重复读的效果了。 要实现RC隔离级别，事务里每次执行查询操作readview都会按照数据库当前状态重新生成readview，也就是每次查询都是 跟数据库里当前所有事务提交状态来比对数据是否可见，当然实现的就是每次都能查到已提交的最新数据效果了。</p>
+<p>注意:begin/start transaction 命令并不是一个事务的起点，在执行到它们之后的第一个修改操作或加排它锁操作(比如 select…for update)的语句，事务才真正启动，才会向mysql申请真正的事务id，mysql内部是严格按照事务的启动顺序来分配事务id的。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>MVCC机制的实现就是通过read-view机制与undo版本链比对机制，使得不同的事务会根据数据版本链对比规则读取同一条 数据在版本链上的不同版本数据。</p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
       </tags>
   </entry>
 </search>
