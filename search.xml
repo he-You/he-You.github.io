@@ -4516,4 +4516,26 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>MySQL</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Spring IoC的工作流程</title>
+    <url>/2023/09/10/Spring%20IoC%E7%9A%84%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B/</url>
+    <content><![CDATA[<h2 id="Ioc的定义"><a href="#Ioc的定义" class="headerlink" title="Ioc的定义"></a>Ioc的定义</h2><p>IOC 的全称是 Inversion Of Control, 也就是控制反转，它的核心思想是把对象的管理权限交给容器，应用程序如果需要使用到某个对象实例，直接从 IOC 容器中去获取就 行，这样设计的好处是降低了程序里面对象与对象之间的耦合性。 使得程序的整个体系结构变得更加灵活。</p>
+<h2 id="工作流程"><a href="#工作流程" class="headerlink" title="工作流程"></a>工作流程</h2><p>Spring Ioc的工作流程大致可以分为两个阶段</p>
+<h3 id="Ioc容器的初始化"><a href="#Ioc容器的初始化" class="headerlink" title="Ioc容器的初始化"></a>Ioc容器的初始化</h3><p>这个阶段主要是根据程序中定义的 XML 或者注解等 Bean 的声明方式 (如图)通过解析和加载后生成 BeanDefinition，然后把 BeanDefinition 注册到 IOC 容器。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230910173603005.png" alt="image-20230910173603005"></p>
+<p>最后把这个 BeanDefinition 保存到一个 Map 集合里面，从而完成了 IOC 的初始化。 IoC 容器的作用就是对这些注册的 Bean 的定义信息进行处理和维护，它 IoC 容器控制 反转的核心。</p>
+<h3 id="Bean的初始化以及依赖注入"><a href="#Bean的初始化以及依赖注入" class="headerlink" title="Bean的初始化以及依赖注入"></a>Bean的初始化以及依赖注入</h3><p>在这个阶段会处理两个事情：</p>
+<ol>
+<li>通过反射针对没有设置lazy-init属性的单例bean进行初始化</li>
+<li>完成bean的依赖注入</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230910174115149.png" alt="bean的初始化"></p>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
 </search>
