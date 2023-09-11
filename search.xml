@@ -4538,4 +4538,73 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Spring</tag>
       </tags>
   </entry>
+  <entry>
+    <title>Spring 启动过程</title>
+    <url>/2023/09/10/Spring%20%E5%90%AF%E5%8A%A8%E8%BF%87%E7%A8%8B/</url>
+    <content><![CDATA[<h2 id="Spring-启动过程"><a href="#Spring-启动过程" class="headerlink" title="Spring 启动过程"></a>Spring 启动过程</h2><p>这里说的Spring启动，就是构造ApplicationContext对象以及调用refresh()方法的过程。</p>
+<p>总体来说，Spring启动过程主要做了这些事情：</p>
+<ol>
+<li>构造BeanFactory对象</li>
+<li>解析配置类，得到BeanDefinition,并注册到BeanFactory中</li>
+<li>初始化MessageSource对象，支持ApplicationContext的国际化</li>
+<li>初始化ApplicationEventMulticaster对象，支持ApplicationContext事件机制</li>
+<li>将用户定义的ApplicationListener对象添加到ApplicationContext中，等Spring启动后发布事件</li>
+<li>创建非懒加载的单例Bean，并存入BeanFactory的单例池中。</li>
+<li>调用Lifecycle Bean的start()方法</li>
+<li>发布ContextRefreshedEvent事件</li>
+</ol>
+<p>由于Spring启动过程要创建非懒加载的单例Bean对象，那么就需要BeanPostProcessor，所以Spring在启动过程中就需要做两件事：</p>
+<ol>
+<li>生成默认的BeanPostProcessor对象，并添加到BeanFactory中<ul>
+<li>AutowiredAnnotationBeanPostProcessor：处理@Autowired、@Value</li>
+<li>CommonAnnotationBeanPostProcessor：处理@Resource、@PostConstruct、 @PreDestroy</li>
+<li>ApplicationContextAwareProcessor：处理ApplicationContextAware等回调</li>
+</ul>
+</li>
+<li>找到外部用户所定义的BeanPostProcessor对象，并添加到BeanFactory中。</li>
+</ol>
+<h2 id="如何理解refresh"><a href="#如何理解refresh" class="headerlink" title="如何理解refresh()"></a>如何理解refresh()</h2><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Load or refresh the persistent representation of the configuration,</span></span><br><span class="line"><span class="comment"> * which might an XML file, properties file, or relational database schema.</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;As this is a startup method, it should destroy already created singletons</span></span><br><span class="line"><span class="comment"> * if it fails, to avoid dangling resources. In other words, after invocation</span></span><br><span class="line"><span class="comment"> * of that method, either all or no singletons at all should be instantiated.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> BeansException if the bean factory could not be initialized</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@throws</span> IllegalStateException if already initialized and multiple refresh</span></span><br><span class="line"><span class="comment"> * attempts are not supported</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">refresh</span><span class="params">()</span> <span class="keyword">throws</span> BeansException, IllegalStateException</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这是ConfigurableApplicationContext接口上refresh()方法的注释，意思是:加载或刷新持久化的配置，可能是XML文件、属性文件或关系数据库中存储的。由于这是一个启动方法，如果失败，它应该销毁已经创建的单例，以避免暂用资源。换句话说，在调用该方法之后，应该实例化所有的单例， 或者根本不实例化单例。</p>
+<p>需要注意的是：<code>ApplicationContext关闭之后不代表JVM也关闭了，ApplicationContext是 属于JVM的，说白了ApplicationContext也是JVM中的一个对象。</code></p>
+<p>在Spring的设计中，也提供可以刷新的ApplicationContext和不可以刷新的ApplicationContext。 比如:</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">AbstractRefreshableApplicationContext extends AbstractApplicationContext</span><br></pre></td></tr></table></figure>
+
+<p>这个是可以刷新的，而下面的则是不可以刷新的</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">GenericApplicationContext extends AbstractApplicationContext</span><br></pre></td></tr></table></figure>
+
+<p>AnnotationConfigApplicationContext继承的是GenericApplicationContext，所以它是不能刷新的。 AnnotationConfigWebApplicationContext继承的是 AbstractRefreshableWebApplicationContext，所以它是可以刷的。</p>
+<p><strong>上面说的不能刷新是指不能重复刷新，只能调用一次refresh方法，第二次时会报错。</strong></p>
+<h2 id="refresh-底层原理"><a href="#refresh-底层原理" class="headerlink" title="refresh()底层原理"></a>refresh()底层原理</h2><p>以AnnotationConfigApplicationContext为例，refresh()底层原理大致如下：</p>
+<ol>
+<li>在调用AnnotationConfigApplicationContext的构造方法之前，会调用父类GenericApplicationContext的无参构造方法，会构造一个BeanFactory,为DefaultListableBeanFactory。</li>
+<li>构造AnnotatedBeanDefinitionReader，主要作用是添加一些基础的PostProcessor，同时可以通过reader进行BeanDefinition的注册，同时对BeanFactory进行设置和添加PostProcessor</li>
+<li>构造ClassPathBeanDefinitionScanner(主要作用可以用来扫描得到并注册 BeanDefinition)</li>
+<li>利用reader注册AppConfig为BeanDefinition，类型为AnnotatedGenericBeanDefinition</li>
+<li>调用refresh方法</li>
+<li>prepareRefresh()</li>
+<li>obtainFreshBeanFactory():进行BeanFactory的refresh，在这里会去调用子类的 refreshBeanFactory方法，具体子类是怎么刷新的得看子类，然后再调用子类的 getBeanFactory方法，重新得到一个BeanFactory</li>
+<li>prepareBeanFactory</li>
+<li>postProcessBeanFactory(beanFactory) : 提供给AbstractApplicationContext的子类进行扩 展，具体的子类，可以继续向BeanFactory中再添加一些东西</li>
+<li>invokeBeanFactoryPostProcessors(beanFactory):执行BeanFactoryPostProcessor</li>
+<li>到此，所有的BeanFactoryPostProcessor的逻辑都执行完了，主要做的事情就是得到 BeanDefinition并注册到BeanFactory中</li>
+<li>registerBeanPostProcessors(beanFactory):因为上面的步骤完成了扫描，这个过程中程序员 可能自己定义了一些BeanPostProcessor，在这一步就会把BeanFactory中所有的 BeanPostProcessor找出来并实例化得到一个对象，并添加到BeanFactory中去(属性 beanPostProcessors)，最后再重新添加一个ApplicationListenerDetector对象(之前其实 就添加了过，这里是为了把ApplicationListenerDetector移动到最后)</li>
+<li>initMessageSource():如果BeanFactory中存在一个叫做”messageSource”的 BeanDefinition，那么就会把这个Bean对象创建出来并赋值给ApplicationContext的 messageSource属性，让ApplicationContext拥有国际化的功能</li>
+<li>initApplicationEventMulticaster():如果BeanFactory中存在一个叫 做”applicationEventMulticaster”的BeanDefinition，那么就会把这个Bean对象创建出来并 赋值给ApplicationContext的applicationEventMulticaster属性，让ApplicationContext拥有 事件发布的功能</li>
+<li>onRefresh():提供给AbstractApplicationContext的子类进行扩展</li>
+<li>registerListeners():从BeanFactory中获取ApplicationListener类型的beanName，然后添加 到ApplicationContext中的事件广播器applicationEventMulticaster中去，到这一步因为 FactoryBean还没有调用getObject()方法生成Bean对象，所以这里要在根据类型找一下 ApplicationListener，记录一下对应的beanName</li>
+<li>finishBeanFactoryInitialization(beanFactory):完成BeanFactory的初始化，主要就是实例化 非懒加载的单例Bean</li>
+<li>finishRefresh():BeanFactory的初始化完后，就到了Spring启动的最后一步了</li>
+<li>设置ApplicationContext的lifecycleProcessor，默认情况下设置的是 DefaultLifecycleProcessor</li>
+<li>调用lifecycleProcessor的onRefresh()方法，如果是DefaultLifecycleProcessor，那么会获取所 有类型为Lifecycle的Bean对象，然后调用它的start()方法，这就是ApplicationContext的生命 周期扩展机制</li>
+<li>发布ContextRefreshedEvent事件</li>
+</ol>
+]]></content>
+      <categories>
+        <category>Spring</category>
+      </categories>
+      <tags>
+        <tag>Spring</tag>
+      </tags>
+  </entry>
 </search>
