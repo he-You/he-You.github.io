@@ -4721,4 +4721,27 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>Spring、nacos</tag>
       </tags>
   </entry>
+  <entry>
+    <title>跨集群/服务商MQ通信方案</title>
+    <url>/2023/09/14/%E8%B7%A8%E9%9B%86%E7%BE%A4MQ%E9%80%9A%E4%BF%A1%E6%96%B9%E6%A1%88/</url>
+    <content><![CDATA[<h1 id="跨服务商MQ通信方案思路"><a href="#跨服务商MQ通信方案思路" class="headerlink" title="跨服务商MQ通信方案思路"></a>跨服务商MQ通信方案思路</h1><h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>现在下游有若干服务需要监听Pass服务开通业务的结果消息，但是由于上下游服务在不同的集群环境中，在不同的云服务商的服务器中。传统的服务直接的交互如下图</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230914151502948.png" alt="image-20230914151502948"></p>
+<p>A服务和B服务直接通过http请求进行连接数据传输等交互，但是在此场景中。由于下游服务不会同步阻塞等待上游服务的消息，而是通过监听MQ消息实现异步处理。但AB两个服务在不同的云服务商的服务器中，各自有各自MQ实例，由于服务商之间的网络不通，无法直接监听对方的MQ消息。</p>
+<h2 id="设计方案"><a href="#设计方案" class="headerlink" title="设计方案"></a>设计方案</h2><p>方案的思路是，在不同的集群环境中搭建同样一套代理服务，组成一个代理层服务，用于不同集群的消息交换。如下图</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230914155954014.png" alt="image-20230914155954014"></p>
+<p>这样，整个业务链路分为了三个部分：A服务，消息代理层，B服务。其中：</p>
+<ol>
+<li>消息代理层由腾讯云中的消息代理服务A和阿里云消息代理服务B共同组成</li>
+<li>各自代理服务负责对本集群中的服务消息进行收发</li>
+<li>代理服务之间通过http请求进行消息的传递</li>
+</ol>
+<p>通过引入消息代理层，使得AB两个业务服务不需要进行定制化改造，A服务只需要将业务消息投递到消息代理层，B服务只需要监听消息代理层的消息。AB服务之间无感。后续的改动，只需要对消息代理层进行改动完善，而且一个集群环境只需要部署一个消息代理服务即可。</p>
+]]></content>
+      <categories>
+        <category>RocketMQ</category>
+      </categories>
+      <tags>
+        <tag>RocketMQ</tag>
+      </tags>
+  </entry>
 </search>
