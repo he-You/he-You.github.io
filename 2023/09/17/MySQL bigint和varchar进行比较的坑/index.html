@@ -1,0 +1,221 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>MySQL bigint和varchar进行比较的坑 | he-You</title><meta name="keywords" content="踩坑记录"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="MySQL bigint和varchar进行比较的坑问题背景这个问题是出在产线列表接口中，返回的数据量与预期的数据量不相符。由于列表是有数据权限的，当时以为是数据权限有问题。 排查过程由于这个列表功能已经上线1年多了，而且最近一段时间一直没有对这块功能进行迭代。所以起初我排除了代码逻辑变动导致的问题。由于产品管理列表有权限控制，所以我开始怀疑是不是账号权限模型有问题。 问题定位 从打印的日志来看，">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL bigint和varchar进行比较的坑">
+<meta property="og:url" content="https://he-you.github.io/2023/09/17/MySQL%20bigint%E5%92%8Cvarchar%E8%BF%9B%E8%A1%8C%E6%AF%94%E8%BE%83%E7%9A%84%E5%9D%91/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="MySQL bigint和varchar进行比较的坑问题背景这个问题是出在产线列表接口中，返回的数据量与预期的数据量不相符。由于列表是有数据权限的，当时以为是数据权限有问题。 排查过程由于这个列表功能已经上线1年多了，而且最近一段时间一直没有对这块功能进行迭代。所以起初我排除了代码逻辑变动导致的问题。由于产品管理列表有权限控制，所以我开始怀疑是不是账号权限模型有问题。 问题定位 从打印的日志来看，">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png">
+<meta property="article:published_time" content="2023-09-17T02:52:57.841Z">
+<meta property="article:modified_time" content="2023-09-20T03:43:55.717Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="踩坑记录">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2023/09/17/MySQL%20bigint%E5%92%8Cvarchar%E8%BF%9B%E8%A1%8C%E6%AF%94%E8%BE%83%E7%9A%84%E5%9D%91/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-09-20 11:43:55'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="gear-loader"><div class="gear-loader_overlay"></div><div class="gear-loader_cogs"><div class="gear-loader_cogs__top"><div class="gear-top_part"></div><div class="gear-top_part"></div><div class="gear-top_part"></div><div class="gear-top_hole"></div></div><div class="gear-loader_cogs__left"><div class="gear-left_part"></div><div class="gear-left_part"></div><div class="gear-left_part"></div><div class="gear-left_hole"></div></div><div class="gear-loader_cogs__bottom"><div class="gear-bottom_part"></div><div class="gear-bottom_part"></div><div class="gear-bottom_part"></div><div class="gear-bottom_hole"></div></div></div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">65</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">42</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">16</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">MySQL bigint和varchar进行比较的坑</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon fas fa-history"></i><span class="post-meta-label">更新于</span><time datetime="2023-09-20T03:43:55.717Z" title="undefined 2023-09-20 11:43:55">2023-09-20</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/MySQL/">MySQL</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="MySQL-bigint和varchar进行比较的坑"><a href="#MySQL-bigint和varchar进行比较的坑" class="headerlink" title="MySQL bigint和varchar进行比较的坑"></a>MySQL bigint和varchar进行比较的坑</h1><h2 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h2><p>这个问题是出在产线列表接口中，返回的数据量与预期的数据量不相符。由于列表是有数据权限的，当时以为是数据权限有问题。</p>
+<h2 id="排查过程"><a href="#排查过程" class="headerlink" title="排查过程"></a>排查过程</h2><p>由于这个列表功能已经上线1年多了，而且最近一段时间一直没有对这块功能进行迭代。所以起初我排除了代码逻辑变动导致的问题。由于产品管理列表有权限控制，所以我开始怀疑是不是账号权限模型有问题。</p>
+<h3 id="问题定位"><a href="#问题定位" class="headerlink" title="问题定位"></a>问题定位</h3><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230920113031509.png" alt="image-20230920113031509"></p>
+<p>从打印的日志来看，数据权限并不多，然后结合项目中查询语句，在数据库中执行了一下</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230920113245866.png" alt="image-20230920113245866"></p>
+<p>从sql的执行结果来看，确实有1300+的记录。但是仔细看一下结果集中的platform_client_id这一列值，是有很多不一样的值的。根据客户关系模型来看，platform_client_id应该不超过2个不一样的值的。这个时候问题的范围就缩小了，所以我就猜测是不是因为平台表中的platform_client_id的字段类型是varchar，而在客户表中的主键是bigint类型。不同的类型的字段进行数值比较的时候出现了差异，类似java中float类型精度丢失的问题。</p>
+<h3 id="问题验证"><a href="#问题验证" class="headerlink" title="问题验证"></a>问题验证</h3><p>修改mybatis中的查询语句，将where条件中的客户id手动改为字符类型，然后执行SQL</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230920114050432.png" alt="image-20230920114050432"></p>
+<p>此时，可以认定现象的本质原因就是子查询中不同数据类型进行比较时出现了问题。</p>
+<h3 id="问题分析"><a href="#问题分析" class="headerlink" title="问题分析"></a>问题分析</h3><p>后来我在网上发现了类似的问题：<a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000041292478">实际上是varchar和bigint的转换问题</a> ，官方文档虽然没有明确指出bigint和varchar是如何进行比较的，但是有这么一段话</p>
+<blockquote>
+<p>The following rules describe how conversion occurs for comparison operations:</p>
+<p>●   If one or both arguments are NULL, the result of the comparison is NULL, except for the NULL-safe <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#operator_equal-to">&lt;=&gt;</a> equality comparison operator. For NULL &lt;=&gt; NULL, the result is true. No conversion is needed.</p>
+<p>●   If both arguments in a comparison operation are strings, they are compared as strings.</p>
+<p>●   If both arguments are integers, they are compared as integers.</p>
+<p>●   Hexadecimal values are treated as binary strings if not compared to a number.</p>
+<p>●   If one of the arguments is a <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">TIMESTAMP</a> or <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">DATETIME</a> column and the other argument is a constant, the constant is converted to a timestamp before the comparison is performed. This is done to be more ODBC-friendly. This is not done for the arguments to <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#operator_in">IN()</a>. To be safe, always use complete datetime, date, or time strings when doing comparisons. For example, to achieve best results when using <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/comparison-operators.html#operator_between">BETWEEN</a> with date or time values, use <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/cast-functions.html#function_cast">CAST()</a> to explicitly convert the values to the desired data type.A single-row subquery from a table or tables is not considered a constant. For example, if a subquery returns an integer to be compared to a <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">DATETIME</a> value, the comparison is done as two integers. The integer is not converted to a temporal value. To compare the operands as <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">DATETIME</a> values, use <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/cast-functions.html#function_cast">CAST()</a> to explicitly convert the subquery value to <a target="_blank" rel="noopener" href="https://dev.mysql.com/doc/refman/8.0/en/datetime.html">DATETIME</a>.</p>
+<p>●   If one of the arguments is a decimal value, comparison depends on the other argument. The arguments are compared as decimal values if the other argument is a decimal or integer value, or as floating-point values if the other argument is a floating-point value.</p>
+<p>●   In all other cases, the arguments are compared as floating-point (double-precision) numbers. For example, a comparison of string and numeric operands takes place as a comparison of floating-point numbers.</p>
+<p>其中“In all other cases, the arguments are compared as floating-point (double-precision) numbers. For example, a comparison of string and numeric operands takes place as a comparison of floating-point numbers.”</p>
+</blockquote>
+<p>就是说除了上述数据类型比较有明确的规则外，其余的不同数据类型的字段进行比较时，会转成浮点数进行比较，而浮点数由 IEEE 754标准定下的。IEEE 754规定了四种表示浮点数值的方式：单精确度（32位）、双精确度（64位）、延伸单精确度（43比特以上，很少使用）与延伸双精确度（79比特以上，通常以80位实现）。查询官方文档中bigint的取值范围如下：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230920114229712.png" alt="image-20230920114229712"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230920114241610.png" alt="image-20230920114241610"></p>
+<p>回到这个问题，<strong>就是在整数转成二进制后，如果大于53位，只要前53位值一样，它们之间用=号就能返回true。</strong></p>
+<h2 id="结论验证"><a href="#结论验证" class="headerlink" title="结论验证"></a>结论验证</h2><p>我们选择两个数据进行验证：3501875912769420370、3501875912769420530。</p>
+<p>3501875912769420370 转为二进制数  <code>11000010011001001010011001011011000100000111100011110</code>001010010</p>
+<p>3501875912769420530 转为二进制数</p>
+<p><code>11000010011001001010011001011011000100000111100011110</code>011110010</p>
+<p>看来确实是这么回事</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2023/09/17/MySQL%20bigint%E5%92%8Cvarchar%E8%BF%9B%E8%A1%8C%E6%AF%94%E8%BE%83%E7%9A%84%E5%9D%91/">https://he-you.github.io/2023/09/17/MySQL bigint和varchar进行比较的坑/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/%E8%B8%A9%E5%9D%91%E8%AE%B0%E5%BD%95/">踩坑记录</a></div><div class="post_share"><div class="social-share" data-image="https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2023/09/14/%E8%B7%A8%E9%9B%86%E7%BE%A4MQ%E9%80%9A%E4%BF%A1%E6%96%B9%E6%A1%88/"><img class="next-cover" src="https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">跨集群/服务商MQ通信方案</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL-bigint%E5%92%8Cvarchar%E8%BF%9B%E8%A1%8C%E6%AF%94%E8%BE%83%E7%9A%84%E5%9D%91"><span class="toc-number">1.</span> <span class="toc-text">MySQL bigint和varchar进行比较的坑</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E8%83%8C%E6%99%AF"><span class="toc-number">1.1.</span> <span class="toc-text">问题背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="toc-number">1.2.</span> <span class="toc-text">排查过程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%AE%9A%E4%BD%8D"><span class="toc-number">1.2.1.</span> <span class="toc-text">问题定位</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E9%AA%8C%E8%AF%81"><span class="toc-number">1.2.2.</span> <span class="toc-text">问题验证</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E5%88%86%E6%9E%90"><span class="toc-number">1.2.3.</span> <span class="toc-text">问题分析</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E7%BB%93%E8%AE%BA%E9%AA%8C%E8%AF%81"><span class="toc-number">1.3.</span> <span class="toc-text">结论验证</span></a></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/apache_rocketmq.png)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
