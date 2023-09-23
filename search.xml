@@ -4796,4 +4796,118 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>踩坑记录</tag>
       </tags>
   </entry>
+  <entry>
+    <title>阿里飞猪面试复盘（2023-09-22）</title>
+    <url>/2023/09/22/%E9%98%BF%E9%87%8C%E9%A3%9E%E7%8C%AA%E9%9D%A2%E8%AF%95%E5%A4%8D%E7%9B%98/</url>
+    <content><![CDATA[<p>电话面试，面试时长大约40分钟。自我介绍环节不赘述</p>
+<h2 id="mq消息丢失问题"><a href="#mq消息丢失问题" class="headerlink" title="mq消息丢失问题"></a>mq消息丢失问题</h2><p>首先要明确，消息从生产到消费完成这个过程，可以分成三个阶段，分别为：<strong>消息生产阶段、消息存储阶段和消息消费阶段</strong></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230922213703437.png" alt="image-20230922213703437"></p>
+<ul>
+<li><strong>消息生产阶段：</strong> 从消息被生产出来，然后提交给 MQ 的过程中，只要能正常收到 MQ Broker 的 ack 确认响应，就表示发送成功，所以只要处理好返回值和异常，这个阶段是不会出现消息丢失的。</li>
+<li><strong>消息存储阶段：</strong> 这个阶段一般会直接交给 MQ 消息中间件来保证，但是你要了解它的原理，比如 Broker 会做副本，保证一条消息至少同步两个节点再返回 ack</li>
+<li><strong>消息消费阶段：</strong> 消费端从 Broker 上拉取消息，只要消费端在收到消息后，不立即发送消费确认给 Broker，而是等到执行完业务逻辑后，再发送消费确认，也能保证消息的不丢失。</li>
+</ul>
+<h3 id="如何保证消息可靠投递"><a href="#如何保证消息可靠投递" class="headerlink" title="如何保证消息可靠投递"></a>如何保证消息可靠投递</h3><ol>
+<li>消息持久化：MQ可以将消息存储到磁盘中，即使MQ服务器崩溃或重启，也能够保证消息不会丢失。同时，MQ还可以通过主从复制等方式保证高可用性。</li>
+<li>消息确认机制：当消费者消费完一条消息后，向MQ服务器发送确认消息，告诉MQ服务器该消息已经被消费，MQ服务器才会将该消息从队列中删除。如果消费者没有发送确认消息，MQ服务器会将该消息重新发送给其他消费者。</li>
+<li>事务机制：MQ可以支持事务机制，在发送消息时开启事务，只有在事务提交成功后才会将消息发送到队列中，否则会进行回滚操作。</li>
+<li>重试机制：当消息发送失败时，MQ会自动进行重试，直到消息被成功投递或达到最大重试次数。如果达到最大重试次数仍然无法成功投递，则会将该消息发送到死信队列中。</li>
+</ol>
+<h3 id="如何排查"><a href="#如何排查" class="headerlink" title="如何排查"></a>如何排查</h3><p>如果出现消息丢失的情况，可以通过以下几个步骤进行排查：</p>
+<ol>
+<li>确认消息是否已经发送到MQ，可以通过MQ的管理界面查看消息发送状态。</li>
+<li>检查消费者的代码，确保消费者已经正确地连接到MQ并正确地处理消息。</li>
+<li>检查消息是否被消费者拒绝或者消费者处理消息时出现异常。</li>
+<li>检查MQ的配置，确保MQ的持久化配置正确，以保证消息能够在MQ中持久化存储。</li>
+<li>检查网络连接，确保消息发送和接收的网络连接正常。</li>
+<li>检查MQ的日志，查看是否有异常或错误日志。</li>
+</ol>
+<h2 id="oom如何排查"><a href="#oom如何排查" class="headerlink" title="oom如何排查"></a>oom如何排查</h2><ol>
+<li><p>先通过内存映像工具对Dump出来的堆转储快照进行分析，<strong>重点是确认内存中的对象是否是必要的，也就是要先分清楚到底是出现了内存泄漏还是内存溢出。</strong></p>
+<ul>
+<li><p>内存溢出：建议加大内存</p>
+</li>
+<li><p>观察内存，每一次gc后都有某一些不要的对象是gc不了的，一直占着空间，导致越来越多的对象堆积在内存中得不到释放，最终内存泄漏导致内存溢出。</p>
+<p>解决思路：应该从代码层面进行解决，不需要的对象不要建立强引用。</p>
+</li>
+</ul>
+</li>
+<li><p>查看OOM错误日志：查找并分析系统的日志文件，通常会有关于OOM的错误信息。可以通过dmesg命令或者系统日志文件（如/var/log/messages）来查看。</p>
+</li>
+<li><p>检查系统资源使用情况：使用系统监控工具（如top、htop等）查看系统的内存、CPU和磁盘使用情况。检查是否存在异常的资源占用情况。</p>
+</li>
+<li><p>检查应用程序日志：查看应用程序的日志文件，寻找与OOM相关的错误或异常信息。这些信息可能会提供有关导致OOM的具体原因的线索。</p>
+</li>
+<li><p>分析堆栈信息：如果有可用的堆栈信息，可以分析其中的线程和方法调用，以确定是否存在内存泄漏或者异常的内存使用情况。</p>
+</li>
+<li><p>检查代码和配置：检查应用程序的代码和配置文件，特别是与内存管理相关的部分。确保没有存在不合理的内存使用或配置问题。</p>
+</li>
+<li><p>调整JVM参数：如果应用程序是基于Java开发的，可以尝试调整JVM参数，如堆大小、垃圾回收策略等，以优化内存使用和垃圾回收性能。</p>
+</li>
+<li><p>使用内存分析工具：如果以上方法无法解决问题，可以考虑使用专业的内存分析工具，如VisualVM、MAT（Memory Analyzer Tool）等，对应用程序进行详细的内存分析和排查。</p>
+</li>
+</ol>
+<h2 id="HashTable和HashMap区别"><a href="#HashTable和HashMap区别" class="headerlink" title="HashTable和HashMap区别"></a>HashTable和HashMap区别</h2><p>Hashtable和HashMap都是实现了Map接口的数据结构，不同之处在于：</p>
+<ul>
+<li>线程安全性：Hashtable是线程安全的，而HashMap不是。如果需要在多线程环境下使用，可以选择Hashtable或者通过synchronized关键字来保证线程安全。</li>
+<li>空值（null）：Hashtable不允许键或值为空，否则会抛出NullPointerException，而HashMap允许键或值为空。</li>
+<li>性能：由于线程安全的原因，Hashtable的性能通常比HashMap差。如果不需要考虑线程安全，建议使用HashMap。</li>
+</ul>
+<h2 id="ConcurrentHashmap底层实现原理"><a href="#ConcurrentHashmap底层实现原理" class="headerlink" title="ConcurrentHashmap底层实现原理"></a>ConcurrentHashmap底层实现原理</h2><p>这里是ConcurrentHashMap是JDK1.8的</p>
+<h3 id="ConcurrentHashMap-整体架构"><a href="#ConcurrentHashMap-整体架构" class="headerlink" title="ConcurrentHashMap 整体架构"></a>ConcurrentHashMap 整体架构</h3><p>它是由数组、 单向链表、红黑树组成。当我们初始化一个 ConcurrentHashMap 实例时，默认会初始化一个长度为 16 的数组。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230923104835046.png" alt="image-20230923104835046"></p>
+<p> 由于 ConcurrentHashMap 它的核心仍然是 hash 表，所以必然会存在 hash 冲突问题。 ConcurrentHashMap 采用链式寻址法来解决 hash 冲突。<br> 当 hash 冲突比较多的时候，会造成链表长度较长，这种情况会使得 ConcurrentHashMap 中数据元素的查询复杂度变成 O(n)。因此在 JDK1.8 中，引入了 红黑树的机制。<br> 当数组长度大于 64 并且链表长度大于等于 8 的时候，单项链表就会转换为红黑树。 另外，随着 ConcurrentHashMap 的动态扩容，一旦链表长度小于 6，红黑树会退化 成单向链表。在JDK8中这个阈值是固定的</p>
+<p>注：在JDK9中ConcurrentHashMap 引入了一种动态计算阈值的机制，以更好地适应不同场景下的数据结构变化。当元素数量减少时，ConcurrentHashMap 也会根据当前数组的长度和元素数量，计算出一个负载因子，并根据负载因子动态调整阈值。如果负载因子小于一个阈值，就会触发缩容操作。</p>
+<h3 id="ConcurrentHashMap的基础功能"><a href="#ConcurrentHashMap的基础功能" class="headerlink" title="ConcurrentHashMap的基础功能"></a>ConcurrentHashMap的基础功能</h3><p>ConcurrentHashMap 本质上是一个 HashMap，因此功能和 HashMap 一样，但是 ConcurrentHashMap 在 HashMap 的基础上，提供了并发安全的实现。 并发安全的主要实现是通过对指定的 Node 节点加锁，来保证数据更新的安全性</p>
+<h3 id="ConcurrentHashMap的性能优化"><a href="#ConcurrentHashMap的性能优化" class="headerlink" title="ConcurrentHashMap的性能优化"></a>ConcurrentHashMap的性能优化</h3><ul>
+<li><p>在 JDK1.8 中，ConcurrentHashMap 锁的粒度是数组中的某一个节点，而在 JDK1.7，锁定的是 Segment，锁的范围要更大，因此性能上会更低。</p>
+</li>
+<li><p>引入红黑树，降低了数据查询的时间复杂度，红黑树的时间复杂度是 O(logn)。</p>
+</li>
+<li><p>当数组长度不够时，ConcurrentHashMap 需要对数组进行扩容，在扩容的实现上，ConcurrentHashMap 引入了多线程并发扩容的机制， 简单来说就是多个线程对原始数组进行分片后，每个线程负责一个分片的数据 迁移，从而提升了扩容过程中数据迁移的效率。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230923122202127.png" alt="image-20230923122202127"></p>
+</li>
+<li><p>ConcurrentHashMap 中有一个 size()方法来获取总的元素个数，而在多线程 并发场景中，在保证原子性的前提下来实现元素个数的累加，性能是非常低的。 ConcurrentHashMap 在这个方面的优化主要体现在两个点:</p>
+<ul>
+<li>当线程竞争不激烈时，直接采用 CAS 来实现元素个数的原子递增。</li>
+<li>如果线程竞争激烈，使用一个数组来维护元素个数，如果要增加总的元素 个数，则直接从数组中随机选择一个，再通过 CAS 实现原子递增。它的核心思想是引入了数组来实现对并发更新的负载。</li>
+</ul>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230923122429620.png" alt="image-20230923122429620"></p>
+</li>
+</ul>
+<h2 id="sql如何优化"><a href="#sql如何优化" class="headerlink" title="sql如何优化"></a>sql如何优化</h2><ul>
+<li><p>优化查询语句：避免使用子查询、不必要的 JOIN、OR 等操作，尽量使用 UNION、IN、EXISTS 等操作；使用 LIMIT 分页，避免一次性查询大量数据；使用索引优化查询等。</p>
+</li>
+<li><p>优化数据库结构：合理设计数据库表结构，避免冗余字段、冗余表等，尽量使用整型作为主键，避免使用字符串类型等；避免使用过多的触发器、存储过程等。</p>
+</li>
+<li><p>优化索引：使用合适的索引可以极大地提高查询性能，但是过多的索引也会影响性能；需要根据具体情况进行选择，可以使用 EXPLAIN 等命令来查看查询语句的执行计划，从而确定是否需要创建或删除索引。</p>
+</li>
+<li><p>优化数据库连接：尽量减少数据库连接的次数，使用连接池等工具来管理连接；避免在循环中进行数据库连接等操作。</p>
+</li>
+<li><p>优化数据访问：尽量减少数据访问次数，使用缓存等机制来提高数据访问效率；避免一次性查询大量数据，可以进行分批查询等操作。</p>
+</li>
+</ul>
+<h2 id="项目中为什么要用ES"><a href="#项目中为什么要用ES" class="headerlink" title="项目中为什么要用ES"></a>项目中为什么要用ES</h2><p>项目使用 Elasticsearch （简称 ES）的原因有以下几点：</p>
+<ul>
+<li>快速搜索：Elasticsearch 是一个基于 Lucene 的搜索引擎，具有非常快的搜索速度和高效的分布式架构，可以快速地处理大量数据。</li>
+<li>高可靠性：Elasticsearch 具有高可靠性和容错性，支持数据备份和自动恢复，可以保证数据的安全和可靠性。</li>
+<li>强大的扩展性：Elasticsearch 具有强大的扩展性，支持插件机制和 API 接口，可以方便地进行二次开发和定制。</li>
+<li>多种数据类型支持：Elasticsearch 支持多种数据类型的索引和搜索，包括文本、数字、日期等等，可以满足不同场景下的需求。</li>
+<li>大量数据存储：Elasticsearch 可以存储大量数据，支持 PB 级别的数据存储和搜索，可以满足大型项目的需求。</li>
+<li>实时搜索：Elasticsearch 支持实时搜索，可以在数据更新后立即进行搜索，满足实时搜索的需求</li>
+</ul>
+<p>其他问题：</p>
+<ol>
+<li>项目架构描述</li>
+<li>项目中的亮点，难点以及如何解决的</li>
+<li><strong>spring初始方法</strong>：@PostConstruct 是一个注解，用于指定一个方法在 Bean 初始化完成后执行。具体来说，当 Bean 实例化、属性注入、Aware 回调、前置处理等操作完成后，Spring 会调用 @PostConstruct 标注的方法，执行一些初始化操作。</li>
+</ol>
+]]></content>
+      <categories>
+        <category>面试</category>
+      </categories>
+      <tags>
+        <tag>复盘</tag>
+      </tags>
+  </entry>
 </search>
