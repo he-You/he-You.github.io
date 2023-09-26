@@ -1,0 +1,248 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>一行日志导致的OOM事件 | he-You</title><meta name="keywords" content="OOM"><meta name="author" content="he-You"><meta name="copyright" content="he-You"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta http-equiv="Cache-Control" content="no-transform"><meta http-equiv="Cache-Control" content="no-siteapp"><meta name="description" content="一行日志导致的OOM事件问题现象简单交代一下问题背景和现象：产线SSO登录服务运行一段时间就会出现LDAP连接无响应，最终导致客户端超时的现象，并且通过日志观察，存在大量OOM异常 问题排查过程 联系运维，拉取nginx的access log 查看请求源ip，判断是否存在测试脚本频繁请求  经过排查发现并不是外部请求导致的OOM  然后拉取了dump日志文件  怀疑存在内存泄露，发现有个对象占用了">
+<meta property="og:type" content="article">
+<meta property="og:title" content="一行日志导致的OOM事件">
+<meta property="og:url" content="https://he-you.github.io/2023/09/26/%E4%B8%80%E8%A1%8C%E6%97%A5%E5%BF%97%E5%AF%BC%E8%87%B4%E7%9A%84OOM%E4%BA%8B%E4%BB%B6/index.html">
+<meta property="og:site_name" content="he-You">
+<meta property="og:description" content="一行日志导致的OOM事件问题现象简单交代一下问题背景和现象：产线SSO登录服务运行一段时间就会出现LDAP连接无响应，最终导致客户端超时的现象，并且通过日志观察，存在大量OOM异常 问题排查过程 联系运维，拉取nginx的access log 查看请求源ip，判断是否存在测试脚本频繁请求  经过排查发现并不是外部请求导致的OOM  然后拉取了dump日志文件  怀疑存在内存泄露，发现有个对象占用了">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg">
+<meta property="article:published_time" content="2023-09-26T15:42:00.349Z">
+<meta property="article:modified_time" content="2023-09-26T16:10:11.969Z">
+<meta property="article:author" content="he-You">
+<meta property="article:tag" content="OOM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg"><link rel="shortcut icon" href="/img/avatar.jpeg"><link rel="canonical" href="https://he-you.github.io/2023/09/26/%E4%B8%80%E8%A1%8C%E6%97%A5%E5%BF%97%E5%AF%BC%E8%87%B4%E7%9A%84OOM%E4%BA%8B%E4%BB%B6/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="preconnect" href="//zz.bdstatic.com"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>var GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"search.xml","languages":{"hits_empty":"找不到您查询的内容：${query}"}},
+  translate: undefined,
+  noticeOutdate: undefined,
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '复制成功',
+    error: '复制错误',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+};
+
+var saveToLocal = {
+  set: function setWithExpiry(key, value, ttl) {
+    const now = new Date()
+    const expiryDay = ttl * 86400000
+    const item = {
+      value: value,
+      expiry: now.getTime() + expiryDay,
+    }
+    localStorage.setItem(key, JSON.stringify(item))
+  },
+
+  get: function getWithExpiry(key) {
+    const itemStr = localStorage.getItem(key)
+
+    if (!itemStr) {
+      return undefined
+    }
+    const item = JSON.parse(itemStr)
+    const now = new Date()
+
+    if (now.getTime() > item.expiry) {
+      localStorage.removeItem(key)
+      return undefined
+    }
+    return item.value
+  }
+}
+
+// https://stackoverflow.com/questions/16839698/jquery-getscript-alternative-in-native-javascript
+const getScript = url => new Promise((resolve, reject) => {
+  const script = document.createElement('script')
+  script.src = url
+  script.async = true
+  script.onerror = reject
+  script.onload = script.onreadystatechange = function() {
+    const loadState = this.readyState
+    if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+    script.onload = script.onreadystatechange = null
+    resolve()
+  }
+  document.head.appendChild(script)
+})</script><script id="config_change">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: false,
+  isToc: true,
+  postUpdate: '2023-09-27 00:10:11'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(function () {  window.activateDarkMode = function () {
+    document.documentElement.setAttribute('data-theme', 'dark')
+    if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+    }
+  }
+  window.activateLightMode = function () {
+    document.documentElement.setAttribute('data-theme', 'light')
+   if (document.querySelector('meta[name="theme-color"]') !== null) {
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+    }
+  }
+  const autoChangeMode = '1'
+  const t = saveToLocal.get('theme')
+  if (autoChangeMode === '1') {
+    const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isLightMode = window.matchMedia('(prefers-color-scheme: light)').matches
+    const isNotSpecified = window.matchMedia('(prefers-color-scheme: no-preference)').matches
+    const hasNoSupport = !isDarkMode && !isLightMode && !isNotSpecified
+    if (t === undefined) {
+      if (isLightMode) activateLightMode()
+      else if (isDarkMode) activateDarkMode()
+      else if (isNotSpecified || hasNoSupport) {
+        const now = new Date()
+        const hour = now.getHours()
+        const isNight = hour <= 6 || hour >= 18
+        isNight ? activateDarkMode() : activateLightMode()
+      }
+      window.matchMedia('(prefers-color-scheme: dark)').addListener(function (e) {
+        if (saveToLocal.get('theme') === undefined) {
+          e.matches ? activateDarkMode() : activateLightMode()
+        }
+      })
+    } else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else if (autoChangeMode === '2') {
+    const now = new Date()
+    const hour = now.getHours()
+    const isNight = hour <= 6 || hour >= 18
+    if (t === undefined) isNight ? activateDarkMode() : activateLightMode()
+    else if (t === 'light') activateLightMode()
+    else activateDarkMode()
+  } else {
+    if (t === 'dark') activateDarkMode()
+    else if (t === 'light') activateLightMode()
+  }const asideStatus = saveToLocal.get('aside-status')
+if (asideStatus !== undefined) {
+   if (asideStatus === 'hide') {
+     document.documentElement.classList.add('hide-aside')
+   } else {
+     document.documentElement.classList.remove('hide-aside')
+   }
+}})()</script><meta name="generator" content="Hexo 5.2.0"></head><body><div id="loading-box"><div class="gear-loader"><div class="gear-loader_overlay"></div><div class="gear-loader_cogs"><div class="gear-loader_cogs__top"><div class="gear-top_part"></div><div class="gear-top_part"></div><div class="gear-top_part"></div><div class="gear-top_hole"></div></div><div class="gear-loader_cogs__left"><div class="gear-left_part"></div><div class="gear-left_part"></div><div class="gear-left_part"></div><div class="gear-left_hole"></div></div><div class="gear-loader_cogs__bottom"><div class="gear-bottom_part"></div><div class="gear-bottom_part"></div><div class="gear-bottom_part"></div><div class="gear-bottom_hole"></div></div></div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpeg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">67</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">标签</div><div class="length-num">44</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/categories/"><div class="headline">分类</div><div class="length-num">18</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div></div></div></div><div id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg)"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">he-You</a></span><div id="menus"><div id="search-button"><a class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">一行日志导致的OOM事件</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="fa-fw post-meta-icon fas fa-history"></i><span class="post-meta-label">更新于</span><time datetime="2023-09-26T16:10:11.969Z" title="undefined 2023-09-27 00:10:11">2023-09-27</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/JVM/">JVM</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">阅读量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><h1 id="一行日志导致的OOM事件"><a href="#一行日志导致的OOM事件" class="headerlink" title="一行日志导致的OOM事件"></a>一行日志导致的OOM事件</h1><h2 id="问题现象"><a href="#问题现象" class="headerlink" title="问题现象"></a>问题现象</h2><p>简单交代一下问题背景和现象：产线SSO登录服务运行一段时间就会出现LDAP连接无响应，最终导致客户端超时的现象，并且通过日志观察，存在大量OOM异常</p>
+<h2 id="问题排查过程"><a href="#问题排查过程" class="headerlink" title="问题排查过程"></a>问题排查过程</h2><ol>
+<li><p>联系运维，拉取nginx的access log 查看请求源ip，判断是否存在测试脚本频繁请求</p>
+</li>
+<li><p>经过排查发现并不是外部请求导致的OOM</p>
+</li>
+<li><p>然后拉取了dump日志文件</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234702045.png" alt="image-20230926234702045"></p>
+<p>怀疑存在内存泄露，发现有个对象占用了3.7G内存</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234754955.png" alt="image-20230926234754955"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234819849.png" alt="image-20230926234819849"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234833581.png" alt="image-20230926234833581"></p>
+</li>
+<li><p>查看该对象具体信息，发现属性workQueue占用了3.7G，明显是一个队列，翻一翻源码去</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234936940.png" alt="image-20230926234936940"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234948523.png" alt="image-20230926234948523"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926234957220.png" alt="image-20230926234957220"></p>
+</li>
+<li><p>看看队列是哪里消费的，先理一下代码逻辑</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">Worker</span> <span class="keyword">implements</span> <span class="title">Runnable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> AtomicLong completedTaskCount = <span class="keyword">new</span> AtomicLong(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">private</span> Thread thread;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            thread = Thread.currentThread();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">                    Runnable task = fetchTask();</span><br><span class="line"></span><br><span class="line">                    idleWorkers.decrementAndGet();</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (task == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">synchronized</span> (workers) &#123;</span><br><span class="line">                            <span class="keyword">if</span> (workers.size() &gt; corePoolSize) &#123;</span><br><span class="line">                                <span class="comment">// Remove now to prevent duplicate exit.</span></span><br><span class="line">                                workers.remove(<span class="keyword">this</span>);</span><br><span class="line">                                <span class="keyword">break</span>;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">if</span> (task == EXIT_SIGNAL) &#123;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        <span class="keyword">if</span> (task != <span class="keyword">null</span>) &#123;</span><br><span class="line">                            queueHandler.polled(UnorderedThreadPoolExecutor.<span class="keyword">this</span>, (IoEvent) task);</span><br><span class="line">                            runTask(task);</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                        idleWorkers.incrementAndGet();</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                <span class="keyword">synchronized</span> (workers) &#123;</span><br><span class="line">                    workers.remove(<span class="keyword">this</span>);</span><br><span class="line">                    UnorderedThreadPoolExecutor.<span class="keyword">this</span>.completedTaskCount += completedTaskCount.get();</span><br><span class="line">                    workers.notifyAll();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> Runnable <span class="title">fetchTask</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            Runnable task = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">long</span> currentTime = System.currentTimeMillis();</span><br><span class="line">            <span class="keyword">long</span> deadline = currentTime + getKeepAliveTime(TimeUnit.MILLISECONDS);</span><br><span class="line">            <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    <span class="keyword">long</span> waitTime = deadline - currentTime;</span><br><span class="line">                    <span class="keyword">if</span> (waitTime &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    <span class="keyword">try</span> &#123;</span><br><span class="line">                        task = getQueue().poll(waitTime, TimeUnit.MILLISECONDS);</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                        <span class="keyword">if</span> (task == <span class="keyword">null</span>) &#123;</span><br><span class="line">                            currentTime = System.currentTimeMillis();</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">                    <span class="comment">// Ignore.</span></span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> task;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">runTask</span><span class="params">(Runnable task)</span> </span>&#123;</span><br><span class="line">            beforeExecute(thread, task);</span><br><span class="line">            <span class="keyword">boolean</span> ran = <span class="keyword">false</span>;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                task.run();</span><br><span class="line">                ran = <span class="keyword">true</span>;</span><br><span class="line">                afterExecute(task, <span class="keyword">null</span>);</span><br><span class="line">                completedTaskCount.incrementAndGet();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (RuntimeException e) &#123;</span><br><span class="line">                <span class="keyword">if</span> (!ran) &#123;</span><br><span class="line">                    afterExecute(task, e);</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">throw</span> e;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235105569.png" alt="image-20230926235105569"></p>
+</li>
+<li><p> 其实看到第4步中的截图，idleWorkers = 0才会创建工作线程，就猜想会不会是idleWorkds不为0？果然，分析dump文件的确不是0。然后继续猜想idleWorkers不为0，但是workers的size却为0，会不会有线程安全问题，看了workers的操作都加了synchronized， idleWorkers这个又是AtomicInteger类型的，推敲了好一会，想不出有什么线程安全的问题</p>
+</li>
+<li><p>否定了这个猜想后，继续排查，猜想除非是下图的第4步出现异常，可能导致问题</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235454316.png" alt="image-20230926235454316"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235502275.png" alt="image-20230926235502275"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235508051.png" alt="image-20230926235508051"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235514520.png" alt="image-20230926235514520"></p>
+</li>
+<li><p>那么何时才会导致这边抛出异常呢？想到了现象中的第3点的空指针异常，本地进行debug模拟，发现无论怎么模拟都是Exception异常，最终都会被捕获掉，抛不上去</p>
+</li>
+<li><p>又猜想会不会是高并发问题，于是本地模拟高并发，发现还是没有问题</p>
+</li>
+<li><p>联想到了现象1，因为产线运行一段时间后会出现ldap连接不上的情况，于是进行验证，发现产线果然又连不上了</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235602286-20230926235614460-20230926235626670.png"></p>
+</li>
+<li><p>拉取产线dump文件，果然idleWorkers不为0，且工作线程队列的size也为0</p>
+</li>
+<li><p>至此排除了高并发导致的问题，因为此刻的产线的现象3的问题已经解决了</p>
+</li>
+<li><p>  看看上线以来产线进行了哪些特殊操作，产线两台实例，都进行了yapi连接之后就再也没有ldap连接了，会不会是yapi的问题？</p>
+</li>
+<li><p>本地进行用yapi进行模拟请求，果然必现了，下图打印日志的地方导致了栈溢出了，该对象依赖了自身，导致了循环</p>
+</li>
+<li><p>本质原因就是因为此处的异常，导致了idleWorkers不为0，然后工作线程不再创建了，而后产线大量的现象3导致了oom，且也导致了现象1</p>
+</li>
+</ol>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235854545.png" alt="image-20230926235854545"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230926235925621.png" alt="image-20230926235925621"></p>
+<h2 id="问题结论"><a href="#问题结论" class="headerlink" title="问题结论"></a>问题结论</h2><p>通过上面的分析，可以得出结论，在使用<code>JSONUtil.toJsonStr(obj);</code>时出现了异常，那具体的异常又是如何的呢?</p>
+<p>首先看一下hutool包中的序列化方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">init</span><span class="params">(Object source)</span> <span class="keyword">throws</span> JSONException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (<span class="keyword">null</span> != source) &#123;</span><br><span class="line">            JSONSerializer serializer = GlobalSerializeMapping.getSerializer(source.getClass());</span><br><span class="line">            <span class="keyword">if</span> (<span class="keyword">null</span> != serializer &amp;&amp; JSONArray.class.equals(TypeUtil.getTypeArgument(serializer.getClass()))) &#123;</span><br><span class="line">                serializer.serialize(<span class="keyword">this</span>, source);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (source <span class="keyword">instanceof</span> CharSequence) &#123;</span><br><span class="line">                <span class="keyword">this</span>.init((CharSequence)source);</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (source <span class="keyword">instanceof</span> JSONTokener) &#123;</span><br><span class="line">                <span class="keyword">this</span>.init((JSONTokener)source);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                Object iter;</span><br><span class="line">                <span class="keyword">if</span> (ArrayUtil.isArray(source)) &#123;</span><br><span class="line">                    iter = <span class="keyword">new</span> ArrayIter(source);</span><br><span class="line">                &#125; <span class="keyword">else</span> <span class="keyword">if</span> (source <span class="keyword">instanceof</span> Iterator) &#123;</span><br><span class="line">                    iter = (Iterator)source;</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="keyword">if</span> (!(source <span class="keyword">instanceof</span> Iterable)) &#123;</span><br><span class="line">                        <span class="keyword">throw</span> <span class="keyword">new</span> JSONException(<span class="string">&quot;JSONArray initial value should be a string or collection or array.&quot;</span>);</span><br><span class="line">                    &#125;</span><br><span class="line"></span><br><span class="line">                    iter = ((Iterable)source).iterator();</span><br><span class="line">                &#125;</span><br><span class="line"></span><br><span class="line">                <span class="keyword">while</span>(((Iterator)iter).hasNext()) &#123;</span><br><span class="line">                    Object next = ((Iterator)iter).next();</span><br><span class="line">                    <span class="keyword">if</span> (next != source) &#123;</span><br><span class="line">                        <span class="keyword">this</span>.add(next);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上作者检查了循环引用，但是只检查了简单的直接引用，多层嵌套的未作处理,即，如果A引用了B对象，B对象又引用了A对象，形成嵌套，就会导致上述问题。</p>
+<p>注：经过测试fastjson对以上情况能够兼容处理，并输出循环引用对象（前提是没有设置SerializerFeature.DisableCircularReferenceDetect）</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">he-You</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章链接: </span><span class="post-copyright-info"><a href="https://he-you.github.io/2023/09/26/%E4%B8%80%E8%A1%8C%E6%97%A5%E5%BF%97%E5%AF%BC%E8%87%B4%E7%9A%84OOM%E4%BA%8B%E4%BB%B6/">https://he-you.github.io/2023/09/26/一行日志导致的OOM事件/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来自 <a href="https://he-you.github.io" target="_blank">he-You</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/OOM/">OOM</a></div><div class="post_share"><div class="social-share" data-image="https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2023/09/22/%E9%98%BF%E9%87%8C%E9%A3%9E%E7%8C%AA%E9%9D%A2%E8%AF%95%E5%A4%8D%E7%9B%98/"><img class="next-cover" src="https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">阿里飞猪面试复盘（2023-09-22）</div></div></a></div></nav></div><div class="aside_content" id="aside_content"><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="card-content"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#%E4%B8%80%E8%A1%8C%E6%97%A5%E5%BF%97%E5%AF%BC%E8%87%B4%E7%9A%84OOM%E4%BA%8B%E4%BB%B6"><span class="toc-number">1.</span> <span class="toc-text">一行日志导致的OOM事件</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E7%8E%B0%E8%B1%A1"><span class="toc-number">1.1.</span> <span class="toc-text">问题现象</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5%E8%BF%87%E7%A8%8B"><span class="toc-number">1.2.</span> <span class="toc-text">问题排查过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E9%97%AE%E9%A2%98%E7%BB%93%E8%AE%BA"><span class="toc-number">1.3.</span> <span class="toc-text">问题结论</span></a></li></ol></li></ol></div></div></div></div></div></main><footer id="footer" style="background-image: url(https://raw.githubusercontent.com/he-You/image/master/y890Y_WuItw.jpg)"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2023 By he-You</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="浅色和深色模式转换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到顶部"><i class="fas fa-arrow-up"></i></button></div></div><div id="local-search"><div class="search-dialog"><div class="search-dialog__title" id="local-search-title">本地搜索</div><div id="local-input-panel"><div id="local-search-input"><div class="local-search-box"><input class="local-search-box--input" placeholder="搜索文章" type="text"/></div></div></div><hr/><div id="local-search-results"></div><span class="search-close-button"><i class="fas fa-times"></i></span></div><div id="search-mask"></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script src="https://cdn.jsdelivr.net/npm/instant.page/instantpage.min.js" type="module"></script><script src="/js/search/local-search.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',()=> {preloader.endLoading()})</script><div class="js-pjax"><script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div><script id="click-heart" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/click-heart.min.js" async="async" mobile="false"></script><script>(function(){
+  const bp = document.createElement('script');
+  const curProtocol = window.location.protocol.split(':')[0];
+  if (curProtocol === 'https') {
+    bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+  }
+  else{
+    bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+  }
+  bp.dataset.pjax = ''
+  const s = document.getElementsByTagName("script")[0];
+  s.parentNode.insertBefore(bp, s);
+})()</script></div></body></html>
