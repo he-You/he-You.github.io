@@ -5091,7 +5091,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
   <entry>
     <title>MySQL InnoDB缓冲池</title>
     <url>/2023/09/28/MySQL%20InnoDB%E7%BC%93%E5%86%B2%E6%B1%A0/</url>
-    <content><![CDATA[<h1 id="MySQL-InnoDB缓冲池"><a href="#MySQL-InnoDB缓冲池" class="headerlink" title="MySQL InnoDB缓冲池"></a>MySQL InnoDB缓冲池</h1><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230928155716575.png" alt="image-20230928155716575"></p>
+    <content><![CDATA[<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230928155716575.png" alt="image-20230928155716575"></p>
 <p>上图是MySQL使用InnoDB存储引擎时，写操作的执行过程。而Buffer Pool缓冲池是InnoDB存储引擎中至关重要的部分，它负责加载磁盘中的数据，并将数据存入内存中，以此可以大大提高MySQL的读写操作的效率。下面会仔细介绍Buffer Pool中的数据结构</p>
 <h2 id="数据页"><a href="#数据页" class="headerlink" title="数据页"></a>数据页</h2><p>我们操作的数据都是以表 + 行的方式，而表 + 行仅仅是逻辑上的概念，MySQL并不会像我们一样去操作行数据，而是抽象出来一个一个的数据页概念，默认大小16KB。一个数据页存放着多条数据，MySQL在执行读写操作时，会先定位到这条数据所在的数据页，然后将数据所在的数据页加载到Buffer Pool中。</p>
 <p>数据页包括七个部分，结构如下图：</p>
