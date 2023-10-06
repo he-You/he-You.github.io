@@ -5088,4 +5088,52 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
         <tag>复盘</tag>
       </tags>
   </entry>
+  <entry>
+    <title>MySQL InnoDB缓冲池</title>
+    <url>/2023/09/28/MySQL%20InnoDB%E7%BC%93%E5%86%B2%E6%B1%A0/</url>
+    <content><![CDATA[<h1 id="MySQL-InnoDB缓冲池"><a href="#MySQL-InnoDB缓冲池" class="headerlink" title="MySQL InnoDB缓冲池"></a>MySQL InnoDB缓冲池</h1><p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230928155716575.png" alt="image-20230928155716575"></p>
+<p>上图是MySQL使用InnoDB存储引擎时，写操作的执行过程。而Buffer Pool缓冲池是InnoDB存储引擎中至关重要的部分，它负责加载磁盘中的数据，并将数据存入内存中，以此可以大大提高MySQL的读写操作的效率。下面会仔细介绍Buffer Pool中的数据结构</p>
+<h2 id="数据页"><a href="#数据页" class="headerlink" title="数据页"></a>数据页</h2><p>我们操作的数据都是以表 + 行的方式，而表 + 行仅仅是逻辑上的概念，MySQL并不会像我们一样去操作行数据，而是抽象出来一个一个的数据页概念，默认大小16KB。一个数据页存放着多条数据，MySQL在执行读写操作时，会先定位到这条数据所在的数据页，然后将数据所在的数据页加载到Buffer Pool中。</p>
+<p>数据页包括七个部分，结构如下图：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20231006204201309.png" alt="image-20231006204201309"></p>
+<p>这 7 个部分的作用如下图：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/fabd6dadd61a0aa342d7107213955a72.png" alt="图片"></p>
+<p>在 File Header 中有两个指针，分别指向上一个数据页和下一个数据页，连接起来的页相当于一个双向的链表</p>
+<h2 id="缓存页"><a href="#缓存页" class="headerlink" title="缓存页"></a>缓存页</h2><p>当数据页被加载到缓冲池中后，Buffer Pool 中也有叫缓存页的概念与其一一对应，大小同样是 16KB，但是 MySQL还为每个缓存也开辟额外的一些空间，用来描述对应的缓存页的一些信息，例如：数据页所属的表空间，数据页号，这些描述数据块的大小大概是缓存页的15%左右（约800KB）。</p>
+<h2 id="Free链"><a href="#Free链" class="headerlink" title="Free链"></a>Free链</h2><p>MySQL 为 Buffer Pool 设计了一个双向链表— free链表，这个 free 链表的作用就是用来保存空闲缓存页的描述块，另外 free 链表还会有一个基础节点，他会引用该链表的头结点和尾结点，还会记录节点的个数，也就是可用的空闲的缓存页的个数</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20230928162845410.png" alt="image-20230928162845410"></p>
+<p>当加载数据页到缓存池中的时候， MySQL会从 free 链表中获取一个描述数据的信息，根据描述节点的信息拿到其对应的缓存页，然后将数据页信息放到该缓存页中，同时将链表中的该描述数据的节点移除。这就是数据页被读取 Buffer Pool 中的缓存页的过程。</p>
+<h2 id="脏页"><a href="#脏页" class="headerlink" title="脏页"></a>脏页</h2><p>脏页是指内存中已经被修改但还没有被写回磁盘的数据页。当MySQL需要从内存中淘汰一个脏页时，需要将其写回到磁盘，这个过程称为脏页刷新。</p>
+<h2 id="Flush链"><a href="#Flush链" class="headerlink" title="Flush链"></a>Flush链</h2><p>MySql 在执行增删改的时候会一直将数据以数据页的形式加载到 Buffer Pool 的缓存页中，增删改的操作都是在内存中执行的，然后会有一个后台的线程数将脏数据刷新到磁盘中，而如何区分哪些需要刷入磁盘的数据呢？为此MySQL设计了这个Flush链，与Free链一样是个双向链表，同样的这些已经被修改了的数据所在的缓存页的描述数据会被维护到 Flush 中，所以 Flush 中维护的是一些脏数据数据描述（准确地说是脏数据的所在的缓存页的数据描述）</p>
+<h2 id="LRU链"><a href="#LRU链" class="headerlink" title="LRU链"></a>LRU链</h2><p>LRU（Least Recently Used）是一种常用的缓存淘汰算法，它根据数据的历史访问记录来淘汰缓存中最近最少使用的数据。在MySQL中，InnoDB存储引擎默认使用LRU算法来淘汰缓存中的数据页。当缓存空间不足时，InnoDB会将最近最少使用的脏页刷新回磁盘，并将其从缓存中淘汰。</p>
+<p>工作原理：每次查询数据时，如果数据已经在缓存页中，那么就会将缓存页对应的描述信息放到LRU链表的头部，如果不存在就去磁盘中查找，找到了加载到缓存中，并将该数据对应的缓存页描述信息插入到LRU链表的头部。</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20231006213811153.png" alt="image-20231006213811153"></p>
+<p>为了提高缓存效率，可以通过调整innodb_buffer_pool_size参数来增加缓存空间。同时，可以通过调整innodb_old_blocks_time和innodb_lru_scan_depth参数来优化LRU算法的性能。</p>
+<h3 id="引入LRU链带来的问题"><a href="#引入LRU链带来的问题" class="headerlink" title="引入LRU链带来的问题"></a>引入LRU链带来的问题</h3><p>这里说的的问题，并不是LRU链的问题，而是MySQL本身的预读机制带来的问题。所谓的预读机制就是： MySQL 在从磁盘加载数据的的时候，会将数据页的相邻的其他的数据页也加载到缓存中。因为根据经验和习惯，一般查询数据的时候往往还会查询该数据相邻前后的一些数据，MySQL 为了提高效率，会将某个数据页的相邻的数据页也加载到缓存池中。这样的话，LRU链中的顺序可能不能满足LRU特性。</p>
+<h3 id="基于冷热数据分离的LRU链表"><a href="#基于冷热数据分离的LRU链表" class="headerlink" title="基于冷热数据分离的LRU链表"></a>基于冷热数据分离的LRU链表</h3><p>MySQL预读机制导致LRU失效的解决方案：即对LRU的数据进行冷热分离，所谓的冷热分离，就是将 LRU 链表分成两部分，一部分是经常被使用到的热数据，另一部分是被加载进来但是很少使用的冷数据。通过参数innodb_old_blocks_pct 参数控制的，默认为37，也就是 37% 。用图表示大致如下：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20231006215536686.png" alt="image-20231006215536686"></p>
+<p>数据在从磁盘被加载到缓存池的时候，首先是会被放在冷数据区的头部，然后在<code>一定时间</code>之后，如果再次访问了这个数据，那么这个数据所在的缓存页对应描述数据就会被放转移到热数据区链表的头部。</p>
+<p>之所以不在访问后立马放入热数据区，是因为如果某条数据刚被加载到缓存池中，然后紧接着又被访问了一次，这个时候假设就将其转移到热数据区链表的头部，但是以后就再也不会被使用了，这种场景也是不能解决LRU链失效的问题。</p>
+<p>所以 MySQL通过<code>innodb_old_blocks_time</code>来设置数据被加载到缓存池后的多少时间之后再次被访问，才会将该数据转移到热数据区链表的头部，该参数默认是1000单位为：毫秒，也就是1秒之后，如果该数据又被访问了，那么这个时候才会将该数据从 LRU 链表的冷数据区转移到热数据区。</p>
+<p>但是这样子还不是足够完美，为什么这么说，刚刚我们一直在讨论的是冷数据区的数据被访问，然后在一定规则之下会被加载到热数据链表的头部，但是现在某个请求需要访问的数据就在热数据区，那是不是直接把该数据所在的缓存页对应的描述数据转移到热数据区链表头部呢？</p>
+<p>所以 MySQL针对热数据区的数据的转移也有相关的规则</p>
+<h3 id="冷热数据转移规则"><a href="#冷热数据转移规则" class="headerlink" title="冷热数据转移规则"></a>冷热数据转移规则</h3><p><strong>如果被访问的数据所在的缓存页在热数据区的前25%，那么该缓存页对应的描述数据是不会被转移到热数据链表的头部的，只有当被访问的缓存页对应的描述数据在热数据区链表的后75%，该缓存页的描述数据才会被转移到热数据链表的头部</strong>。</p>
+<h2 id="Buffer-Pool在并发环境中的表现"><a href="#Buffer-Pool在并发环境中的表现" class="headerlink" title="Buffer Pool在并发环境中的表现"></a>Buffer Pool在并发环境中的表现</h2><p>在正常的环境中不可能每次只有一个请求来访问的，说白了就是如果多个请求同时来执行增删改，那他们会并行的去操作 Buffer Pool 中的各种链表吗？如果是并行的会不会有什么问题。</p>
+<p>实际上 MySQL在处理这个问题的时候考虑得非常简单，就是： <strong>Buffer Pool 一次只能允许一个线程来操作，一次只有一个线程来执行这一系列的操作，因为MySQL 为了保证数据的一致性，操作的时候必须缓存池加锁，一次只能有一个线程获取到锁</strong>。</p>
+<p>当然MySQL针对这种情况也有相应的优化方案：</p>
+<h3 id="多个Buffer-Pool"><a href="#多个Buffer-Pool" class="headerlink" title="多个Buffer Pool"></a>多个Buffer Pool</h3><p> Buffer Pool 是可以有多个的，可以通过 MySQL的配置文件来配置，参数分别是：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">#  Buffer Pool  的总大小</span></span><br><span class="line">innodb_buffer_pool_size=8589934592</span><br><span class="line"><span class="comment">#  Buffer Pool  的实例数（个数）</span></span><br><span class="line">innodb_buffer_pool_instance=4</span><br></pre></td></tr></table></figure>
+
+<p>多个BufferPool虽然可以提升并发环境中的性能，但是同样也会面临并发环境的问题：在多个线程访问不同的 Buffer Pool 那不同的线程加载的数据必然是在不同的 Buffer Pool 中，假设 A 线程加载数据页A到 Buffer Pool A 中，B 线程加载数据页B到 Buffer Pool  B 中，然后两个都执行完了，这个时候 C 线程来了，他到达的是 Buffer Pool B中，但是 C 要访问的数据是在 Buffer Pool A中的数据页上了，这个时候 C 还会去加载数据页A吗？，这种情况会发生吗？在不同的 Buffer Pool 缓存中会去缓存相同的数据页吗？</p>
+<p>这种情况很显然不会发生，既然不会发生，那 MySql 是如何解决这种问题的？其实前面已经提到过了，那就是数据页缓存哈希表，里面存放的是表空间号+数据页号 = 缓存页地址，所以  <strong>MySQL 在加载数据所在的数据页的时候根据这一系列的映射关系判断数据页是否被加载，被加载到了那个缓存页中</strong>，所以 MySQL 能够精确的确定某个数据页是否被加载，被加载的到了哪个缓存页，绝不可能出现重复加载的情况。</p>
+<h3 id="动态调整Buffer-Pool——chunk机制"><a href="#动态调整Buffer-Pool——chunk机制" class="headerlink" title="动态调整Buffer Pool——chunk机制"></a>动态调整Buffer Pool——chunk机制</h3><p>**什么是chunk机制:**chunk是 MySQL 设计的一种机制，这种机制的原理是将 Buffer Pool 拆分一个一个大小相等的 chunk 块，每个 chunk 默认大小为 128M（可以通过参数innodb_buffer_pool_chunk_size 来调整大小），也就是说 Buffer Pool 是由一个个的chunk组成的     假设 Buffer Pool 大小是2GB，而一个chunk大小默认是128M，也就是说一个2GB大小的 Buffer Pool 里面由16个 chunk 组成，每个chunk中有自己的缓存页和描述数据，而 free 链表、flush 链表和 lru 链表是共享的，如下图所示：</p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20231006222218988.png" alt="image-20231006222218988"></p>
+]]></content>
+      <categories>
+        <category>MySQL</category>
+      </categories>
+      <tags>
+        <tag>MySQL</tag>
+      </tags>
+  </entry>
 </search>
