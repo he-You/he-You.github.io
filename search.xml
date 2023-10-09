@@ -3532,7 +3532,7 @@ forEach方法的参数是Consumer或者BiConsumer，主要用于消费资源，�
     <title>雪花id重复问题与解决方案</title>
     <url>/2023/07/27/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E9%97%AE%E9%A2%98%E4%B8%8E%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88/</url>
     <content><![CDATA[<h1 id="雪花id重复问题与解决方案"><a href="#雪花id重复问题与解决方案" class="headerlink" title="雪花id重复问题与解决方案"></a>雪花id重复问题与解决方案</h1><h2 id="一、背景"><a href="#一、背景" class="headerlink" title="一、背景"></a>一、背景</h2><p>CSM项目中用线程池异步插入日志数据，产线环境会偶发（出现的概率也不算小）日志表主键id重复的异常</p>
-<p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D-%E6%97%A5%E5%BF%97%E7%8E%B0%E5%9C%BA" alt="image-20230727110910080"></p>
+<p><img src="https://raw.githubusercontent.com/he-You/image/master/image-20231009222605966.png" alt="image-20231009222605966"></p>
 <h2 id="二、排查过程"><a href="#二、排查过程" class="headerlink" title="二、排查过程"></a>二、排查过程</h2><p>一开始怀疑是mybatis-plus的主键生成策略的问题，但是项目中采用的生成策略是雪花算法生成的id</p>
 <p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E9%87%8D%E5%A4%8D%E6%8E%92%E6%9F%A501" alt="image-20230727111003701"></p>
 <p><img src="https://raw.githubusercontent.com/he-You/image/master/%E9%9B%AA%E8%8A%B1id%E6%8E%92%E6%9F%A502" alt="img"></p>
